@@ -417,9 +417,9 @@ class random_depictor:
         (y,x) of that position.'''
         if random.choice([True, False]):
             y_range = range(0, height)
-            x_range = list(range(0, int(0.05*width))) + list(range(int(0.95*width), width))
+            x_range = list(range(0, int(0.05*width))) + list(range(int(0.9*width), width))
         else:
-            y_range = list(range(0, int(0.05*height))) + list(range(int(0.95*height), height))
+            y_range = list(range(0, int(0.05*height))) + list(range(int(0.9*height), height))
             x_range = range(0, width)
         return random.choice(y_range), random.choice(x_range)
             
@@ -443,30 +443,34 @@ class random_depictor:
     def add_chemical_ID(self, image: np.array)-> np.array:
         '''This function takes an image (np.array) and adds random text that looks like a chemical ID label 
         around the structure. It returns the modified image.'''
-        
         im = Image.fromarray(image)
+        orig_image = deepcopy(im)
+        width, height = im.size
         # Choose random font
         font_dir = os.path.abspath("./fonts/")
         fonts = os.listdir(font_dir)
-        font_sizes = range(12, 24)
-        # Define random position for text element around the chemical structure (if it can be placed around it)
-        width, height = im.size
-        y_pos, x_pos = self.get_random_label_position(width, height)
-
         # Choose random font size
+        font_sizes = range(12, 24)
         size = random.choice(font_sizes)
+        # Generate random string that resembles an ID label
         label_text = self.ID_label_text()
-        
         try:
             font = ImageFont.truetype(str(os.path.join(font_dir, random.choice(fonts))), size = size)
         except OSError:
             font = ImageFont.load_default()
+        
         draw = ImageDraw.Draw(im, 'RGBA')
-        bb = draw.textbbox((x_pos, y_pos), label_text, font = font) # left, up, right, low
 
-        # Add text element to image
-        draw = ImageDraw.Draw(im, 'RGBA')
-        draw.text((x_pos,y_pos), label_text, font = font, fill=(0,0,0,255))
+        # Try different positions with the condition that the label´does not overlap with non-white pixels (the structure)
+        for _ in range(50):        
+            y_pos, x_pos = self.get_random_label_position(width, height)
+            bounding_box = draw.textbbox((x_pos, y_pos), label_text, font = font) # left, up, right, low
+            paste_region = orig_image.crop(bounding_box)
+            mean = ImageStat.Stat(paste_region).mean
+            if sum(mean)/len(mean) == 255:
+                draw.text((x_pos,y_pos), label_text, font = font, fill=(0,0,0,255))
+                break
+
         return np.asarray(im)
 
 
