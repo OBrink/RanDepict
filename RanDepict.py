@@ -3,8 +3,8 @@ import numpy as np
 import io
 from skimage import io as sk_io
 from skimage.transform import resize
-from skimage.color import rgba2rgb
-from skimage.util import img_as_ubyte
+from skimage.color import rgba2rgb, rgb2gray
+from skimage.util import img_as_ubyte, img_as_float
 from PIL import Image, ImageFont, ImageDraw, ImageFilter, ImageStat
 
 import imgaug.augmenters as iaa
@@ -42,7 +42,7 @@ class random_depictor:
             startJVM(jvmPath, "-ea", "-Djava.class.path=./jar_files/cdk_2_5.jar")
             
             
-    def __call__(self, smiles: str):
+    def __call__(self, smiles: str, grayscale: bool = True):
         # Depict structure with random parameters
         depiction = self.random_depiction(smiles)
         # In 50 percent of the cases add a chemical ID label or curved arrows
@@ -53,6 +53,8 @@ class random_depictor:
                 depiction = self.add_arrows_to_structure(depiction)
         # Add augmentations
         depiction = self.imgaug_augment(depiction)
+        if grayscale:
+            return self.to_grayscale_float_img(depiction)
         return depiction
     
 
@@ -145,7 +147,7 @@ class random_depictor:
         # Load molecule
         molecule = indigo.loadMolecule(smiles)
         # Do not kekulize in 20% of cases
-        if random.choice([True, False, False, False, False]):
+        if random.choice([True, True, False, False, False, False]):
             molecule.aromatize()
         molecule.layout()
         # Create structure depiction, save in temporary file and load as Pillow image
@@ -298,7 +300,7 @@ class random_depictor:
         # Read molecule from SMILES str
         SCOB = JClass("org.openscience.cdk.silent.SilentChemObjectBuilder")
         SmilesParser = JClass("org.openscience.cdk.smiles.SmilesParser")(SCOB.getInstance())
-        if random.choice([True, False, False, False, False]):
+        if random.choice([True, True, False, False, False, False]):
             SmilesParser.kekulise(False)
         molecule = SmilesParser.parseSmiles(smiles)
         # Instantiate StructureDiagramGenerator, determine coordinates
@@ -321,7 +323,6 @@ class random_depictor:
         font_name = random.choice(["Verdana", "Times New Roman", "Arial", "Gulliver Regular"])
         font_style = random.choice([Font.PLAIN, Font.BOLD])
         font = Font(font_name, font_style, font_size)
-        #font = Font("Verdana", Font.PLAIN, font_size) # FONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONT
         StandardGenerator = JClass("org.openscience.cdk.renderer.generators.standard.StandardGenerator")(font)
         generators.add(StandardGenerator)
         
@@ -497,3 +498,8 @@ class random_depictor:
                     image.paste(arrow_image, (x_position, y_position), arrow_image)
                     break
         return np.asarray(image)
+
+
+    def to_grayscale_float_img(self, image: np.array) -> np.array:
+        '''This function takes an image (np.array), converts it to grayscale and returns it.'''
+        return img_as_float(rgb2gray(image))
