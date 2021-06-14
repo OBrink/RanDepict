@@ -102,13 +102,15 @@ class random_depictor:
         # Set random relative thickness
         relative_thickness = float(random.choice(np.arange(1, 2.5, 0.5)))
         indigo.setOption("render-relative-thickness", relative_thickness)
-        # Set random bond length
-        bond_length = random.choice(range(int(shape[0]/19), int(shape[0]/6)))
-        indigo.setOption("render-bond-length", bond_length)
+        # Set random bond length 
+        # CAREFUL! Changing the bond length does not change the bond length relative to other
+        # elements. Instead, the whole molecule is scaled down!
+        #bond_length = random.choice(range(int(shape[0]/19), int(shape[0]/6))) #19
+        #indigo.setOption("render-bond-length", bond_length)
         # Output_format: PNG
         indigo.setOption("render-output-format", "png")
         # Set random atom label rendering model (standard is rendering terminal groups)
-        if random.choice([True] + [False] * 9):
+        if random.choice([True] + [False] * 19):
             indigo.setOption('render-label-mode', 'all') # show all atom labels
         elif random.choice([True] + [False] * 3):
             indigo.setOption('render-label-mode', 'hetero') # only hetero atoms, no terminal groups
@@ -143,8 +145,8 @@ class random_depictor:
         renderer = IndigoRenderer(indigo)
         # Load molecule
         molecule = indigo.loadMolecule(smiles)
-        # Do not kekulize in 25% of cases
-        if random.choice([True, False, False, False]):
+        # Do not kekulize in 20% of cases
+        if random.choice([True, False, False, False, False]):
             molecule.aromatize()
         molecule.layout()
         # Create structure depiction, save in temporary file and load as Pillow image
@@ -205,6 +207,9 @@ class random_depictor:
         # Get random depiction settings
         depiction_settings = self.get_random_rdkit_rendering_settings()
         # Create depiction
+        # TODO: Figure out how to depict molecules without kekulization here.
+        # This does not prevent the molecule from being depicted kekulized
+        #mol = rdMolDraw2D.PrepareMolForDrawing(mol, kekulize = False) 
         rdMolDraw2D.PrepareAndDrawMolecule(depiction_settings, mol)
         depiction = depiction_settings.GetDrawingText() 
         depiction = sk_io.imread(io.BytesIO(depiction))
@@ -224,7 +229,7 @@ class random_depictor:
         
         # Define visibility of atom/superatom labels
         SymbolVisibility = JClass("org.openscience.cdk.renderer.SymbolVisibility")
-        if random.choice([True] + [False] * 9):
+        if random.choice([True] + [False] * 19):
             rendererModel.set(StandardGenerator.Visibility.class_, SymbolVisibility.all()) # show all atom labels
         elif random.choice([True] + [False] * 3):
             # only hetero atoms, no terminal alkyl groups
@@ -290,6 +295,8 @@ class random_depictor:
         # Read molecule from SMILES str
         SCOB = JClass("org.openscience.cdk.silent.SilentChemObjectBuilder")
         SmilesParser = JClass("org.openscience.cdk.smiles.SmilesParser")(SCOB.getInstance())
+        if random.choice([True, False, False, False, False]):
+            SmilesParser.kekulise(False)
         molecule = SmilesParser.parseSmiles(smiles)
         # Instantiate StructureDiagramGenerator, determine coordinates
         sdg = JClass("org.openscience.cdk.layout.StructureDiagramGenerator")()
@@ -303,7 +310,7 @@ class random_depictor:
         generators.add(BasicSceneGenerator)
         font_size = random.choice(range(10, 20))
         Font = JClass("java.awt.Font")
-        font = Font("Verdana", Font.PLAIN, font_size)
+        font = Font("Verdana", Font.PLAIN, font_size) # FONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONT
         StandardGenerator = JClass("org.openscience.cdk.renderer.generators.standard.StandardGenerator")(font)
         generators.add(StandardGenerator)
         
@@ -373,8 +380,8 @@ class random_depictor:
                             iaa.ReplaceElementwise((0.01, 0.3), 255)]),
             # Shearing
             iaa.OneOf([
-                        iaa.geometric.ShearX((-10, 10), mode = 'edge', fit_output = True),
-                        iaa.geometric.ShearY((-10, 10), mode = 'edge', fit_output = True)]),
+                        iaa.geometric.ShearX((-5, 5), mode = 'edge', fit_output = True),
+                        iaa.geometric.ShearY((-5, 5), mode = 'edge', fit_output = True)]),
             # Jpeg compression or pixelation
             iaa.OneOf([
                 iaa.imgcorruptlike.JpegCompression(severity=(1,2)),
@@ -385,7 +392,7 @@ class random_depictor:
             iaa.ChangeColorTemperature((1100, 10000)), # colour temperature adjustment
         ]
         # Apply zero to all augmentations
-        aug_number = random.choice(range(0, len(aug_list)))
+        aug_number = random.choice(range(0, 3))
         aug = iaa.SomeOf(aug_number, aug_list)
         augmented_image = aug.augment_images([image])[0]
         augmented_image = resize(augmented_image, image.shape)
@@ -463,7 +470,7 @@ class random_depictor:
         
         arrow_dir = os.path.normpath('./arrow_images/')
         
-        for _ in range(random.choice(range(2, 6))):
+        for _ in range(random.choice(range(2, 4))):
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(os.path.join(arrow_dir, random.choice(os.listdir(arrow_dir))))
             new_arrow_image_shape = int((x_max - x_min) / random.choice(range(3,6))), int((y_max - y_min) / random.choice(range(3,6)))
