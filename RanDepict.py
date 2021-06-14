@@ -99,7 +99,7 @@ class random_depictor:
         bond_line_width = float(random.choice(np.arange(0.5, 2.5, 0.5)))
         indigo.setOption("render-bond-line-width", bond_line_width)
         # Set random relative thickness
-        relative_thickness = float(random.choice(np.arange(1, 2.5, 0.5)))
+        relative_thickness = float(random.choice(np.arange(0.5, 1.5, 0.1)))
         indigo.setOption("render-relative-thickness", relative_thickness)
         # Set random bond length 
         # CAREFUL! Changing the bond length does not change the bond length relative to other
