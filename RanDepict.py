@@ -50,16 +50,19 @@ class random_depictor:
     def __call__(self, smiles: str, grayscale: bool = True):
         # Depict structure with random parameters
         depiction = self.random_depiction(smiles)
-        # Each type of label and arrow has a 20% chance to appear
+        # Each type of label and curved arrows have a 20% chance to appear
+        # In 75% of the cases, we attempt to insert 1-2 straight arrows
+        # (does not work in most cases because there is not enought space) 
         if random.choice([True, False, False, False, False]):
-            depiction = self.add_arrows_to_structure(depiction, 'curved')
+            depiction = self.add_curved_arrows_to_structure(depiction)
+        if random.choice([True, True, True, False]):
+            depiction = self.add_straight_arrows_to_structure(depiction)
         if random.choice([True, False, False, False, False]):
             depiction = self.add_chemical_label(depiction, 'ID')
         if random.choice([True, False, False, False, False]):
             depiction = self.add_chemical_label(depiction, 'R_GROUP')
         if random.choice([True, False, False, False, False]):            
             depiction = self.add_chemical_label(depiction, 'REACTION')
-        
         # Add augmentations
         depiction = self.imgaug_augment(depiction)
         if grayscale:
@@ -426,9 +429,9 @@ class random_depictor:
         (y,x) of that position.'''
         if random.choice([True, False]):
             y_range = range(0, height)
-            x_range = list(range(0, int(0.05*width))) + list(range(int(0.9*width), width))
+            x_range = list(range(0, int(0.1*width))) + list(range(int(0.9*width), width))
         else:
-            y_range = list(range(0, int(0.05*height))) + list(range(int(0.9*height), height))
+            y_range = list(range(0, int(0.1*height))) + list(range(int(0.9*height), height))
             x_range = range(0, width)
         return random.choice(y_range), random.choice(x_range)
             
@@ -551,10 +554,9 @@ class random_depictor:
         return np.asarray(im)
 
 
-    def add_arrows_to_structure(self, image: np.array, arrow_type: str) -> np.array:
-        '''This function takes an image of a chemical structure (np.array) and adds between 2 and 6 curved arrows 
-        in random positions in the central part of the image OR it adds one straight reaction arrow that does not 
-        overlap with the structure.'''
+    def add_curved_arrows_to_structure(self, image: np.array) -> np.array:
+        '''This function takes an image of a chemical structure (np.array) and adds between 2 and 4 curved arrows 
+        in random positions in the central part of the image.'''
         height, width, _ = image.shape
         image = Image.fromarray(image)
         orig_image = deepcopy(image)
@@ -562,10 +564,7 @@ class random_depictor:
         x_min, x_max = (int(0.1 * width), int(0.9 * width))
         y_min, y_max = (int(0.1 * height), int(0.9 * height))
         
-        if arrow_type == 'curved':
-            arrow_dir = os.path.normpath('./arrow_images/curved_arrows/')
-        elif arrow_type == 'straight':
-            arrow_dir = os.path.normpath('./arrow_images/curved_arrows/')
+        arrow_dir = os.path.normpath('./arrow_images/curved_arrows/')
         
         for _ in range(random.choice(range(2, 4))):
             # Load random curved arrow image, resize and rotate it randomly.
@@ -579,14 +578,38 @@ class random_depictor:
                 y_position = random.choice(range(y_min, y_max - new_arrow_image_shape[1]))
                 paste_region = orig_image.crop((x_position, y_position, x_position + new_arrow_image_shape[0], y_position + new_arrow_image_shape[1]))
                 mean = ImageStat.Stat(paste_region).mean
-                if arrow_type == 'curved':
-                    if sum(mean)/len(mean) < 252:
-                        image.paste(arrow_image, (x_position, y_position), arrow_image)
-                        break
+                if sum(mean)/len(mean) < 252:
+                    image.paste(arrow_image, (x_position, y_position), arrow_image)
+                    break
         return np.asarray(image)
 
 
-    
+    def add_straight_arrows_to_structure(self, image: np.array) -> np.array:
+        '''This function takes an image of a chemical structure (np.array) and adds between 1 and 2 straight arrows 
+        in random positions in the image (no overlap with other elements)'''
+        height, width, _ = image.shape
+        image = Image.fromarray(image)
+        
+        arrow_dir = os.path.normpath('./arrow_images/straight_arrows/')
+        
+        for _ in range(random.choice(range(1,3))):
+            # Load random curved arrow image, resize and rotate it randomly.
+            arrow_image = Image.open(os.path.join(arrow_dir, random.choice(os.listdir(arrow_dir))))
+            new_arrow_image_shape = (int(width/2 * random.choice(np.arange(1.0, 1.5, 0.1))), int(height/10 * random.choice(np.arange(1.0, 1.5, 0.1))))
+
+            arrow_image = arrow_image.resize(new_arrow_image_shape, resample=Image.BICUBIC)
+            arrow_image = arrow_image.rotate(random.choice(range(360)), resample=Image.BICUBIC, expand=True)
+            new_arrow_image_shape = arrow_image.size
+            # Try different positions with the condition that the arrows are overlapping with non-white pixels (the structure)
+            for _ in range(50):
+                y_position, x_position = self.get_random_label_position(width, height)
+                paste_region = image.crop((x_position, y_position, x_position + new_arrow_image_shape[0], y_position + new_arrow_image_shape[1]))
+                mean = ImageStat.Stat(paste_region).mean
+                if sum(mean)/len(mean) == 255:
+                    image.paste(arrow_image, (x_position, y_position), arrow_image)
+                    break
+
+        return np.asarray(image)
 
 
     def to_grayscale_float_img(self, image: np.array) -> np.array:
