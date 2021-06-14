@@ -37,7 +37,6 @@ class random_depictor:
                   "This indicates that the environment varibale JAVA_HOME is not set properly.",
                   "You can set it or set it manually in the code (see __init__() of random_depictor)")
             jvmPath ="Define/your/path/or/set/your/JAVA_HOME/variable/properly"
-        print(jvmPath)
         if not isJVMStarted():
             jar_path = './jar_files/'
             startJVM(jvmPath, "-ea", "-Djava.class.path=./jar_files/cdk_2_5.jar")
@@ -303,6 +302,11 @@ class random_depictor:
         sdg.setMolecule(molecule)
         sdg.generateCoordinates()
         molecule = sdg.getMolecule()
+
+        # Rotate molecule randomly
+        point = JClass("org.openscience.cdk.geometry.GeometryTools").get2DCenter(molecule)
+        rot_degrees = random.choice(range(360))
+        JClass("org.openscience.cdk.geometry.GeometryTools").rotate(molecule, point, rot_degrees)
 
         # Get Generators
         generators = JClass("java.util.ArrayList")()
