@@ -40,17 +40,26 @@ class random_depictor:
         if not isJVMStarted():
             jar_path = './jar_files/'
             startJVM(jvmPath, "-ea", "-Djava.class.path=./jar_files/cdk_2_5.jar")
+
+        # Load list of superatoms (from OSRA)
+        with open('./superatom.txt') as superatoms:
+            superatoms = superatoms.readlines()
+            self.superatoms = [s[:-2] for s in superatoms]
             
             
     def __call__(self, smiles: str, grayscale: bool = True):
         # Depict structure with random parameters
         depiction = self.random_depiction(smiles)
-        # In 50 percent of the cases add a chemical ID label or curved arrows
-        if random.choice([True, False]):
-            if random.choice([True, False]):
-                depiction = self.add_chemical_ID(depiction)
-            else:
-                depiction = self.add_arrows_to_structure(depiction)
+        # Each type of label and arrow has a 20% chance to appear
+        if random.choice([True, False, False, False, False]):
+            depiction = self.add_arrows_to_structure(depiction, 'curved')
+        if random.choice([True, False, False, False, False]):
+            depiction = self.add_chemical_label(depiction, 'ID')
+        if random.choice([True, False, False, False, False]):
+            depiction = self.add_chemical_label(depiction, 'R_GROUP')
+        if random.choice([True, False, False, False, False]):            
+            depiction = self.add_chemical_label(depiction, 'REACTION')
+        
         # Add augmentations
         depiction = self.imgaug_augment(depiction)
         if grayscale:
@@ -440,9 +449,71 @@ class random_depictor:
             return str(random.choice(label_num)) + random.choice(label_letters) + "-" + random.choice(label_letters)
 
 
-    def add_chemical_ID(self, image: np.array)-> np.array:
-        '''This function takes an image (np.array) and adds random text that looks like a chemical ID label 
-        around the structure. It returns the modified image.'''
+    def new_reaction_condition_elements(self) -> Tuple[str, str, str]:
+        '''Randomly redefine reaction_time, solvent and other_reactand.'''
+        reaction_time = random.choice([str(num) for num in range(30)]) + random.choice([' h', ' min'])
+        solvent = random.choice(['MeOH', 'EtOH', 'CHCl3', 'DCM', 'iPrOH', 'MeCN', 'DMSO', 'pentane', 'hexane', 'benzene', 'Et2O', 'THF', 'DMF'])
+        other_reactand = random.choice(['HF', 'HCl', 'HBr', 'NaOH', 'Et3N', 'TEA', 'Ac2O', 'DIBAL', 'DIBAL-H', 'DIPEA', 'DMAP', 'EDTA', 'HOBT', 'HOAt', 'TMEDA', 'p-TsOH', 'Tf2O'])
+        return reaction_time, solvent, other_reactand
+
+
+    def reaction_condition_label_text(self) -> str:
+        '''This function returns a random string that looks like a reaction condition label.'''
+        reaction_condition_label = ''
+        label_type = random.choice(['A', 'B', 'C', 'D'])
+        if label_type in ['A', 'B']:
+            for n in range(random.choice(range(1, 5))):
+                reaction_time, solvent, other_reactand = self.new_reaction_condition_elements()
+                if label_type == 'A':
+                    reaction_condition_label += str(n+1) + ' ' + other_reactand + ', ' + solvent + ', ' + reaction_time + '\n'
+                elif label_type == 'B':
+                    reaction_condition_label += str(n+1) + ' ' + other_reactand + ', ' + solvent + ' (' + reaction_time + ')\n'
+        elif label_type == 'C':
+            reaction_time, solvent, other_reactand = self.new_reaction_condition_elements()
+            reaction_condition_label += other_reactand + '\n' + solvent + '\n' + reaction_time
+        elif label_type == 'D':
+            reaction_condition_label += random.choice(self.new_reaction_condition_elements())
+        return reaction_condition_label
+
+
+
+    def make_R_group_str(self) -> str:
+        '''This function returns a random string that looks like an R group label.
+        It generates them by inserting randomly chosen elements into one of five 
+        templates.'''
+        rest_variables = ['X','Y','Z','R','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','Y2','D']
+        # Load list of superatoms (from OSRA)
+        superatoms = self.superatoms
+        label_type = random.choice(['A', 'B', 'C', 'D', 'E'])
+        R_group_label = ''
+        if label_type == 'A':
+            for _ in range(1, random.choice(range(2,6))):
+                R_group_label += random.choice(rest_variables) + ' = ' + random.choice(superatoms) + '\n'
+        elif label_type == 'B':
+            R_group_label += '      ' + random.choice(rest_variables)  + '\n'
+            for n in range(1, random.choice(range(2,6))):
+                R_group_label += str(n) + '    ' + random.choice(superatoms)  + '\n'
+        elif label_type == 'C':
+            R_group_label += '      ' + random.choice(rest_variables)  + '      ' + random.choice(rest_variables) + '\n'
+            for n in range(1, random.choice(range(2,6))):
+                R_group_label += str(n) + '  ' + random.choice(superatoms) + '  ' + random.choice(superatoms) + '\n'
+        elif label_type == 'D':
+            R_group_label += '      ' + random.choice(rest_variables)  + '      ' + random.choice(rest_variables) + '      ' + random.choice(rest_variables) + '\n'
+            for n in range(1, random.choice(range(2,6))):
+                R_group_label += str(n) + '  ' + random.choice(superatoms) + '  ' + random.choice(superatoms) + '  ' + random.choice(superatoms) + '\n'
+        if label_type == 'E':
+            for n in range(1, random.choice(range(2,6))):
+                R_group_label += str(n) + '  ' + random.choice(rest_variables) + ' = ' + random.choice(superatoms) + '\n'
+        return R_group_label
+
+
+
+
+    def add_chemical_label(self, image: np.array, label_type: str)-> np.array:
+        '''This function takes an image (np.array) and adds random text that looks like a chemical ID label ,
+        an R group label or a reaction condition label around the structure. It returns the modified image.
+        The label type is determined by the parameter label_type (str), which needs to be "ID", R_GROUP" or
+        "REACTION"'''
         im = Image.fromarray(image)
         orig_image = deepcopy(im)
         width, height = im.size
@@ -450,10 +521,16 @@ class random_depictor:
         font_dir = os.path.abspath("./fonts/")
         fonts = os.listdir(font_dir)
         # Choose random font size
-        font_sizes = range(12, 24)
+        font_sizes = range(10, 20)
         size = random.choice(font_sizes)
-        # Generate random string that resembles an ID label
-        label_text = self.ID_label_text()
+        # Generate random string that resembles the desired type of chemical label
+        if label_type == 'ID':
+            label_text = self.ID_label_text()
+        if label_type == 'R_GROUP':
+            label_text = self.make_R_group_str()
+        if label_type == 'REACTION':
+            label_text = self.reaction_condition_label_text()
+
         try:
             font = ImageFont.truetype(str(os.path.join(font_dir, random.choice(fonts))), size = size)
         except OSError:
@@ -474,9 +551,10 @@ class random_depictor:
         return np.asarray(im)
 
 
-    def add_arrows_to_structure(self, image: np.array) -> np.array:
+    def add_arrows_to_structure(self, image: np.array, arrow_type: str) -> np.array:
         '''This function takes an image of a chemical structure (np.array) and adds between 2 and 6 curved arrows 
-        in random positions in the central part of the image.'''
+        in random positions in the central part of the image OR it adds one straight reaction arrow that does not 
+        overlap with the structure.'''
         height, width, _ = image.shape
         image = Image.fromarray(image)
         orig_image = deepcopy(image)
@@ -484,7 +562,10 @@ class random_depictor:
         x_min, x_max = (int(0.1 * width), int(0.9 * width))
         y_min, y_max = (int(0.1 * height), int(0.9 * height))
         
-        arrow_dir = os.path.normpath('./arrow_images/')
+        if arrow_type == 'curved':
+            arrow_dir = os.path.normpath('./arrow_images/curved_arrows/')
+        elif arrow_type == 'straight':
+            arrow_dir = os.path.normpath('./arrow_images/curved_arrows/')
         
         for _ in range(random.choice(range(2, 4))):
             # Load random curved arrow image, resize and rotate it randomly.
@@ -498,10 +579,14 @@ class random_depictor:
                 y_position = random.choice(range(y_min, y_max - new_arrow_image_shape[1]))
                 paste_region = orig_image.crop((x_position, y_position, x_position + new_arrow_image_shape[0], y_position + new_arrow_image_shape[1]))
                 mean = ImageStat.Stat(paste_region).mean
-                if sum(mean)/len(mean) < 252:
-                    image.paste(arrow_image, (x_position, y_position), arrow_image)
-                    break
+                if arrow_type == 'curved':
+                    if sum(mean)/len(mean) < 252:
+                        image.paste(arrow_image, (x_position, y_position), arrow_image)
+                        break
         return np.asarray(image)
+
+
+    
 
 
     def to_grayscale_float_img(self, image: np.array) -> np.array:
