@@ -181,13 +181,17 @@ class random_depictor:
         # Draw terminal methyl groups
         if random.choice([True, False]):
             depiction_settings.drawOptions().explicitMethyl = True
-        # Label font size
+        # Label font type and size
+        font_dir = os.path.normpath('./fonts/')
+        font_path = os.path.join(font_dir, random.choice(os.listdir(font_dir)))
+        depiction_settings.drawOptions().fontFile = font_path
         min_font_size = random.choice(range(10, 20))
         depiction_settings.drawOptions().minFontSize = min_font_size
+        depiction_settings.drawOptions().maxFontSize = 30
         # Rotate the molecule
         depiction_settings.drawOptions().rotate = random.choice(range(360))
         # Fixed bond length
-        fixed_bond_length = random.choice(range(15,30))
+        fixed_bond_length = random.choice(range(30,45))
         depiction_settings.drawOptions().fixedBondLength = fixed_bond_length
         # Comic mode (looks a bit hand drawn)
         if random.choice([True, False, False, False, False]):
@@ -314,7 +318,10 @@ class random_depictor:
         generators.add(BasicSceneGenerator)
         font_size = random.choice(range(10, 20))
         Font = JClass("java.awt.Font")
-        font = Font("Verdana", Font.PLAIN, font_size) # FONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONT
+        font_name = random.choice(["Verdana", "Times New Roman", "Arial", "Gulliver Regular"])
+        font_style = random.choice([Font.PLAIN, Font.BOLD])
+        font = Font(font_name, font_style, font_size)
+        #font = Font("Verdana", Font.PLAIN, font_size) # FONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONTFONT
         StandardGenerator = JClass("org.openscience.cdk.renderer.generators.standard.StandardGenerator")(font)
         generators.add(StandardGenerator)
         
