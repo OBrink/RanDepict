@@ -28,7 +28,7 @@ setuptools.setup(
         "rdkit-pypi",
         "imagecorruptions",
     ],
-     data_files=[('superatom', ['assets/superatom.txt']),
+     data_files=[('superatom', ['RanDepict/assets/superatom.txt']),
                   ('cdk_jar', ['assets/jar_files/cdk_2_5.jar']),
                   ('straight_arrows', ['assets/arrow_images/straight_arrows/*.png']),
                   ('curved_arrows', ['assets/arrow_images/curved_arrows/*.png']),
