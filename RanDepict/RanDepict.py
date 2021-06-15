@@ -42,6 +42,7 @@ class random_depictor:
             jvmPath = "Define/your/path/or/set/your/JAVA_HOME/variable/properly"
         if not isJVMStarted():
             jar_path = HERE.joinpath("assets/jar_files/cdk_2_5.jar")
+            print(jar_path)
             startJVM(jvmPath, "-ea", "-Djava.class.path=" + jar_path)
 
         # Load list of superatoms (from OSRA)
