@@ -28,8 +28,11 @@ setuptools.setup(
         "rdkit-pypi",
         "imagecorruptions",
     ],
-    data_files=[('RanDepict', ['assets/superatom.txt']),
-                  ('RanDepict/assets/jar_files', ['cdk_2_5.jar'])],
+      data_files=[('superatom', ['RanDepict/assets/superatom.txt']),
+                  ('cdk_jar', ['RanDepict/assets/jar_files/cdk_2_5.jar']),
+                  ('straight_arrows', ['RanDepict/assets/arrow_images/straight_arrows/*.png']),
+                  ('curved_arrows', ['RanDepict/assets/arrow_images/curved_arrows/*.png']),
+                  ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.5",
