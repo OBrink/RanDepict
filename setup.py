@@ -30,9 +30,9 @@ setuptools.setup(
     ],
     package_data={
         "RanDepict.assets": ["*"],
-        "RanDepict.assets/jar_files": ["*"],
-        "RanDepict.assets/arrow_images/straight_arrows": ["*"],
-        "RanDepict.assets/arrow_images/curved_arrows": ["*"],
+        "RanDepict.assets.jar_files": ["*"],
+        "RanDepict.assets.arrow_images.straight_arrows": ["*"],
+        "RanDepict.assets.arrow_images.curved_arrows": ["*"],
     },
     classifiers=[
         "Programming Language :: Python :: 3",
