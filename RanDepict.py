@@ -6,11 +6,11 @@ from skimage.transform import resize
 from skimage.color import rgba2rgb, rgb2gray
 from skimage.util import img_as_ubyte, img_as_float
 from PIL import Image, ImageFont, ImageDraw, ImageFilter, ImageStat
-
+from multiprocessing import Pool
 import imgaug.augmenters as iaa
 import random
 from copy import deepcopy
-from typing import Tuple
+from typing import Tuple, List
 
 from rdkit import Chem
 from rdkit.Chem.Draw import rdMolDraw2D
@@ -47,9 +47,9 @@ class random_depictor:
             self.superatoms = [s[:-2] for s in superatoms]
             
             
-    def __call__(self, smiles: str, grayscale: bool = True):
+    def __call__(self, smiles: str, shape: Tuple[int,int,int] = (299,299), grayscale: bool = True):
         # Depict structure with random parameters
-        depiction = self.random_depiction(smiles)
+        depiction = self.random_depiction(smiles, shape)
         # Each type of label and curved arrows have a 1/6 chance to appear
         # In 33% of the cases, we attempt to insert 1-2 straight arrows
         # (incomplete/fails in most cases because there is not enought space) 
@@ -90,23 +90,22 @@ class random_depictor:
                 return file_name
     
     
-    def random_image_size(self, shape: Tuple[int,int,int]) -> Tuple[int,int,int]:  
+    def random_image_size(self, shape: Tuple[int,int]) -> Tuple[int,int]:  
         '''This function takes a random image shape and returns an image shape where the 
         first two dimensions are slightly distorted.'''
         # Set random depiction image shape (to cause a slight distortion)
         y = int(shape[0] * random.choice(np.arange(0.9 ,1.1, 0.02)))
         x = int(shape[1] * random.choice(np.arange(0.9 ,1.1, 0.02)))
-        z = shape[2]
-        return y, x, z
+        return y, x
         
 
-    def get_random_indigo_rendering_settings(self, shape: Tuple[int,int,int] = (299,299,3)) -> Indigo:
+    def get_random_indigo_rendering_settings(self, shape: Tuple[int,int] = (299,299)) -> Indigo:
         '''This function defines random rendering options for the structure depictions created
         using Indigo. It returns an Indigo object with the settings.'''
         # Define random shape for depiction (within boundaries); image is resized later)
         indigo = Indigo()
         # Get slightly distorted shape
-        y, x, _ = self.random_image_size(shape)
+        y, x = self.random_image_size(shape)
         indigo.setOption("render-image-width", x)
         indigo.setOption("render-image-height", y)
         # Set random bond line width
@@ -145,7 +144,7 @@ class random_depictor:
         return indigo
 
     
-    def depict_and_resize_indigo(self, smiles: str, shape: Tuple[int,int,int]=(299, 299, 3)) -> np.array:
+    def depict_and_resize_indigo(self, smiles: str, shape: Tuple[int,int]=(299, 299)) -> np.array:
         '''This function takes a smiles str and an image shape. It renders the chemical structures
         using Indigo with random rendering/depiction settings and returns an RGB image (np.array) 
         with the given image shape.'''
@@ -174,11 +173,11 @@ class random_depictor:
         return depiction
 
 
-    def get_random_rdkit_rendering_settings(self, shape: Tuple[int,int,int] = (299,299,3)) -> rdMolDraw2D.MolDraw2DCairo:
+    def get_random_rdkit_rendering_settings(self, shape: Tuple[int,int] = (299,299)) -> rdMolDraw2D.MolDraw2DCairo:
         '''This function defines random rendering options for the structure depictions created
         using rdkit. It returns an MolDraw2DCairo object with the settings.'''
         # Get slightly distorted shape
-        y, x, _ = self.random_image_size(shape)
+        y, x = self.random_image_size(shape)
         # Instantiate object that saves the settings
         depiction_settings = rdMolDraw2D.MolDraw2DCairo(y,x)
         # Stereo bond annotation
@@ -215,7 +214,7 @@ class random_depictor:
         return depiction_settings
 
     
-    def depict_and_resize_rdkit(self, smiles: str, shape: Tuple[int,int]=(299, 299, 3)) -> np.array:
+    def depict_and_resize_rdkit(self, smiles: str, shape: Tuple[int,int]=(299, 299)) -> np.array:
         '''This function takes a smiles str and an image shape. It renders the chemical structures
         using Rdkit with random rendering/depiction settings and returns an RGB image (np.array) 
         with the given image shape.'''
@@ -299,7 +298,7 @@ class random_depictor:
         return rendererModel
     
 
-    def depict_and_resize_cdk(self, smiles: str, shape: Tuple[int,int]=(299, 299, 3)) -> np.array:
+    def depict_and_resize_cdk(self, smiles: str, shape: Tuple[int,int]=(299, 299)) -> np.array:
         '''This function takes a smiles str and an image shape. It renders the chemical structures
         using CDK with random rendering/depiction settings and returns an RGB image (np.array) 
         with the given image shape.
@@ -343,7 +342,7 @@ class random_depictor:
         renderer = JClass("org.openscience.cdk.renderer.AtomContainerRenderer")(generators, AWTFontManager())
         
         # Create an empty image of the right size
-        y, x, _ = self.random_image_size(shape)
+        y, x = self.random_image_size(shape)
         drawArea = JClass("java.awt.Rectangle")(x, y)
         BufferedImage = JClass("java.awt.image.BufferedImage")
         image = BufferedImage(x, y, BufferedImage.TYPE_INT_RGB)
@@ -378,7 +377,7 @@ class random_depictor:
         return depiction
 
 
-    def random_depiction(self, smiles: str, shape: Tuple[int, int, int] = (299, 299, 3)) -> np.array:
+    def random_depiction(self, smiles: str, shape: Tuple[int, int] = (299, 299)) -> np.array:
         '''This function takes a SMILES str and depicts it using Rdkit, Indigo or CDK.
         The depiction method and the specific parameters for the depiction are chosen
         completely randomly. The purpose of this function is to enable depicting a diverse
@@ -642,3 +641,44 @@ class random_depictor:
     def to_grayscale_float_img(self, image: np.array) -> np.array:
         '''This function takes an image (np.array), converts it to grayscale and returns it.'''
         return img_as_float(rgb2gray(image))
+
+
+    def depict_save(self, smiles: str, images_per_structure: int, output_dir: str, shape: Tuple[int,int] = (299,299)):
+        '''This function takes a SMILES str, the amount of images to create per SMILES str and the path
+        of an output directory. It then creates images_per_structure depictions of the chemical structure
+        that is represented by the SMILES str and saves it as PNG images in output_dir. '''
+        self.__init__() # JVM has to be launched in each thread to make multiprocessing work
+        for n in range(images_per_structure):
+            image = self.random_depiction(smiles, shape)
+            output_file_path = os.path.join(output_dir, smiles + '_' + str(n) + '.png')
+            sk_io.imsave(output_file_path, img_as_ubyte(image))
+
+
+    def depict_augment_save(self, smiles: str, images_per_structure: int, output_dir: str, shape: Tuple[int,int] = (299,299)):
+        '''This function takes a SMILES str, the amount of images to create per SMILES str and the path
+        of an output directory. It then creates images_per_structure augmented depictions of the chemical structure
+        that is represented by the SMILES str and saves it as PNG images in output_dir. '''
+        self.__init__() # JVM has to be launched in each thread to make multiprocessing work
+        for n in range(images_per_structure):
+            image = self(smiles, shape)
+            output_file_path = os.path.join(output_dir, smiles + '_' + str(n) + '.png')
+            sk_io.imsave(output_file_path, img_as_ubyte(image))
+
+
+    def batch_depict_save(self, smiles_list: List[str], images_per_structure: int, output_dir: str, shape: Tuple[int,int] = (299,299)) -> None:
+        '''This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
+        of an output directory. It then creates images_per_structure depictions of each chemical structure
+        that is represented by a SMILES str and saves them as PNG images in output_dir. '''
+        starmap_tuple_generator = ((smiles, images_per_structure, output_dir, shape) for smiles in smiles_list)
+        with Pool() as p:
+            p.starmap(self.depict_save, starmap_tuple_generator)
+
+
+    def batch_depict_augment_save(self, smiles_list: List[str], images_per_structure: int, output_dir: str, shape: Tuple[int,int] = (299,299)) -> None:
+        '''This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
+        of an output directory. It then creates images_per_structure augmented depictions of each chemical structure
+        that is represented by a SMILES str and saves them as PNG images in output_dir.'''
+        starmap_tuple_generator = ((smiles, images_per_structure, output_dir, shape) for smiles in smiles_list)
+        with Pool() as p:
+            p.starmap(self.depict_augment_save, starmap_tuple_generator)
+        
