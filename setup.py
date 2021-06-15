@@ -17,10 +17,16 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/OBrink/RanDepict",
     packages=setuptools.find_packages(),
-    license='MIT',
+    license="MIT",
     install_requires=[
-          'markdown','numpy','scikit-image','epam.indigo','jpype1','ipyplot','rdkit-pypi'
-      ],
+        "markdown",
+        "numpy",
+        "scikit-image",
+        "epam.indigo",
+        "jpype1",
+        "ipyplot",
+        "rdkit-pypi",
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.5",
