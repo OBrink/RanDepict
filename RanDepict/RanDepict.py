@@ -19,6 +19,8 @@ from indigo.renderer import IndigoRenderer
 from jpype import *
 import base64
 
+from .assets import HERE
+
 
 class random_depictor:
     """This class contains everything necessary to generate a variety of random depictions
@@ -39,11 +41,11 @@ class random_depictor:
             )
             jvmPath = "Define/your/path/or/set/your/JAVA_HOME/variable/properly"
         if not isJVMStarted():
-            jar_path = ("assets/jar_files/cdk_2_5.jar")
+            jar_path = HERE.joinpath("assets/jar_files/cdk_2_5.jar")
             startJVM(jvmPath, "-ea", "-Djava.class.path=" + jar_path)
 
         # Load list of superatoms (from OSRA)
-        with open("assets/superatom.txt") as superatoms:
+        with open(HERE.joinpath("assets/superatom.txt")) as superatoms:
             superatoms = superatoms.readlines()
             self.superatoms = [s[:-2] for s in superatoms]
 
