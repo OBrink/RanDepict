@@ -41,12 +41,12 @@ class random_depictor:
             )
             jvmPath = "Define/your/path/or/set/your/JAVA_HOME/variable/properly"
         if not isJVMStarted():
-            jar_path = HERE.joinpath("assets/jar_files/cdk_2_5.jar")
+            jar_path = HERE.joinpath("jar_files/cdk_2_5.jar")
             print(jar_path)
             startJVM(jvmPath, "-ea", "-Djava.class.path=" + str(jar_path))
 
         # Load list of superatoms (from OSRA)
-        with open(HERE.joinpath("assets/superatom.txt")) as superatoms:
+        with open(HERE.joinpath("superatom.txt")) as superatoms:
             superatoms = superatoms.readlines()
             self.superatoms = [s[:-2] for s in superatoms]
 
@@ -788,7 +788,7 @@ class random_depictor:
         x_min, x_max = (int(0.1 * width), int(0.9 * width))
         y_min, y_max = (int(0.1 * height), int(0.9 * height))
 
-        arrow_dir = os.path.normpath("assets/arrow_images/curved_arrows/")
+        arrow_dir = os.path.normpath(str(HERE.joinpath("arrow_images/curved_arrows/")))
 
         for _ in range(random.choice(range(2, 4))):
             # Load random curved arrow image, resize and rotate it randomly.
@@ -847,7 +847,7 @@ class random_depictor:
         height, width, _ = image.shape
         image = Image.fromarray(image)
 
-        arrow_dir = os.path.normpath("assets/arrow_images/straight_arrows/")
+        arrow_dir = os.path.normpath(str(HERE.joinpath("assets/arrow_images/straight_arrows/")))
 
         for _ in range(random.choice(range(1, 3))):
             # Load random curved arrow image, resize and rotate it randomly.
