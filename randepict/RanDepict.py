@@ -39,11 +39,11 @@ class random_depictor:
             )
             jvmPath = "Define/your/path/or/set/your/JAVA_HOME/variable/properly"
         if not isJVMStarted():
-            jar_path = "./jar_files/"
-            startJVM(jvmPath, "-ea", "-Djava.class.path=./jar_files/cdk_2_5.jar")
+            jar_path = os.path.join(os.path.split(os.path.realpath(__file__))[0], "../jar_files/cdk_2_5.jar")
+            startJVM(jvmPath, "-ea", "-Djava.class.path=" + jar_path)
 
         # Load list of superatoms (from OSRA)
-        with open("./superatom.txt") as superatoms:
+        with open(os.path.join(os.path.split(os.path.realpath(__file__))[0], "../superatom.txt")) as superatoms:
             superatoms = superatoms.readlines()
             self.superatoms = [s[:-2] for s in superatoms]
 
@@ -205,7 +205,7 @@ class random_depictor:
         if random.choice([True, False]):
             depiction_settings.drawOptions().explicitMethyl = True
         # Label font type and size
-        font_dir = os.path.normpath("./fonts/")
+        font_dir = os.path.join(os.path.join(os.path.split(os.path.realpath(__file__))[0], "../fonts/"))
         font_path = os.path.join(font_dir, random.choice(os.listdir(font_dir)))
         depiction_settings.drawOptions().fontFile = font_path
         min_font_size = random.choice(range(10, 20))
@@ -739,7 +739,7 @@ class random_depictor:
         orig_image = deepcopy(im)
         width, height = im.size
         # Choose random font
-        font_dir = os.path.abspath("./fonts/")
+        font_dir = os.path.join(os.path.join(os.path.split(os.path.realpath(__file__))[0], "../fonts/"))
         fonts = os.listdir(font_dir)
         # Choose random font size
         font_sizes = range(10, 20)
@@ -894,14 +894,20 @@ class random_depictor:
         images_per_structure: int,
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
+        ID = False,
     ):
         """This function takes a SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure depictions of the chemical structure
-        that is represented by the SMILES str and saves it as PNG images in output_dir."""
+        that is represented by the SMILES str and saves it as PNG images in output_dir.
+        If an ID is given, it is used as the base filename. Otherwise, the SMILES str is used."""
         self.__init__()  # JVM has to be launched in each thread to make multiprocessing work
+        if not ID:
+            name = smiles
+        else:
+            name = ID
         for n in range(images_per_structure):
             image = self.random_depiction(smiles, shape)
-            output_file_path = os.path.join(output_dir, smiles + "_" + str(n) + ".png")
+            output_file_path = os.path.join(output_dir, name + "_" + str(n) + ".png")
             sk_io.imsave(output_file_path, img_as_ubyte(image))
 
     def depict_augment_save(
@@ -910,14 +916,20 @@ class random_depictor:
         images_per_structure: int,
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
-    ):
+        ID = False,
+    ) -> None:
         """This function takes a SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure augmented depictions of the chemical structure
-        that is represented by the SMILES str and saves it as PNG images in output_dir."""
+        that is represented by the SMILES str and saves it as PNG images in output_dir.
+        If an ID is given, it is used as the base filename. Otherwise, the SMILES str is used."""
         self.__init__()  # JVM has to be launched in each thread to make multiprocessing work
+        if not ID:
+            name = smiles
+        else:
+            name = ID
         for n in range(images_per_structure):
             image = self(smiles, shape)
-            output_file_path = os.path.join(output_dir, smiles + "_" + str(n) + ".png")
+            output_file_path = os.path.join(output_dir, name + "_" + str(n) + ".png")
             sk_io.imsave(output_file_path, img_as_ubyte(image))
 
     def batch_depict_save(
@@ -926,13 +938,21 @@ class random_depictor:
         images_per_structure: int,
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
+        ID_list = False,
     ) -> None:
         """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure depictions of each chemical structure
-        that is represented by a SMILES str and saves them as PNG images in output_dir."""
-        starmap_tuple_generator = (
-            (smiles, images_per_structure, output_dir, shape) for smiles in smiles_list
-        )
+        that is represented by a SMILES str and saves them as PNG images in output_dir.
+        If an ID list (list with names of same length as smiles_list that contains unique IDs), the IDs will be used
+        to name the files. Otherwise, the SMILES str is used as a filename."""
+        if ID_list:
+            starmap_tuple_generator = (
+                (smiles_list[n], images_per_structure, output_dir, shape, ID_list[n],) for n in range(len(smiles_list))
+            )
+        else:
+            starmap_tuple_generator = (
+                (smiles, images_per_structure, output_dir, shape) for smiles in smiles_list
+            )
         with Pool() as p:
             p.starmap(self.depict_save, starmap_tuple_generator)
 
@@ -942,12 +962,20 @@ class random_depictor:
         images_per_structure: int,
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
+        ID_list = False,
     ) -> None:
         """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure augmented depictions of each chemical structure
-        that is represented by a SMILES str and saves them as PNG images in output_dir."""
-        starmap_tuple_generator = (
-            (smiles, images_per_structure, output_dir, shape) for smiles in smiles_list
-        )
+        that is represented by a SMILES str and saves them as PNG images in output_dir.
+        If an ID list (list with names of same length as smiles_list that contains unique IDs), the IDs will be used
+        to name the files. Otherwise, the SMILES str is used as a filename."""
+        if ID_list:
+            starmap_tuple_generator = (
+                (smiles_list[n], images_per_structure, output_dir, shape, ID_list[n]) for n in range(len(smiles_list))
+            )
+        else:
+            starmap_tuple_generator = (
+                (smiles, images_per_structure, output_dir, shape) for smiles in smiles_list
+            )
         with Pool() as p:
             p.starmap(self.depict_augment_save, starmap_tuple_generator)
