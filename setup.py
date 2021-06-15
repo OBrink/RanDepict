@@ -39,4 +39,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.5",
+    package_data={'RanDepict': ['assets/*.*']
 )
