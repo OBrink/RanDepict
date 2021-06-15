@@ -82,7 +82,7 @@ class random_depictor:
         pass
         
 
-    def get_nonexisting_image_name(self, path: str = './tmp/', format: str = 'PNG') -> str:
+    def get_nonexisting_image_name(self, path: str = './temp/', format: str = 'PNG') -> str:
         '''This function returns a random file name that does not already exist at path'''
         for _ in range(100):
             file_name = str(random.choice(range(10000))) + '.' + format
@@ -163,10 +163,12 @@ class random_depictor:
         molecule.layout()
         # Create structure depiction, save in temporary file and load as Pillow image
         # TODO: Do this without saving file (renderToBuffer format does not seem to work)
-        tmp_filename = self.get_nonexisting_image_name(path= './tmp/', format= 'png')
-        renderer.renderToFile(molecule, os.path.join('./tmp/', tmp_filename))
-        depiction = sk_io.imread(os.path.join('./tmp/', tmp_filename))
-        os.remove(os.path.join('./tmp/', tmp_filename))
+        if not os.path.exists('./temp/'):
+            os.mkdir('./temp/')
+        tmp_filename = self.get_nonexisting_image_name(path= './temp/', format= 'png')
+        renderer.renderToFile(molecule, os.path.join('./temp/', tmp_filename))
+        depiction = sk_io.imread(os.path.join('./temp/', tmp_filename))
+        os.remove(os.path.join('./temp/', tmp_filename))
         depiction = resize(depiction, (shape[0], shape[1], 4))
         depiction = rgba2rgb(depiction)
         depiction = img_as_ubyte(depiction)
