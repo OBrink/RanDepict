@@ -19,8 +19,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     license="MIT",
     install_requires=[
-        "markdown",
-        "numpy",
+        "numpy>=1.19",
         "imgaug",
         "scikit-image",
         "epam.indigo",
