@@ -26,6 +26,7 @@ setuptools.setup(
         "jpype1",
         "ipyplot",
         "rdkit-pypi",
+        "imagecorruptions",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
