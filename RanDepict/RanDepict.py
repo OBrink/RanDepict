@@ -793,7 +793,7 @@ class random_depictor:
         for _ in range(random.choice(range(2, 4))):
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(
-                os.path.join(arrow_dir, random.choice(os.listdir(arrow_dir)))
+                os.path.join(str(arrow_dir), random.choice(os.listdir(str(arrow_dir))))
             )
             new_arrow_image_shape = int(
                 (x_max - x_min) / random.choice(range(3, 6))
@@ -848,13 +848,13 @@ class random_depictor:
         image = Image.fromarray(image)
 
         arrow_dir = os.path.normpath(
-            str(HERE.joinpath("assets/arrow_images/straight_arrows/"))
+            str(HERE.joinpath("arrow_images/straight_arrows/"))
         )
 
         for _ in range(random.choice(range(1, 3))):
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(
-                os.path.join(arrow_dir, random.choice(os.listdir(arrow_dir)))
+                os.path.join(str(arrow_dir), random.choice(os.listdir(str(arrow_dir))))
             )
             # new_arrow_image_shape = (int(width * random.choice(np.arange(0.9, 1.5, 0.1))), int(height/10 * random.choice(np.arange(0.7, 1.2, 0.1))))
 
