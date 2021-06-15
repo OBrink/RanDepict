@@ -28,8 +28,8 @@ setuptools.setup(
         "rdkit-pypi",
         "imagecorruptions",
     ],
-    package_data={
-  'RanDepict': ['assets/*'],
+package_data={
+  'RanDepict.assets': ['*'],
   'RanDepict': ['assets/jar_files/*'],
   'RanDepict': ['assets/arrow_images/straight_arrows/*'],
   'RanDepict': ['assets/arrow_images/curved_arrows/*'],
