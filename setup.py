@@ -21,6 +21,7 @@ setuptools.setup(
     install_requires=[
         "markdown",
         "numpy",
+        "imgaug",
         "scikit-image",
         "epam.indigo",
         "jpype1",
