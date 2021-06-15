@@ -26,7 +26,11 @@ $ conda install pip
 $ python -m pip install -U pip #Upgrade pip
 $ pip install numpy scikit-image epam.indigo jpype1 ipyplot
 ```
-
+### Alternate
+```
+$ python -m pip install -U pip #Upgrade pip
+$ pip install git+https://github.com/OBrink/RanDepict.git
+```
 ### Basic usage: 
 ```
 from RanDepict import random_depictor
@@ -40,7 +44,7 @@ with random_depictor() as depictor:
 Have a look in the RanDepictNotebook.ipynb for more examples and a more detailed documentation.
 
 
-## TODO: Set up instructions to build an environment to run it.
+## TODO: Archive code on zenodo and then publish the package. Also publish the package on PyPI.
 
 
 
