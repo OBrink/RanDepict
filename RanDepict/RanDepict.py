@@ -209,7 +209,7 @@ class random_depictor:
             depiction_settings.drawOptions().explicitMethyl = True
         # Label font type and size
         font_dir = HERE.joinpath("fonts/")
-        font_path = os.path.join(str(font_dir), random.choice(os.listdir(font_dir)))
+        font_path = os.path.join(str(font_dir), random.choice(os.listdir(str(font_dir))))
         depiction_settings.drawOptions().fontFile = font_path
         min_font_size = random.choice(range(10, 20))
         depiction_settings.drawOptions().minFontSize = min_font_size
@@ -742,10 +742,8 @@ class random_depictor:
         orig_image = deepcopy(im)
         width, height = im.size
         # Choose random font
-        font_dir = os.path.join(
-            os.path.join(os.path.split(os.path.realpath(__file__))[0], "../fonts/")
-        )
-        fonts = os.listdir(font_dir)
+        font_dir = HERE.joinpath("fonts/")
+        fonts = os.listdir(str(font_dir))
         # Choose random font size
         font_sizes = range(10, 20)
         size = random.choice(font_sizes)
@@ -759,7 +757,7 @@ class random_depictor:
 
         try:
             font = ImageFont.truetype(
-                str(os.path.join(font_dir, random.choice(fonts))), size=size
+                str(os.path.join(str(font_dir), random.choice(fonts))), size=size
             )
         except OSError:
             font = ImageFont.load_default()
