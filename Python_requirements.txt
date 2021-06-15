@@ -1,0 +1,6 @@
+rdkit
+numpy
+scikit-image
+epam.indigo
+jpype1
+ipyplot
