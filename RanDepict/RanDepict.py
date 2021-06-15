@@ -208,8 +208,8 @@ class random_depictor:
         if random.choice([True, False]):
             depiction_settings.drawOptions().explicitMethyl = True
         # Label font type and size
-        font_dir = os.path.join(os.path.join(os.path.split(os.path.realpath(__file__))[0], "../fonts/"))
-        font_path = os.path.join(font_dir, random.choice(os.listdir(font_dir)))
+        font_dir = HERE.joinpath("fonts/")
+        font_path = os.path.join(str(font_dir), random.choice(os.listdir(font_dir)))
         depiction_settings.drawOptions().fontFile = font_path
         min_font_size = random.choice(range(10, 20))
         depiction_settings.drawOptions().minFontSize = min_font_size
@@ -742,7 +742,9 @@ class random_depictor:
         orig_image = deepcopy(im)
         width, height = im.size
         # Choose random font
-        font_dir = os.path.join(os.path.join(os.path.split(os.path.realpath(__file__))[0], "../fonts/"))
+        font_dir = os.path.join(
+            os.path.join(os.path.split(os.path.realpath(__file__))[0], "../fonts/")
+        )
         fonts = os.listdir(font_dir)
         # Choose random font size
         font_sizes = range(10, 20)
@@ -847,7 +849,9 @@ class random_depictor:
         height, width, _ = image.shape
         image = Image.fromarray(image)
 
-        arrow_dir = os.path.normpath(str(HERE.joinpath("assets/arrow_images/straight_arrows/")))
+        arrow_dir = os.path.normpath(
+            str(HERE.joinpath("assets/arrow_images/straight_arrows/"))
+        )
 
         for _ in range(random.choice(range(1, 3))):
             # Load random curved arrow image, resize and rotate it randomly.
@@ -897,7 +901,7 @@ class random_depictor:
         images_per_structure: int,
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
-        ID = False,
+        ID=False,
     ):
         """This function takes a SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure depictions of the chemical structure
@@ -919,7 +923,7 @@ class random_depictor:
         images_per_structure: int,
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
-        ID = False,
+        ID=False,
     ) -> None:
         """This function takes a SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure augmented depictions of the chemical structure
@@ -941,7 +945,7 @@ class random_depictor:
         images_per_structure: int,
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
-        ID_list = False,
+        ID_list=False,
     ) -> None:
         """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure depictions of each chemical structure
@@ -950,11 +954,19 @@ class random_depictor:
         to name the files. Otherwise, the SMILES str is used as a filename."""
         if ID_list:
             starmap_tuple_generator = (
-                (smiles_list[n], images_per_structure, output_dir, shape, ID_list[n],) for n in range(len(smiles_list))
+                (
+                    smiles_list[n],
+                    images_per_structure,
+                    output_dir,
+                    shape,
+                    ID_list[n],
+                )
+                for n in range(len(smiles_list))
             )
         else:
             starmap_tuple_generator = (
-                (smiles, images_per_structure, output_dir, shape) for smiles in smiles_list
+                (smiles, images_per_structure, output_dir, shape)
+                for smiles in smiles_list
             )
         with Pool() as p:
             p.starmap(self.depict_save, starmap_tuple_generator)
@@ -965,7 +977,7 @@ class random_depictor:
         images_per_structure: int,
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
-        ID_list = False,
+        ID_list=False,
     ) -> None:
         """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure augmented depictions of each chemical structure
@@ -974,11 +986,13 @@ class random_depictor:
         to name the files. Otherwise, the SMILES str is used as a filename."""
         if ID_list:
             starmap_tuple_generator = (
-                (smiles_list[n], images_per_structure, output_dir, shape, ID_list[n]) for n in range(len(smiles_list))
+                (smiles_list[n], images_per_structure, output_dir, shape, ID_list[n])
+                for n in range(len(smiles_list))
             )
         else:
             starmap_tuple_generator = (
-                (smiles, images_per_structure, output_dir, shape) for smiles in smiles_list
+                (smiles, images_per_structure, output_dir, shape)
+                for smiles in smiles_list
             )
         with Pool() as p:
             p.starmap(self.depict_augment_save, starmap_tuple_generator)
