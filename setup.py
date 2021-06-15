@@ -28,7 +28,7 @@ setuptools.setup(
         "rdkit-pypi",
         "imagecorruptions",
     ],
-    package_data = {"RanDepict": ['assets/*.*', 'assets/*/*.*']},
+    package_data = {"RanDepict": ['assets/*.*', 'assets/*/*.*', 'assets/*/*/*.*']},
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.5",
