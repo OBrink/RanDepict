@@ -28,8 +28,7 @@ setuptools.setup(
         "rdkit-pypi",
         "imagecorruptions",
     ],
-      data_files=[('superatom', ['RanDepict/assets/superatom.txt']),
-                  ],
+    package_data = {"RanDepict": ['assets/*.*', 'assets/*/*.*']},
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.5",
