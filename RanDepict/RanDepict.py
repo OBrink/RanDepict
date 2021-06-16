@@ -22,13 +22,14 @@ import base64
 from .assets import HERE
 
 
+
 class random_depictor:
     """This class contains everything necessary to generate a variety of random depictions
     with given SMILES strings.
     An instance of random_depictor can be called with a SMILES str and returns an np.array
     that represents the RGB image with the given chemical structure."""
 
-    def __init__(self):
+    def __init__(self, seed: int=42):
         """Load the JVM only once, otherwise it produces errors."""
         # Start the JVM to access Java classes
         try:
@@ -44,6 +45,10 @@ class random_depictor:
             jar_path = HERE.joinpath("jar_files/cdk_2_5.jar")
             print(jar_path)
             startJVM(jvmPath, "-ea", "-Djava.class.path=" + str(jar_path))
+
+        self.seed = seed
+        random.seed(self.seed)
+
 
         # Load list of superatoms (from OSRA)
         with open(HERE.joinpath("superatom.txt")) as superatoms:
@@ -61,15 +66,15 @@ class random_depictor:
         # Each type of label and curved arrows have a 1/6 chance to appear
         # In 33% of the cases, we attempt to insert 1-2 straight arrows
         # (incomplete/fails in most cases because there is not enought space)
-        if random.choice([True, False, False, False, False, False]):
+        if self.random_choice([True, False, False, False, False, False]):
             depiction = self.add_curved_arrows_to_structure(depiction)
-        if random.choice([True, False, False]):
+        if self.random_choice([True, False, False]):
             depiction = self.add_straight_arrows_to_structure(depiction)
-        if random.choice([True, False, False, False, False, False]):
+        if self.random_choice([True, False, False, False, False, False]):
             depiction = self.add_chemical_label(depiction, "ID")
-        if random.choice([True, False, False, False, False, False]):
+        if self.random_choice([True, False, False, False, False, False]):
             depiction = self.add_chemical_label(depiction, "R_GROUP")
-        if random.choice([True, False, False, False, False, False]):
+        if self.random_choice([True, False, False, False, False, False]):
             depiction = self.add_chemical_label(depiction, "REACTION")
         # Add augmentations
         depiction = self.imgaug_augment(depiction)
@@ -87,12 +92,20 @@ class random_depictor:
         # shutdownJVM()
         pass
 
+    def random_choice(self, iterable: List):
+        '''This function takes an iterable, calls self.random_choice() on it,
+        increases random.seed by 1 and returns the result. This way, results 
+        produced by RanDepict are replicable.'''
+        self.seed += 1
+        random.seed(self.seed)
+        return random.choice(iterable)
+
     def get_nonexisting_image_name(
         self, path: str = "./temp/", format: str = "PNG"
     ) -> str:
         """This function returns a random file name that does not already exist at path"""
         for _ in range(100):
-            file_name = str(random.choice(range(10000))) + "." + format
+            file_name = str(self.random_choice(range(10000))) + "." + format
             if not os.path.exists(os.path.join(path, file_name)):
                 return file_name
 
@@ -100,8 +113,8 @@ class random_depictor:
         """This function takes a random image shape and returns an image shape where the
         first two dimensions are slightly distorted."""
         # Set random depiction image shape (to cause a slight distortion)
-        y = int(shape[0] * random.choice(np.arange(0.9, 1.1, 0.02)))
-        x = int(shape[1] * random.choice(np.arange(0.9, 1.1, 0.02)))
+        y = int(shape[0] * self.random_choice(np.arange(0.9, 1.1, 0.02)))
+        x = int(shape[1] * self.random_choice(np.arange(0.9, 1.1, 0.02)))
         return y, x
 
     def get_random_indigo_rendering_settings(
@@ -116,39 +129,39 @@ class random_depictor:
         indigo.setOption("render-image-width", x)
         indigo.setOption("render-image-height", y)
         # Set random bond line width
-        bond_line_width = float(random.choice(np.arange(0.5, 2.5, 0.5)))
+        bond_line_width = float(self.random_choice(np.arange(0.5, 2.5, 0.5)))
         indigo.setOption("render-bond-line-width", bond_line_width)
         # Set random relative thickness
-        relative_thickness = float(random.choice(np.arange(0.5, 1.5, 0.1)))
+        relative_thickness = float(self.random_choice(np.arange(0.5, 1.5, 0.1)))
         indigo.setOption("render-relative-thickness", relative_thickness)
         # Set random bond length
         # CAREFUL! Changing the bond length does not change the bond length relative to other
         # elements. Instead, the whole molecule is scaled down!
-        # bond_length = random.choice(range(int(shape[0]/19), int(shape[0]/6))) #19
+        # bond_length = self.random_choice(range(int(shape[0]/19), int(shape[0]/6))) #19
         # indigo.setOption("render-bond-length", bond_length)
         # Output_format: PNG
         indigo.setOption("render-output-format", "png")
         # Set random atom label rendering model (standard is rendering terminal groups)
-        if random.choice([True] + [False] * 19):
+        if self.random_choice([True] + [False] * 19):
             indigo.setOption("render-label-mode", "all")  # show all atom labels
-        elif random.choice([True] + [False] * 3):
+        elif self.random_choice([True] + [False] * 3):
             indigo.setOption(
                 "render-label-mode", "hetero"
             )  # only hetero atoms, no terminal groups
         # Set random depiction colour / not necessary for us as we binarise everything anyway
-        # if random.choice([True, False, False, False, False]):
-        #    R = str(random.choice(np.arange(0.1, 1.0, 0.1)))
-        #    G = str(random.choice(np.arange(0.1, 1.0, 0.1)))
-        #    B = str(random.choice(np.arange(0.1, 1.0, 0.1)))
+        # if self.random_choice([True, False, False, False, False]):
+        #    R = str(self.random_choice(np.arange(0.1, 1.0, 0.1)))
+        #    G = str(self.random_choice(np.arange(0.1, 1.0, 0.1)))
+        #    B = str(self.random_choice(np.arange(0.1, 1.0, 0.1)))
         #    indigo.setOption("render-base-color", ", ".join([R,G,B]))
         # Render bold bond for Haworth projection
-        if random.choice([True, False]):
+        if self.random_choice([True, False]):
             indigo.setOption("render-bold-bond-detection", "True")
         # Render labels for stereobonds
-        stereo_style = random.choice(["ext", "old", "none"])
+        stereo_style = self.random_choice(["ext", "old", "none"])
         indigo.setOption("render-stereo-style", stereo_style)
         # Collapse superatoms (default: expand)
-        if random.choice([True, False]):
+        if self.random_choice([True, False]):
             indigo.setOption("render-superatom-mode", "collapse")
         return indigo
 
@@ -168,7 +181,7 @@ class random_depictor:
         # Load molecule
         molecule = indigo.loadMolecule(smiles)
         # Do not kekulize in 20% of cases
-        if random.choice([True, True, False, False, False, False]):
+        if self.random_choice([True, True, False, False, False, False]):
             molecule.aromatize()
         molecule.layout()
         # Create structure depiction, save in temporary file and load as Pillow image
@@ -194,33 +207,33 @@ class random_depictor:
         # Instantiate object that saves the settings
         depiction_settings = rdMolDraw2D.MolDraw2DCairo(y, x)
         # Stereo bond annotation
-        if random.choice([True, False]):
+        if self.random_choice([True, False]):
             depiction_settings.drawOptions().addStereoAnnotation = True
-        if random.choice([True, False]):
+        if self.random_choice([True, False]):
             depiction_settings.drawOptions().includeChiralFlagLabel = True
         # Atom indices
-        if random.choice([True, False, False, False]):
+        if self.random_choice([True, False, False, False]):
             depiction_settings.drawOptions().addAtomIndices = True
         # Bond line width
-        bond_line_width = random.choice(range(1, 5))
+        bond_line_width = self.random_choice(range(1, 5))
         depiction_settings.drawOptions().bondLineWidth = bond_line_width
         # Draw terminal methyl groups
-        if random.choice([True, False]):
+        if self.random_choice([True, False]):
             depiction_settings.drawOptions().explicitMethyl = True
         # Label font type and size
         font_dir = HERE.joinpath("fonts/")
-        font_path = os.path.join(str(font_dir), random.choice(os.listdir(str(font_dir))))
+        font_path = os.path.join(str(font_dir), self.random_choice(os.listdir(str(font_dir))))
         depiction_settings.drawOptions().fontFile = font_path
-        min_font_size = random.choice(range(10, 20))
+        min_font_size = self.random_choice(range(10, 20))
         depiction_settings.drawOptions().minFontSize = min_font_size
         depiction_settings.drawOptions().maxFontSize = 30
         # Rotate the molecule
-        depiction_settings.drawOptions().rotate = random.choice(range(360))
+        depiction_settings.drawOptions().rotate = self.random_choice(range(360))
         # Fixed bond length
-        fixed_bond_length = random.choice(range(30, 45))
+        fixed_bond_length = self.random_choice(range(30, 45))
         depiction_settings.drawOptions().fixedBondLength = fixed_bond_length
         # Comic mode (looks a bit hand drawn)
-        if random.choice([True, False, False, False, False]):
+        if self.random_choice([True, False, False, False, False]):
             depiction_settings.drawOptions().comicMode = True
         # Keep it black and white
         depiction_settings.drawOptions().useBWAtomPalette()
@@ -260,11 +273,11 @@ class random_depictor:
 
         # Define visibility of atom/superatom labels
         SymbolVisibility = JClass("org.openscience.cdk.renderer.SymbolVisibility")
-        if random.choice([True] + [False] * 19):
+        if self.random_choice([True] + [False] * 19):
             rendererModel.set(
                 StandardGenerator.Visibility.class_, SymbolVisibility.all()
             )  # show all atom labels
-        elif random.choice([True] + [False] * 3):
+        elif self.random_choice([True] + [False] * 3):
             # only hetero atoms, no terminal alkyl groups
             rendererModel.set(
                 StandardGenerator.Visibility.class_,
@@ -276,30 +289,30 @@ class random_depictor:
                 SymbolVisibility.iupacRecommendations(),
             )
         # Define bond line stroke width
-        stroke_width = random.choice(np.arange(0.8, 2.0, 0.1))
+        stroke_width = self.random_choice(np.arange(0.8, 2.0, 0.1))
         rendererModel.set(StandardGenerator.StrokeRatio.class_, stroke_width)
         # Define symbol margin ratio
-        margin_ratio = random.choice([0, 1, 2, 2, 2, 3, 4])
+        margin_ratio = self.random_choice([0, 1, 2, 2, 2, 3, 4])
         rendererModel.set(
             StandardGenerator.SymbolMarginRatio.class_,
             JClass("java.lang.Double")(margin_ratio),
         )
         # Define bond properties
-        double_bond_dist = random.choice(np.arange(0.11, 0.25, 0.01))
+        double_bond_dist = self.random_choice(np.arange(0.11, 0.25, 0.01))
         rendererModel.set(StandardGenerator.BondSeparation.class_, double_bond_dist)
-        wedge_ratio = random.choice(np.arange(4.5, 7.5, 0.1))
+        wedge_ratio = self.random_choice(np.arange(4.5, 7.5, 0.1))
         rendererModel.set(
             StandardGenerator.WedgeRatio.class_, JClass("java.lang.Double")(wedge_ratio)
         )
-        if random.choice([True, False]):
+        if self.random_choice([True, False]):
             rendererModel.set(StandardGenerator.FancyBoldWedges.class_, False)
-        if random.choice([True, False]):
+        if self.random_choice([True, False]):
             rendererModel.set(StandardGenerator.FancyHashedWedges.class_, False)
-        hash_spacing = random.choice(np.arange(4.0, 6.0, 0.2))
+        hash_spacing = self.random_choice(np.arange(4.0, 6.0, 0.2))
         rendererModel.set(StandardGenerator.HashSpacing.class_, hash_spacing)
         # Add CIP labels
         labels = False
-        if random.choice([True, True]):
+        if self.random_choice([True, True]):
             labels = True
             JClass("org.openscience.cdk.geometry.cip.CIPTool").label(molecule)
             for atom in molecule.atoms():
@@ -313,7 +326,7 @@ class random_depictor:
                 )
                 bond.setProperty(StandardGenerator.ANNOTATION_LABEL, label)
         # Add atom indices to the depictions
-        if random.choice([True, False, False, False]):
+        if self.random_choice([True, False, False, False]):
             labels = True
             for atom in molecule.atoms():
                 label = JClass("java.lang.Integer")(1 + molecule.getAtomNumber(atom))
@@ -325,10 +338,10 @@ class random_depictor:
                 JClass("java.awt.Color")(0x000000),
             )
             # Font size of labels
-            font_scale = random.choice(np.arange(0.5, 0.8, 0.1))
+            font_scale = self.random_choice(np.arange(0.5, 0.8, 0.1))
             rendererModel.set(StandardGenerator.AnnotationFontScale.class_, font_scale)
             # Distance between atom numbering and depiction
-            annotation_distance = random.choice(np.arange(0.15, 0.30, 0.05))
+            annotation_distance = self.random_choice(np.arange(0.15, 0.30, 0.05))
             rendererModel.set(
                 StandardGenerator.AnnotationDistance.class_, annotation_distance
             )
@@ -351,7 +364,7 @@ class random_depictor:
         SmilesParser = JClass("org.openscience.cdk.smiles.SmilesParser")(
             SCOB.getInstance()
         )
-        if random.choice([True, True, False, False, False, False]):
+        if self.random_choice([True, True, False, False, False, False]):
             SmilesParser.kekulise(False)
         molecule = SmilesParser.parseSmiles(smiles)
         # Instantiate StructureDiagramGenerator, determine coordinates
@@ -364,7 +377,7 @@ class random_depictor:
         point = JClass("org.openscience.cdk.geometry.GeometryTools").get2DCenter(
             molecule
         )
-        rot_degrees = random.choice(range(360))
+        rot_degrees = self.random_choice(range(360))
         JClass("org.openscience.cdk.geometry.GeometryTools").rotate(
             molecule, point, rot_degrees
         )
@@ -375,12 +388,12 @@ class random_depictor:
             "org.openscience.cdk.renderer.generators.BasicSceneGenerator"
         )()
         generators.add(BasicSceneGenerator)
-        font_size = random.choice(range(10, 20))
+        font_size = self.random_choice(range(10, 20))
         Font = JClass("java.awt.Font")
-        font_name = random.choice(
+        font_name = self.random_choice(
             ["Verdana", "Times New Roman", "Arial", "Gulliver Regular"]
         )
-        font_style = random.choice([Font.PLAIN, Font.BOLD])
+        font_style = self.random_choice([Font.PLAIN, Font.BOLD])
         font = Font(font_name, font_style, font_size)
         StandardGenerator = JClass(
             "org.openscience.cdk.renderer.generators.standard.StandardGenerator"
@@ -447,7 +460,7 @@ class random_depictor:
             self.depict_and_resize_indigo,
             self.depict_and_resize_cdk,
         ]
-        depiction_function = random.choice(depiction_functions)
+        depiction_function = self.random_choice(depiction_functions)
         depiction = depiction_function(smiles, shape)
         return depiction
 
@@ -490,7 +503,7 @@ class random_depictor:
             iaa.ChangeColorTemperature((1100, 10000)),  # colour temperature adjustment
         ]
         # Apply zero to all augmentations
-        aug_number = random.choice(range(0, 3))
+        aug_number = self.random_choice(range(0, 3))
         aug = iaa.SomeOf(aug_number, aug_list)
         augmented_image = aug.augment_images([image])[0]
         augmented_image = resize(augmented_image, original_shape)
@@ -500,7 +513,7 @@ class random_depictor:
         """Given the width and height of an image (int), this function determines a random
         position in the outer 15% of the image and returns a tuple that contain the coordinates
         (y,x) of that position."""
-        if random.choice([True, False]):
+        if self.random_choice([True, False]):
             y_range = range(0, height)
             x_range = list(range(0, int(0.15 * width))) + list(
                 range(int(0.85 * width), width)
@@ -510,7 +523,7 @@ class random_depictor:
                 range(int(0.85 * height), height)
             )
             x_range = range(0, width)
-        return random.choice(y_range), random.choice(x_range)
+        return self.random_choice(y_range), self.random_choice(x_range)
 
     def ID_label_text(self) -> str:
         """This function returns a string that resembles a typical chemica ID label"""
@@ -537,27 +550,27 @@ class random_depictor:
             "numtonum",
             "numcombtonumcomb",
         ]
-        option = random.choice(options)
+        option = self.random_choice(options)
         if option == "only_number":
-            return str(random.choice(label_num))
+            return str(self.random_choice(label_num))
         if option == "num_letter_combination":
-            return str(random.choice(label_num)) + random.choice(label_letters)
+            return str(self.random_choice(label_num)) + self.random_choice(label_letters)
         if option == "numtonum":
-            return str(random.choice(label_num)) + "-" + str(random.choice(label_num))
+            return str(self.random_choice(label_num)) + "-" + str(self.random_choice(label_num))
         if option == "numcombtonumcomb":
             return (
-                str(random.choice(label_num))
-                + random.choice(label_letters)
+                str(self.random_choice(label_num))
+                + self.random_choice(label_letters)
                 + "-"
-                + random.choice(label_letters)
+                + self.random_choice(label_letters)
             )
 
     def new_reaction_condition_elements(self) -> Tuple[str, str, str]:
         """Randomly redefine reaction_time, solvent and other_reactand."""
-        reaction_time = random.choice([str(num) for num in range(30)]) + random.choice(
+        reaction_time = self.random_choice([str(num) for num in range(30)]) + self.random_choice(
             [" h", " min"]
         )
-        solvent = random.choice(
+        solvent = self.random_choice(
             [
                 "MeOH",
                 "EtOH",
@@ -574,7 +587,7 @@ class random_depictor:
                 "DMF",
             ]
         )
-        other_reactand = random.choice(
+        other_reactand = self.random_choice(
             [
                 "HF",
                 "HCl",
@@ -600,9 +613,9 @@ class random_depictor:
     def reaction_condition_label_text(self) -> str:
         """This function returns a random string that looks like a reaction condition label."""
         reaction_condition_label = ""
-        label_type = random.choice(["A", "B", "C", "D"])
+        label_type = self.random_choice(["A", "B", "C", "D"])
         if label_type in ["A", "B"]:
-            for n in range(random.choice(range(1, 5))):
+            for n in range(self.random_choice(range(1, 5))):
                 (
                     reaction_time,
                     solvent,
@@ -640,7 +653,7 @@ class random_depictor:
                 other_reactand + "\n" + solvent + "\n" + reaction_time
             )
         elif label_type == "D":
-            reaction_condition_label += random.choice(
+            reaction_condition_label += self.random_choice(
                 self.new_reaction_condition_elements()
             )
         return reaction_condition_label
@@ -669,66 +682,66 @@ class random_depictor:
         ]
         # Load list of superatoms (from OSRA)
         superatoms = self.superatoms
-        label_type = random.choice(["A", "B", "C", "D", "E"])
+        label_type = self.random_choice(["A", "B", "C", "D", "E"])
         R_group_label = ""
         if label_type == "A":
-            for _ in range(1, random.choice(range(2, 6))):
+            for _ in range(1, self.random_choice(range(2, 6))):
                 R_group_label += (
-                    random.choice(rest_variables)
+                    self.random_choice(rest_variables)
                     + " = "
-                    + random.choice(superatoms)
+                    + self.random_choice(superatoms)
                     + "\n"
                 )
         elif label_type == "B":
-            R_group_label += "      " + random.choice(rest_variables) + "\n"
-            for n in range(1, random.choice(range(2, 6))):
-                R_group_label += str(n) + "    " + random.choice(superatoms) + "\n"
+            R_group_label += "      " + self.random_choice(rest_variables) + "\n"
+            for n in range(1, self.random_choice(range(2, 6))):
+                R_group_label += str(n) + "    " + self.random_choice(superatoms) + "\n"
         elif label_type == "C":
             R_group_label += (
                 "      "
-                + random.choice(rest_variables)
+                + self.random_choice(rest_variables)
                 + "      "
-                + random.choice(rest_variables)
+                + self.random_choice(rest_variables)
                 + "\n"
             )
-            for n in range(1, random.choice(range(2, 6))):
+            for n in range(1, self.random_choice(range(2, 6))):
                 R_group_label += (
                     str(n)
                     + "  "
-                    + random.choice(superatoms)
+                    + self.random_choice(superatoms)
                     + "  "
-                    + random.choice(superatoms)
+                    + self.random_choice(superatoms)
                     + "\n"
                 )
         elif label_type == "D":
             R_group_label += (
                 "      "
-                + random.choice(rest_variables)
+                + self.random_choice(rest_variables)
                 + "      "
-                + random.choice(rest_variables)
+                + self.random_choice(rest_variables)
                 + "      "
-                + random.choice(rest_variables)
+                + self.random_choice(rest_variables)
                 + "\n"
             )
-            for n in range(1, random.choice(range(2, 6))):
+            for n in range(1, self.random_choice(range(2, 6))):
                 R_group_label += (
                     str(n)
                     + "  "
-                    + random.choice(superatoms)
+                    + self.random_choice(superatoms)
                     + "  "
-                    + random.choice(superatoms)
+                    + self.random_choice(superatoms)
                     + "  "
-                    + random.choice(superatoms)
+                    + self.random_choice(superatoms)
                     + "\n"
                 )
         if label_type == "E":
-            for n in range(1, random.choice(range(2, 6))):
+            for n in range(1, self.random_choice(range(2, 6))):
                 R_group_label += (
                     str(n)
                     + "  "
-                    + random.choice(rest_variables)
+                    + self.random_choice(rest_variables)
                     + " = "
-                    + random.choice(superatoms)
+                    + self.random_choice(superatoms)
                     + "\n"
                 )
         return R_group_label
@@ -746,7 +759,7 @@ class random_depictor:
         fonts = os.listdir(str(font_dir))
         # Choose random font size
         font_sizes = range(10, 20)
-        size = random.choice(font_sizes)
+        size = self.random_choice(font_sizes)
         # Generate random string that resembles the desired type of chemical label
         if label_type == "ID":
             label_text = self.ID_label_text()
@@ -757,7 +770,7 @@ class random_depictor:
 
         try:
             font = ImageFont.truetype(
-                str(os.path.join(str(font_dir), random.choice(fonts))), size=size
+                str(os.path.join(str(font_dir), self.random_choice(fonts))), size=size
             )
         except OSError:
             font = ImageFont.load_default()
@@ -790,26 +803,26 @@ class random_depictor:
 
         arrow_dir = os.path.normpath(str(HERE.joinpath("arrow_images/curved_arrows/")))
 
-        for _ in range(random.choice(range(2, 4))):
+        for _ in range(self.random_choice(range(2, 4))):
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(
-                os.path.join(str(arrow_dir), random.choice(os.listdir(str(arrow_dir))))
+                os.path.join(str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir))))
             )
             new_arrow_image_shape = int(
-                (x_max - x_min) / random.choice(range(3, 6))
-            ), int((y_max - y_min) / random.choice(range(3, 6)))
+                (x_max - x_min) / self.random_choice(range(3, 6))
+            ), int((y_max - y_min) / self.random_choice(range(3, 6)))
             arrow_image = arrow_image.resize(
                 new_arrow_image_shape, resample=Image.BICUBIC
             )
             arrow_image = arrow_image.rotate(
-                random.choice(range(360)), resample=Image.BICUBIC, expand=True
+                self.random_choice(range(360)), resample=Image.BICUBIC, expand=True
             )
             # Try different positions with the condition that the arrows are overlapping with non-white pixels (the structure)
             for _ in range(50):
-                x_position = random.choice(
+                x_position = self.random_choice(
                     range(x_min, x_max - new_arrow_image_shape[0])
                 )
-                y_position = random.choice(
+                y_position = self.random_choice(
                     range(y_min, y_max - new_arrow_image_shape[1])
                 )
                 paste_region = orig_image.crop(
@@ -829,7 +842,7 @@ class random_depictor:
     def get_random_arrow_position(self, width, height):
         """Given the width and height of an image (int), this function determines a random
         position to paste a reaction arrow."""
-        if random.choice([True, False]):
+        if self.random_choice([True, False]):
             y_range = range(0, height)
             x_range = list(range(0, int(0.15 * width))) + list(
                 range(int(0.85 * width), width)
@@ -839,7 +852,7 @@ class random_depictor:
                 range(int(0.85 * height), height)
             )
             x_range = range(0, int(0.5 * width))
-        return random.choice(y_range), random.choice(x_range)
+        return self.random_choice(y_range), self.random_choice(x_range)
 
     def add_straight_arrows_to_structure(self, image: np.array) -> np.array:
         """This function takes an image of a chemical structure (np.array) and adds between 1 and 2 straight arrows
@@ -851,21 +864,21 @@ class random_depictor:
             str(HERE.joinpath("arrow_images/straight_arrows/"))
         )
 
-        for _ in range(random.choice(range(1, 3))):
+        for _ in range(self.random_choice(range(1, 3))):
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(
-                os.path.join(str(arrow_dir), random.choice(os.listdir(str(arrow_dir))))
+                os.path.join(str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir))))
             )
-            # new_arrow_image_shape = (int(width * random.choice(np.arange(0.9, 1.5, 0.1))), int(height/10 * random.choice(np.arange(0.7, 1.2, 0.1))))
+            # new_arrow_image_shape = (int(width * self.random_choice(np.arange(0.9, 1.5, 0.1))), int(height/10 * self.random_choice(np.arange(0.7, 1.2, 0.1))))
 
             # arrow_image = arrow_image.resize(new_arrow_image_shape, resample=Image.BICUBIC)
             # Rotate completely randomly in half of the cases and in   180° steps in the other cases (higher probability that pasting works)
-            if random.choice([True, False]):
+            if self.random_choice([True, False]):
                 arrow_image = arrow_image.rotate(
-                    random.choice(range(360)), resample=Image.BICUBIC, expand=True
+                    self.random_choice(range(360)), resample=Image.BICUBIC, expand=True
                 )
             else:
-                arrow_image = arrow_image.rotate(random.choice([180, 360]))
+                arrow_image = arrow_image.rotate(self.random_choice([180, 360]))
             new_arrow_image_shape = arrow_image.size
             # Try different positions with the condition that the arrows are overlapping with non-white pixels (the structure)
             for _ in range(50):
