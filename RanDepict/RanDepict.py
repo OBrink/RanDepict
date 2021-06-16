@@ -33,22 +33,20 @@ class random_depictor:
         """Load the JVM only once, otherwise it produces errors."""
         # Start the JVM to access Java classes
         try:
-            jvmPath = getDefaultJVMPath()
+            self.jvmPath = getDefaultJVMPath()
         except JVMNotFoundException:
             print(
                 "If you see this message, for some reason JPype cannot find jvm.dll.",
                 "This indicates that the environment varibale JAVA_HOME is not set properly.",
                 "You can set it or set it manually in the code (see __init__() of random_depictor)",
             )
-            jvmPath = "Define/your/path/or/set/your/JAVA_HOME/variable/properly"
+            self.jvmPath = "Define/your/path/or/set/your/JAVA_HOME/variable/properly"
         if not isJVMStarted():
-            jar_path = HERE.joinpath("jar_files/cdk_2_5.jar")
-            print(jar_path)
-            startJVM(jvmPath, "-ea", "-Djava.class.path=" + str(jar_path))
+            self.jar_path = HERE.joinpath("jar_files/cdk_2_5.jar")
+            startJVM(self.jvmPath, "-ea", "-Djava.class.path=" + str(self.jar_path))
 
         self.seed = seed
         random.seed(self.seed)
-
 
         # Load list of superatoms (from OSRA)
         with open(HERE.joinpath("superatom.txt")) as superatoms:
@@ -510,14 +508,14 @@ class random_depictor:
                 ]
             ),
             # Shearing
-            iaa.OneOf(
+            self.random_choice(
                 [
                     iaa.geometric.ShearX(shear_param, mode="edge", fit_output=True),
                     iaa.geometric.ShearY(shear_param, mode="edge", fit_output=True),
                 ]
             ),
             # Jpeg compression or pixelation
-            iaa.OneOf(
+            self.random_choice(
                 [
                     iaa.imgcorruptlike.JpegCompression(severity=imgcorrupt_severity),
                     iaa.imgcorruptlike.Pixelate(severity=imgcorrupt_severity),
@@ -939,18 +937,22 @@ class random_depictor:
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
         ID=False,
+        seed: int =0
     ):
         """This function takes a SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure depictions of the chemical structure
         that is represented by the SMILES str and saves it as PNG images in output_dir.
         If an ID is given, it is used as the base filename. Otherwise, the SMILES str is used."""
-        self.__init__()  # JVM has to be launched in each thread to make multiprocessing work
+        # This seems a bit odd but it appears that it is the only way to make the seed tracking work
+        # with multiprocessing
+        depictor = random_depictor(seed+13)
+
         if not ID:
             name = smiles
         else:
             name = ID
         for n in range(images_per_structure):
-            image = self.random_depiction(smiles, shape)
+            image = depictor.random_depiction(smiles, shape)
             output_file_path = os.path.join(output_dir, name + "_" + str(n) + ".png")
             sk_io.imsave(output_file_path, img_as_ubyte(image))
 
@@ -961,18 +963,22 @@ class random_depictor:
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
         ID=False,
+        seed:int=0,
     ) -> None:
         """This function takes a SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure augmented depictions of the chemical structure
         that is represented by the SMILES str and saves it as PNG images in output_dir.
         If an ID is given, it is used as the base filename. Otherwise, the SMILES str is used."""
-        self.__init__()  # JVM has to be launched in each thread to make multiprocessing work
+        # This seems a bit odd but it appears that it is the only way to make the seed tracking work
+        # with multiprocessing
+        depictor = random_depictor(seed+13)
+        
         if not ID:
             name = smiles
         else:
             name = ID
         for n in range(images_per_structure):
-            image = self(smiles, shape)
+            image = depictor(smiles, shape)
             output_file_path = os.path.join(output_dir, name + "_" + str(n) + ".png")
             sk_io.imsave(output_file_path, img_as_ubyte(image))
 
@@ -997,6 +1003,7 @@ class random_depictor:
                     output_dir,
                     shape,
                     ID_list[n],
+                    (n+1)*len(smiles_list) # individual seed
                 )
                 for n in range(len(smiles_list))
             )
@@ -1023,9 +1030,16 @@ class random_depictor:
         to name the files. Otherwise, the SMILES str is used as a filename."""
         if ID_list:
             starmap_tuple_generator = (
-                (smiles_list[n], images_per_structure, output_dir, shape, ID_list[n])
+                (
+                    smiles_list[n], 
+                    images_per_structure, 
+                    output_dir, 
+                    shape, ID_list[n], 
+                    (n+1)*len(smiles_list) # individual seed
+                )
                 for n in range(len(smiles_list))
             )
+
         else:
             starmap_tuple_generator = (
                 (smiles, images_per_structure, output_dir, shape)
