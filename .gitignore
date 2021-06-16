@@ -139,8 +139,8 @@ Temporary Items
 Session.vim
 
 # Temporary
-./output/augmented/*
-./output/not_augmented/*
+augmented
+not_augmented
 .netrwhist
 *~
 # Auto-generated tag files
