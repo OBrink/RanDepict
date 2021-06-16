@@ -100,6 +100,14 @@ class random_depictor:
         random.seed(self.seed)
         return random.choice(iterable)
 
+    def random_choices(self, iterable: List, k: int) -> List:
+        '''This function takes an iterable, calls self.random_choices() on it to take k
+        elements from it,increases random.seed by 1 and returns the result. This way, results 
+        produced by RanDepict are replicable.'''
+        self.seed += 1
+        random.seed(self.seed)
+        return random.choices(iterable, k = k)
+
     def get_nonexisting_image_name(
         self, path: str = "./temp/", format: str = "PNG"
     ) -> str:
@@ -470,41 +478,59 @@ class random_depictor:
         # Add some padding to make sure rotation does not lead to funny bits at the edges of the image
         # print(image)
         original_shape = image.shape
+
+        # Choose number of augmentations to apply (0-2); return image if nothiing needs to be done.
+        aug_number = self.random_choice(range(0, 3))
+        if not aug_number:
+            return image
+
+        # Add some padding to avoid weird artifacts after rotation
         image = np.pad(
             image, ((1, 1), (1, 1), (0, 0)), mode="constant", constant_values=255
         )
+        # Set parameters for imgaug via self.random_choice() to keep seed control
+        rot_angle = self.random_choice(np.arange(-10, 10, 1))
+        coarse_dropout_p = self.random_choice(np.arange(0.0002, 0.0015, 0.0001))
+        coarse_dropout_size_percent = self.random_choice(np.arange(1.0, 1.1, 0.01))
+        replace_elementwise_p = self.random_choice(np.arange(0.01, 0.3, 0.01))
+        shear_param = self.random_choice(np.arange(-5, 5, 1))
+        imgcorrupt_severity = self.random_choice(np.arange(1, 2, 1))
+        brightness_adj_param = self.random_choice(np.arange(-50, 50, 1))
+        colour_temp = self.random_choice(np.arange(1100, 10000, 1))
+
+        # Define list of available augmentations
         aug_list = [
             # Rotation between -10 and 10 degrees
-            iaa.Affine(rotate=(-10, 10), mode="edge", fit_output=True),
+            iaa.Affine(rotate=rot_angle, mode="edge", fit_output=True),
             # Black and white noise
             iaa.Sequential(
                 [
-                    iaa.CoarseDropout((0.0002, 0.0015), size_percent=(1.0, 1.1)),
-                    iaa.ReplaceElementwise((0.01, 0.3), 255),
+                    iaa.CoarseDropout(coarse_dropout_p, size_percent=coarse_dropout_size_percent),
+                    iaa.ReplaceElementwise(replace_elementwise_p, 255),
                 ]
             ),
             # Shearing
             iaa.OneOf(
                 [
-                    iaa.geometric.ShearX((-5, 5), mode="edge", fit_output=True),
-                    iaa.geometric.ShearY((-5, 5), mode="edge", fit_output=True),
+                    iaa.geometric.ShearX(shear_param, mode="edge", fit_output=True),
+                    iaa.geometric.ShearY(shear_param, mode="edge", fit_output=True),
                 ]
             ),
             # Jpeg compression or pixelation
             iaa.OneOf(
                 [
-                    iaa.imgcorruptlike.JpegCompression(severity=(1, 2)),
-                    iaa.imgcorruptlike.Pixelate(severity=(1, 2)),
+                    iaa.imgcorruptlike.JpegCompression(severity=imgcorrupt_severity),
+                    iaa.imgcorruptlike.Pixelate(severity=imgcorrupt_severity),
                 ]
             ),
             # Brightness adjustment
-            iaa.WithBrightnessChannels(iaa.Add((-50, 50))),
+            iaa.WithBrightnessChannels(iaa.Add(brightness_adj_param)),
             # Colour temperature adjustment
-            iaa.ChangeColorTemperature((1100, 10000)),  # colour temperature adjustment
+            iaa.ChangeColorTemperature(colour_temp),  # colour temperature adjustment
         ]
-        # Apply zero to all augmentations
-        aug_number = self.random_choice(range(0, 3))
-        aug = iaa.SomeOf(aug_number, aug_list)
+        
+        selected_aug_list = self.random_choices(aug_list, aug_number)
+        aug = iaa.Sequential(selected_aug_list)
         augmented_image = aug.augment_images([image])[0]
         augmented_image = resize(augmented_image, original_shape)
         return augmented_image
