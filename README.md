@@ -3,7 +3,7 @@
 [![GitHub issues](https://img.shields.io/github/issues/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/issues/)
 [![GitHub contributors](https://img.shields.io/github/contributors/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/graphs/contributors/)
 # RanDepict
-This repository contains RanDepict, an easy-to-use utility to generate a big variety of chemical structure depictions (random depiction styles and image augmentations).
+This repository contains RanDepict, an easy-to-use utility to generate a big variety of chemical structure depictions (random depiction styles and image augmentations) based on RDKit, CDK and Indigo.
 
 ## Usage
 -  To use RanDepict, clone the repository to your local disk and make sure you install all the necessary requirements.
@@ -26,7 +26,7 @@ $ conda install pip
 $ python -m pip install -U pip #Upgrade pip
 $ pip install numpy scikit-image epam.indigo jpype1 ipyplot imagecorruptions imgaug
 ```
-### Alternate
+### Alternative
 ```shell
 $ python -m pip install -U pip #Upgrade pip
 $ pip install git+https://github.com/OBrink/RanDepict.git
