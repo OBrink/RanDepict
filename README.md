@@ -43,6 +43,9 @@ with random_depictor() as depictor:
 
 Have a look in the RanDepictNotebook.ipynb for more examples and a more detailed documentation.
 
+Here are some examples of depictions of caffeine without augmentations (left) and with augmentations (right) that were automatically created using RanDepict. 
+
+![](caffeine_no_augmentations.gif)   ![](caffeine_augmentations.gif)
 
 ## TODO: Archive code on zenodo and then publish the package. Also publish the package on PyPI.
 
