@@ -6,7 +6,7 @@ from skimage.transform import resize
 from skimage.color import rgba2rgb, rgb2gray
 from skimage.util import img_as_ubyte, img_as_float
 from PIL import Image, ImageFont, ImageDraw, ImageFilter, ImageStat
-from multiprocessing import Pool
+from multiprocessing import Pool, set_start_method,  get_context
 import imgaug.augmenters as iaa
 import random
 from copy import deepcopy
@@ -995,6 +995,7 @@ class random_depictor:
         that is represented by a SMILES str and saves them as PNG images in output_dir.
         If an ID list (list with names of same length as smiles_list that contains unique IDs), the IDs will be used
         to name the files. Otherwise, the SMILES str is used as a filename."""
+        set_start_method("spawn")
         if ID_list:
             starmap_tuple_generator = (
                 (
@@ -1012,7 +1013,7 @@ class random_depictor:
                 (smiles, images_per_structure, output_dir, shape)
                 for smiles in smiles_list
             )
-        with Pool() as p:
+        with get_context("spawn").Pool() as p:
             p.starmap(self.depict_save, starmap_tuple_generator)
 
     def batch_depict_augment_save(
@@ -1023,6 +1024,7 @@ class random_depictor:
         shape: Tuple[int, int] = (299, 299),
         ID_list=False,
     ) -> None:
+        set_start_method("spawn")
         """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure augmented depictions of each chemical structure
         that is represented by a SMILES str and saves them as PNG images in output_dir.
@@ -1045,5 +1047,6 @@ class random_depictor:
                 (smiles, images_per_structure, output_dir, shape)
                 for smiles in smiles_list
             )
-        with Pool() as p:
+        with get_context("spawn").Pool() as p:
             p.starmap(self.depict_augment_save, starmap_tuple_generator)
+
