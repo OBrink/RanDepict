@@ -28,7 +28,7 @@ class random_depictor:
     that represents the RGB image with the given chemical structure."""
 
     def __init__(self, seed: int=42):
-        """Load the JVM only once, otherwise it produces errors."""
+        """Load the JVM only once, load superatom list (OSRA), set context for multiprocessing"""
         # Start the JVM to access Java classes
         try:
             self.jvmPath = getDefaultJVMPath()
@@ -51,7 +51,11 @@ class random_depictor:
             superatoms = superatoms.readlines()
             self.superatoms = [s[:-2] for s in superatoms]
 
-        set_start_method("spawn")
+        # Set context for multiprocessing but make sure this only happens once
+        try:
+            set_start_method("spawn")
+        except RuntimeError:
+            pass
 
     def __call__(
         self,
