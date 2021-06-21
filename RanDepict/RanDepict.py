@@ -21,7 +21,7 @@ import base64
 
 from .assets import HERE
 
-
+set_start_method("spawn")
 
 class random_depictor:
     """This class contains everything necessary to generate a variety of random depictions
@@ -995,7 +995,6 @@ class random_depictor:
         that is represented by a SMILES str and saves them as PNG images in output_dir.
         If an ID list (list with names of same length as smiles_list that contains unique IDs), the IDs will be used
         to name the files. Otherwise, the SMILES str is used as a filename."""
-        set_start_method("spawn")
         if ID_list:
             starmap_tuple_generator = (
                 (
@@ -1024,7 +1023,6 @@ class random_depictor:
         shape: Tuple[int, int] = (299, 299),
         ID_list=False,
     ) -> None:
-        set_start_method("spawn")
         """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure augmented depictions of each chemical structure
         that is represented by a SMILES str and saves them as PNG images in output_dir.
