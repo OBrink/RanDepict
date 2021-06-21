@@ -21,8 +21,6 @@ import base64
 
 from .assets import HERE
 
-set_start_method("spawn")
-
 class random_depictor:
     """This class contains everything necessary to generate a variety of random depictions
     with given SMILES strings.
@@ -52,6 +50,8 @@ class random_depictor:
         with open(HERE.joinpath("superatom.txt")) as superatoms:
             superatoms = superatoms.readlines()
             self.superatoms = [s[:-2] for s in superatoms]
+
+        set_start_method("spawn")
 
     def __call__(
         self,
