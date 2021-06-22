@@ -401,12 +401,25 @@ class random_depictor:
         if self.random_choice([True, True, False, False, False, False]):
             SmilesParser.kekulise(False)
         molecule = SmilesParser.parseSmiles(smiles)
+        
+        # Add hydrogens for coordinate generation (to make it look nicer/ avoid overlaps)
+        matcher = JClass("org.openscience.cdk.atomtype.CDKAtomTypeMatcher").getInstance(molecule.getBuilder())
+        for atom in molecule.atoms():
+            atom_type = matcher.findMatchingAtomType(molecule, atom);
+            JClass("org.openscience.cdk.tools.manipulator.AtomTypeManipulator").configure(atom, atom_type)
+        adder = JClass("org.openscience.cdk.tools.CDKHydrogenAdder").getInstance(molecule.getBuilder())
+        adder.addImplicitHydrogens(molecule)
+        AtomContainerManipulator = JClass("org.openscience.cdk.tools.manipulator.AtomContainerManipulator")
+        AtomContainerManipulator.convertImplicitToExplicitHydrogens(molecule)
+
         # Instantiate StructureDiagramGenerator, determine coordinates
         sdg = JClass("org.openscience.cdk.layout.StructureDiagramGenerator")()
         sdg.setMolecule(molecule)
         sdg.generateCoordinates(molecule)
-
         molecule = sdg.getMolecule()
+
+        # Remove explicit hydrogens again
+        AtomContainerManipulator.suppressHydrogens(molecule)
 
         # Rotate molecule randomly
         point = JClass("org.openscience.cdk.geometry.GeometryTools").get2DCenter(
@@ -1030,7 +1043,7 @@ class random_depictor:
         images_per_structure: int,
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
-        ID_list=False,
+        ID_list: List[str] = False,
         processes: int = 4,
     ) -> None:
         """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
@@ -1064,7 +1077,7 @@ class random_depictor:
         images_per_structure: int,
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
-        ID_list=False,
+        ID_list: List[str] = False,
         processes: int = 4,
     ) -> None:
         """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
