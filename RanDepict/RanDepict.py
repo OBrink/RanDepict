@@ -6,7 +6,7 @@ from skimage.transform import resize
 from skimage.color import rgba2rgb, rgb2gray
 from skimage.util import img_as_ubyte, img_as_float
 from PIL import Image, ImageFont, ImageDraw, ImageFilter, ImageStat
-from multiprocessing import Pool, set_start_method,  get_context
+from multiprocessing import Pool, set_start_method, get_context
 import imgaug.augmenters as iaa
 import random
 from copy import deepcopy
@@ -23,13 +23,14 @@ import base64
 
 from .assets import HERE
 
+
 class random_depictor:
     """This class contains everything necessary to generate a variety of random depictions
     with given SMILES strings.
     An instance of random_depictor can be called with a SMILES str and returns an np.array
     that represents the RGB image with the given chemical structure."""
 
-    def __init__(self, seed: int=42):
+    def __init__(self, seed: int = 42):
         """Load the JVM only once, load superatom list (OSRA), set context for multiprocessing"""
         # Start the JVM to access Java classes
         try:
@@ -97,20 +98,20 @@ class random_depictor:
         pass
 
     def random_choice(self, iterable: List):
-        '''This function takes an iterable, calls self.random_choice() on it,
-        increases random.seed by 1 and returns the result. This way, results 
-        produced by RanDepict are replicable.'''
+        """This function takes an iterable, calls self.random_choice() on it,
+        increases random.seed by 1 and returns the result. This way, results
+        produced by RanDepict are replicable."""
         self.seed += 1
         random.seed(self.seed)
         return random.choice(iterable)
 
     def random_choices(self, iterable: List, k: int) -> List:
-        '''This function takes an iterable, calls self.random_choices() on it to take k
-        elements from it,increases random.seed by 1 and returns the result. This way, results 
-        produced by RanDepict are replicable.'''
+        """This function takes an iterable, calls self.random_choices() on it to take k
+        elements from it,increases random.seed by 1 and returns the result. This way, results
+        produced by RanDepict are replicable."""
         self.seed += 1
         random.seed(self.seed)
-        return random.choices(iterable, k = k)
+        return random.choices(iterable, k=k)
 
     def get_nonexisting_image_name(
         self, path: str = "./temp/", format: str = "PNG"
@@ -234,7 +235,9 @@ class random_depictor:
             depiction_settings.drawOptions().explicitMethyl = True
         # Label font type and size
         font_dir = HERE.joinpath("fonts/")
-        font_path = os.path.join(str(font_dir), self.random_choice(os.listdir(str(font_dir))))
+        font_path = os.path.join(
+            str(font_dir), self.random_choice(os.listdir(str(font_dir)))
+        )
         depiction_settings.drawOptions().fontFile = font_path
         min_font_size = self.random_choice(range(10, 20))
         depiction_settings.drawOptions().minFontSize = min_font_size
@@ -366,11 +369,13 @@ class random_depictor:
                 StandardGenerator.AnnotationDistance.class_, annotation_distance
             )
         # Abbreviate superatom labels in half of the cases
-        # TODO: Find a way to define Abbreviations object as a class attribute. Problem: can't be pickled. 
+        # TODO: Find a way to define Abbreviations object as a class attribute. Problem: can't be pickled.
         # Right now, this is loaded every time when a structure is depicted. That seems inefficient.
         if self.random_choice([True, False]):
             cdk_superatom_abrv = JClass("org.openscience.cdk.depict.Abbreviations")()
-            abbreviation_path = str(HERE.joinpath("superatom_obabel.smi")).replace('\\', '/')
+            abbreviation_path = str(HERE.joinpath("superatom_obabel.smi")).replace(
+                "\\", "/"
+            )
             abbreviation_path = JClass("java.lang.String")(abbreviation_path)
             cdk_superatom_abrv.loadFromFile(abbreviation_path)
             cdk_superatom_abrv.apply(molecule)
@@ -400,7 +405,7 @@ class random_depictor:
         sdg = JClass("org.openscience.cdk.layout.StructureDiagramGenerator")()
         sdg.setMolecule(molecule)
         sdg.generateCoordinates(molecule)
-        
+
         molecule = sdg.getMolecule()
 
         # Rotate molecule randomly
@@ -528,7 +533,9 @@ class random_depictor:
             # Black and white noise
             iaa.Sequential(
                 [
-                    iaa.CoarseDropout(coarse_dropout_p, size_percent=coarse_dropout_size_percent),
+                    iaa.CoarseDropout(
+                        coarse_dropout_p, size_percent=coarse_dropout_size_percent
+                    ),
                     iaa.ReplaceElementwise(replace_elementwise_p, 255),
                 ]
             ),
@@ -551,7 +558,7 @@ class random_depictor:
             # Colour temperature adjustment
             iaa.ChangeColorTemperature(colour_temp),  # colour temperature adjustment
         ]
-        
+
         selected_aug_list = self.random_choices(aug_list, aug_number)
         aug = iaa.Sequential(selected_aug_list)
         augmented_image = aug.augment_images([image])[0]
@@ -603,9 +610,15 @@ class random_depictor:
         if option == "only_number":
             return str(self.random_choice(label_num))
         if option == "num_letter_combination":
-            return str(self.random_choice(label_num)) + self.random_choice(label_letters)
+            return str(self.random_choice(label_num)) + self.random_choice(
+                label_letters
+            )
         if option == "numtonum":
-            return str(self.random_choice(label_num)) + "-" + str(self.random_choice(label_num))
+            return (
+                str(self.random_choice(label_num))
+                + "-"
+                + str(self.random_choice(label_num))
+            )
         if option == "numcombtonumcomb":
             return (
                 str(self.random_choice(label_num))
@@ -616,9 +629,9 @@ class random_depictor:
 
     def new_reaction_condition_elements(self) -> Tuple[str, str, str]:
         """Randomly redefine reaction_time, solvent and other_reactand."""
-        reaction_time = self.random_choice([str(num) for num in range(30)]) + self.random_choice(
-            [" h", " min"]
-        )
+        reaction_time = self.random_choice(
+            [str(num) for num in range(30)]
+        ) + self.random_choice([" h", " min"])
         solvent = self.random_choice(
             [
                 "MeOH",
@@ -855,7 +868,9 @@ class random_depictor:
         for _ in range(self.random_choice(range(2, 4))):
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(
-                os.path.join(str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir))))
+                os.path.join(
+                    str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir)))
+                )
             )
             new_arrow_image_shape = int(
                 (x_max - x_min) / self.random_choice(range(3, 6))
@@ -916,7 +931,9 @@ class random_depictor:
         for _ in range(self.random_choice(range(1, 3))):
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(
-                os.path.join(str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir))))
+                os.path.join(
+                    str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir)))
+                )
             )
             # new_arrow_image_shape = (int(width * self.random_choice(np.arange(0.9, 1.5, 0.1))), int(height/10 * self.random_choice(np.arange(0.7, 1.2, 0.1))))
 
@@ -962,7 +979,7 @@ class random_depictor:
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
         ID=False,
-        seed: int =0
+        seed: int = 0,
     ):
         """This function takes a SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure depictions of the chemical structure
@@ -970,7 +987,7 @@ class random_depictor:
         If an ID is given, it is used as the base filename. Otherwise, the SMILES str is used."""
         # This seems a bit odd but it appears that it is the only way to make the seed tracking work
         # with multiprocessing
-        depictor = random_depictor(seed+13)
+        depictor = random_depictor(seed + 13)
 
         if not ID:
             name = smiles
@@ -988,7 +1005,7 @@ class random_depictor:
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
         ID=False,
-        seed:int=0,
+        seed: int = 0,
     ) -> None:
         """This function takes a SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure augmented depictions of the chemical structure
@@ -996,8 +1013,8 @@ class random_depictor:
         If an ID is given, it is used as the base filename. Otherwise, the SMILES str is used."""
         # This seems a bit odd but it appears that it is the only way to make the seed tracking work
         # with multiprocessing
-        depictor = random_depictor(seed+13)
-        
+        depictor = random_depictor(seed + 13)
+
         if not ID:
             name = smiles
         else:
@@ -1029,7 +1046,7 @@ class random_depictor:
                     output_dir,
                     shape,
                     ID_list[n],
-                    (n+1)*len(smiles_list) # individual seed
+                    (n + 1) * len(smiles_list),  # individual seed
                 )
                 for n in range(len(smiles_list))
             )
@@ -1058,11 +1075,12 @@ class random_depictor:
         if ID_list:
             starmap_tuple_generator = (
                 (
-                    smiles_list[n], 
-                    images_per_structure, 
-                    output_dir, 
-                    shape, ID_list[n], 
-                    (n+1)*len(smiles_list) # individual seed
+                    smiles_list[n],
+                    images_per_structure,
+                    output_dir,
+                    shape,
+                    ID_list[n],
+                    (n + 1) * len(smiles_list),  # individual seed
                 )
                 for n in range(len(smiles_list))
             )
