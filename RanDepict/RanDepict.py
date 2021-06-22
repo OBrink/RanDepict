@@ -1014,6 +1014,7 @@ class random_depictor:
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
         ID_list=False,
+        processes: int = 4,
     ) -> None:
         """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure depictions of each chemical structure
@@ -1037,7 +1038,7 @@ class random_depictor:
                 (smiles, images_per_structure, output_dir, shape)
                 for smiles in smiles_list
             )
-        with get_context("spawn").Pool() as p:
+        with get_context("spawn").Pool(processes) as p:
             p.starmap(self.depict_save, starmap_tuple_generator)
 
     def batch_depict_augment_save(
@@ -1047,6 +1048,7 @@ class random_depictor:
         output_dir: str,
         shape: Tuple[int, int] = (299, 299),
         ID_list=False,
+        processes: int = 4,
     ) -> None:
         """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure augmented depictions of each chemical structure
@@ -1070,6 +1072,5 @@ class random_depictor:
                 (smiles, images_per_structure, output_dir, shape)
                 for smiles in smiles_list
             )
-        with get_context("spawn").Pool() as p:
+        with get_context("spawn").Pool(processes) as p:
             p.starmap(self.depict_augment_save, starmap_tuple_generator)
-

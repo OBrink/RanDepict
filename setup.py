@@ -27,6 +27,7 @@ setuptools.setup(
         "ipyplot",
         "rdkit-pypi",
         "imagecorruptions",
+        "pillow>=8.2.0",
     ],
     package_data={"RanDepict": ["assets/*.*", "assets/*/*.*", "assets/*/*/*.*"]},
     classifiers=[
