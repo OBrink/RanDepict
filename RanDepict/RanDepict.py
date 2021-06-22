@@ -1,4 +1,6 @@
+import sys
 import os
+import pathlib
 import numpy as np
 import io
 from skimage import io as sk_io
@@ -21,7 +23,12 @@ from indigo.renderer import IndigoRenderer
 from jpype import *
 import base64
 
-from .assets import HERE
+#print(str(pathlib.Path().absolute()).replace('\\', '/'))
+#sys.path.append(str(pathlib.Path().absolute()).replace('\\', '/'))
+#os.chdir(pathlib.Path().absolute())
+#from assets import HERE
+HERE = pathlib.Path(__file__).resolve().parent.joinpath("assets")
+print(HERE)
 
 
 class random_depictor:
