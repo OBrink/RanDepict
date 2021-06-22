@@ -13,6 +13,8 @@ from copy import deepcopy
 from typing import Tuple, List
 
 from rdkit import Chem
+from rdkit.Chem import AllChem
+from rdkit.Chem.rdAbbreviations import CondenseMolAbbreviations, GetDefaultAbbreviations
 from rdkit.Chem.Draw import rdMolDraw2D
 from indigo import Indigo, IndigoException
 from indigo.renderer import IndigoRenderer
@@ -46,7 +48,7 @@ class random_depictor:
         self.seed = seed
         random.seed(self.seed)
 
-        # Load list of superatoms (from OSRA)
+        # Load list of superatoms for label generation
         with open(HERE.joinpath("superatom.txt")) as superatoms:
             superatoms = superatoms.readlines()
             self.superatoms = [s[:-2] for s in superatoms]
@@ -257,12 +259,19 @@ class random_depictor:
         with the given image shape."""
         # Generate mol object from smiles str
         mol = Chem.MolFromSmiles(smiles)
+        AllChem.Compute2DCoords(mol)
+        # Abbreviate superatoms
+        if self.random_choice([True, False]):
+            abbrevs = GetDefaultAbbreviations()
+            mol = CondenseMolAbbreviations(mol, abbrevs)
         # Get random depiction settings
         depiction_settings = self.get_random_rdkit_rendering_settings()
         # Create depiction
         # TODO: Figure out how to depict molecules without kekulization here.
-        # This does not prevent the molecule from being depicted kekulized
+        # This does not prevent the molecule from being depicted kekulized:
         # mol = rdMolDraw2D.PrepareMolForDrawing(mol, kekulize = False)
+        # The molecule must get kekulized somewhere "by accident"
+
         rdMolDraw2D.PrepareAndDrawMolecule(depiction_settings, mol)
         depiction = depiction_settings.GetDrawingText()
         depiction = sk_io.imread(io.BytesIO(depiction))
@@ -274,7 +283,8 @@ class random_depictor:
     def get_random_cdk_rendering_settings(self, rendererModel, molecule):
         """This function defines random rendering options for the structure depictions created
         using CDK. It takes a org.openscience.cdk.renderer.AtomContainerRenderer.2DModel and a
-        org.openscience.cdk.AtomContainer and returns the 2DModel object with random rendering settings.
+        org.openscience.cdk.AtomContainer and returns the 2DModel object with random rendering settings
+        and the AtomContainer with superatom abbreviations (50% of the cases).
         I followed https://github.com/cdk/cdk/wiki/Standard-Generator while creating this."""
 
         StandardGenerator = JClass(
@@ -355,7 +365,16 @@ class random_depictor:
             rendererModel.set(
                 StandardGenerator.AnnotationDistance.class_, annotation_distance
             )
-        return rendererModel
+        # Abbreviate superatom labels in half of the cases
+        # TODO: Find a way to define Abbreviations object as a class attribute. Problem: can't be pickled. 
+        # Right now, this is loaded every time when a structure is depicted. That seems inefficient.
+        if self.random_choice([True, False]):
+            cdk_superatom_abrv = JClass("org.openscience.cdk.depict.Abbreviations")()
+            abbreviation_path = str(HERE.joinpath("superatom_obabel.smi")).replace('\\', '/')
+            abbreviation_path = JClass("java.lang.String")(abbreviation_path)
+            cdk_superatom_abrv.loadFromFile(abbreviation_path)
+            cdk_superatom_abrv.apply(molecule)
+        return rendererModel, molecule
 
     def depict_and_resize_cdk(
         self, smiles: str, shape: Tuple[int, int] = (299, 299)
@@ -380,7 +399,8 @@ class random_depictor:
         # Instantiate StructureDiagramGenerator, determine coordinates
         sdg = JClass("org.openscience.cdk.layout.StructureDiagramGenerator")()
         sdg.setMolecule(molecule)
-        sdg.generateCoordinates()
+        sdg.generateCoordinates(molecule)
+        
         molecule = sdg.getMolecule()
 
         # Rotate molecule randomly
@@ -427,7 +447,7 @@ class random_depictor:
         model = renderer.getRenderer2DModel()
 
         # Get random rendering settings
-        model = self.get_random_cdk_rendering_settings(model, molecule)
+        model, molecule = self.get_random_cdk_rendering_settings(model, molecule)
 
         double = JClass("java.lang.Double")
         model.set(
@@ -440,6 +460,7 @@ class random_depictor:
         g2.setColor(JClass("java.awt.Color").WHITE)
         g2.fillRect(0, 0, x, y)
         AWTDrawVisitor = JClass("org.openscience.cdk.renderer.visitor.AWTDrawVisitor")
+
         renderer.paint(molecule, AWTDrawVisitor(g2))
 
         # Write the image into a format that can be read by skimage
