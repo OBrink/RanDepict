@@ -23,12 +23,7 @@ from indigo.renderer import IndigoRenderer
 from jpype import *
 import base64
 
-#print(str(pathlib.Path().absolute()).replace('\\', '/'))
-#sys.path.append(str(pathlib.Path().absolute()).replace('\\', '/'))
-#os.chdir(pathlib.Path().absolute())
-#from assets import HERE
 HERE = pathlib.Path(__file__).resolve().parent.joinpath("assets")
-print(HERE)
 
 
 class random_depictor:
