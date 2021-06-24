@@ -264,26 +264,29 @@ class random_depictor:
         with the given image shape."""
         # Generate mol object from smiles str
         mol = Chem.MolFromSmiles(smiles)
-        AllChem.Compute2DCoords(mol)
-        # Abbreviate superatoms
-        if self.random_choice([True, False]):
-            abbrevs = GetDefaultAbbreviations()
-            mol = CondenseMolAbbreviations(mol, abbrevs)
-        # Get random depiction settings
-        depiction_settings = self.get_random_rdkit_rendering_settings()
-        # Create depiction
-        # TODO: Figure out how to depict molecules without kekulization here.
-        # This does not prevent the molecule from being depicted kekulized:
-        # mol = rdMolDraw2D.PrepareMolForDrawing(mol, kekulize = False)
-        # The molecule must get kekulized somewhere "by accident"
+        if mol:
+            AllChem.Compute2DCoords(mol)
+            # Abbreviate superatoms
+            if self.random_choice([True, False]):
+                abbrevs = GetDefaultAbbreviations()
+                mol = CondenseMolAbbreviations(mol, abbrevs)
+            # Get random depiction settings
+            depiction_settings = self.get_random_rdkit_rendering_settings()
+            # Create depiction
+            # TODO: Figure out how to depict molecules without kekulization here.
+            # This does not prevent the molecule from being depicted kekulized:
+            # mol = rdMolDraw2D.PrepareMolForDrawing(mol, kekulize = False)
+            # The molecule must get kekulized somewhere "by accident"
 
-        rdMolDraw2D.PrepareAndDrawMolecule(depiction_settings, mol)
-        depiction = depiction_settings.GetDrawingText()
-        depiction = sk_io.imread(io.BytesIO(depiction))
-        # Resize image to desired shape
-        depiction = resize(depiction, shape)
-        depiction = img_as_ubyte(depiction)
-        return np.asarray(depiction)
+            rdMolDraw2D.PrepareAndDrawMolecule(depiction_settings, mol)
+            depiction = depiction_settings.GetDrawingText()
+            depiction = sk_io.imread(io.BytesIO(depiction))
+            # Resize image to desired shape
+            depiction = resize(depiction, shape)
+            depiction = img_as_ubyte(depiction)
+            return np.asarray(depiction)
+        else: 
+            print('RDKit was unable to read SMILES: {}'.format(smiles))
 
     def get_random_cdk_rendering_settings(self, rendererModel, molecule):
         """This function defines random rendering options for the structure depictions created
@@ -513,6 +516,10 @@ class random_depictor:
         ]
         depiction_function = self.random_choice(depiction_functions)
         depiction = depiction_function(smiles, shape)
+        # RDKit sometimes has troubles reading SMILES. If that happens, use Indigo or CDK
+        if depiction == None:
+            depiction_function = self.random_choice([self.depict_and_resize_indigo,self.depict_and_resize_cdk])
+            depiction = depiction_function(smiles, shape)
         return depiction
 
     def imgaug_augment(self, image: np.array) -> np.array:
