@@ -6,8 +6,8 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="Ran_Depict",
-    version="1.0.0",
+    name="RanDepict",
+    version="1.0.1",
     author="Otto Brinkhaus",
     author_email="henning.brinkhaus@uni-jena.de, kohulan.rajan@uni-jena.de",
     maintainer="Otto Brinkhaus, Kohulan Rajan",
