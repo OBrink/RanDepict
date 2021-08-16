@@ -70,8 +70,7 @@ Here are some examples of depictions of caffeine without augmentations (left) an
 ## Cite Us
 ```Bibtex
 @misc{Brinkhaus2021,
-  title={an easy-to-use utility to generate a big variety of chemical structure depictions 
-  (random depiction styles and image augmentations) based on RDKit, CDK and Indigo.},
+  title={RanDepict},
   author={Brinkhaus, Henning Otto and Rajan, Kohulan},
   doi = {10.5281/zenodo.5205528},
   year={2021},
