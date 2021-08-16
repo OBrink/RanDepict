@@ -2,6 +2,8 @@
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-blue.svg)](https://github.com/OBrink/RanDepict/graphs/commit-activity)
 [![GitHub issues](https://img.shields.io/github/issues/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/issues/)
 [![GitHub contributors](https://img.shields.io/github/contributors/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/graphs/contributors/)
+[![GitHub release](https://img.shields.io/github/release/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/releases/)
+[![PyPI version fury.io](https://badge.fury.io/py/RanDepict.svg)](https://pypi.python.org/pypi/RanDepict/)
 # RanDepict
 This repository contains RanDepict, an easy-to-use utility to generate a big variety of chemical structure depictions (random depiction styles and image augmentations) based on RDKit, CDK and Indigo.
 
@@ -31,6 +33,12 @@ $ pip install numpy scikit-image epam.indigo jpype1 ipyplot imagecorruptions img
 $ python -m pip install -U pip #Upgrade pip
 $ pip install git+https://github.com/OBrink/RanDepict.git
 ```
+
+### Install from PyPI
+```shell
+$ pip install RanDepict
+```
+
 ### Basic usage: 
 ```python
 from RanDepict import random_depictor
@@ -47,7 +55,6 @@ Here are some examples of depictions of caffeine without augmentations (left) an
 
 ![](caffeine_no_augmentations.gif)   ![](caffeine_augmentations.gif)
 
-## TODO: Archive code on zenodo and then publish the package. Also publish the package on PyPI.
 
 
 
