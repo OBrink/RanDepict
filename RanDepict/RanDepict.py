@@ -517,7 +517,7 @@ class random_depictor:
         depiction_function = self.random_choice(depiction_functions)
         depiction = depiction_function(smiles, shape)
         # RDKit sometimes has troubles reading SMILES. If that happens, use Indigo or CDK
-        if type(depiction) == bool or depiction == None:
+        if type(depiction) == bool or type(depiction) == type(None):
             depiction_function = self.random_choice([self.depict_and_resize_indigo,self.depict_and_resize_cdk])
             depiction = depiction_function(smiles, shape)
         return depiction
