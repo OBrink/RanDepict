@@ -4,6 +4,7 @@
 [![GitHub contributors](https://img.shields.io/github/contributors/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/graphs/contributors/)
 [![GitHub release](https://img.shields.io/github/release/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/releases/)
 [![PyPI version fury.io](https://badge.fury.io/py/RanDepict.svg)](https://pypi.python.org/pypi/RanDepict/)
+![versions](https://img.shields.io/pypi/pyversions/RanDepict.svg)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5205528.svg)](https://doi.org/10.5281/zenodo.5205528)
 # RanDepict
 This repository contains RanDepict, an easy-to-use utility to generate a big variety of chemical structure depictions (random depiction styles and image augmentations) based on RDKit, CDK and Indigo.
