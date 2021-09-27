@@ -139,6 +139,7 @@ class random_depictor:
         using Indigo. It returns an Indigo object with the settings."""
         # Define random shape for depiction (within boundaries); image is resized later)
         indigo = Indigo()
+        renderer = IndigoRenderer(indigo)
         # Get slightly distorted shape
         y, x = self.random_image_size(shape)
         indigo.setOption("render-image-width", x)
@@ -178,7 +179,7 @@ class random_depictor:
         # Collapse superatoms (default: expand)
         if self.random_choice([True, False]):
             indigo.setOption("render-superatom-mode", "collapse")
-        return indigo
+        return indigo, renderer
 
     def depict_and_resize_indigo(
         self, smiles: str, shape: Tuple[int, int] = (299, 299)
@@ -187,26 +188,19 @@ class random_depictor:
         using Indigo with random rendering/depiction settings and returns an RGB image (np.array)
         with the given image shape."""
         # Instantiate Indigo with random settings and IndigoRenderer
-        try:
-            indigo = self.get_random_indigo_rendering_settings()
-        except IndigoException:
-            # This happens the first time something is depicted, I don't know why.
-            indigo = Indigo()
-        renderer = IndigoRenderer(indigo)
+        #try:
+        indigo, renderer = self.get_random_indigo_rendering_settings()
+
         # Load molecule
         molecule = indigo.loadMolecule(smiles)
         # Do not kekulize in 20% of cases
         if self.random_choice([True, True, False, False, False, False]):
             molecule.aromatize()
         molecule.layout()
-        # Create structure depiction, save in temporary file and load as Pillow image
-        # TODO: Do this without saving file (renderToBuffer format does not seem to work)
-        if not os.path.exists("./temp/"):
-            os.mkdir("./temp/")
-        tmp_filename = self.get_nonexisting_image_name(path="./temp/", format="png")
-        renderer.renderToFile(molecule, os.path.join("./temp/", tmp_filename))
-        depiction = sk_io.imread(os.path.join("./temp/", tmp_filename))
-        os.remove(os.path.join("./temp/", tmp_filename))
+        # Write to buffer
+        temp = renderer.renderToBuffer(molecule)
+        temp = io.BytesIO(temp)
+        depiction = sk_io.imread(temp) 
         depiction = resize(depiction, (shape[0], shape[1], 4))
         depiction = rgba2rgb(depiction)
         depiction = img_as_ubyte(depiction)
