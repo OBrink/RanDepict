@@ -66,7 +66,7 @@ class random_depictor:
         self,
         smiles: str,
         shape: Tuple[int, int, int] = (299, 299),
-        grayscale: bool = True,
+        grayscale: bool = False,
     ):
         # Depict structure with random parameters
         depiction = self.random_depiction(smiles, shape)
@@ -455,6 +455,13 @@ class random_depictor:
 
         # Create an empty image of the right size
         y, x = self.random_image_size(shape)
+        # Workaround for structures that are cut off at edged of images:
+        # Make image twice as big, apply Zoom factor of 0.5, then remove white 
+        # areas at borders and resize to originally desired shape
+        # TODO: Find out why the structures are cut off in the first place
+        y = y * 2
+        x = x * 2
+
         drawArea = JClass("java.awt.Rectangle")(x, y)
         BufferedImage = JClass("java.awt.image.BufferedImage")
         image = BufferedImage(x, y, BufferedImage.TYPE_INT_RGB)
@@ -471,7 +478,7 @@ class random_depictor:
             JClass(
                 "org.openscience.cdk.renderer.generators.BasicSceneGenerator.ZoomFactor"
             ),
-            double(0.9),
+            double(0.5),
         )
         g2 = image.getGraphics()
         g2.setColor(JClass("java.awt.Color").WHITE)
@@ -492,9 +499,52 @@ class random_depictor:
 
         # Read image in skimage
         depiction = sk_io.imread(depiction, plugin="imageio")
+        # Normalise padding and get non-distorted image of right size
+        depiction = self.normalise_padding(depiction)
+        depiction = self.central_square_image(depiction)
         depiction = resize(depiction, shape)
         depiction = img_as_ubyte(depiction)
         return depiction
+
+    def normalise_padding(self, im: np.array) -> np.array:
+        """This function takes an RGB image (np.array) and deletes white space at 
+        the borders. Then 0-10% of the image width/height is added as padding again.
+        The modified image is returned
+        ___
+        im: np.array
+        ___
+        output: the modified image (np.array)
+        """
+        mask = im > 200 
+        all_white = mask.sum(axis=2) > 0
+        rows = np.flatnonzero((~all_white).sum(axis=1))
+        cols = np.flatnonzero((~all_white).sum(axis=0))
+        crop = im[rows.min():rows.max()+1, cols.min():cols.max()+1, :]
+        pad = self.random_choice(np.arange(5, int(crop.shape[0]*0.2), 1))
+        crop = np.pad(crop, pad_width=((pad,pad), (pad,pad), (0,0)), mode='constant', constant_values=255)
+        return crop
+
+    def central_square_image(self, im: np.array) -> np.array:
+        """
+        This function takes image (np.array) and will add white padding 
+        so that the image has a square shape with the width/height of the longest side 
+        of the original image.
+        ___
+        im: np.array
+        ___
+        output: np.array
+        """
+        # Create new blank white image
+        max_wh = max(im.shape)
+        new_im = 255 * np.ones((max_wh, max_wh, 3), np.uint8)
+        # Determine paste coordinates and paste image
+        upper = int((new_im.shape[0]-im.shape[0])/2)
+        lower = int((new_im.shape[0]-im.shape[0])/2) + im.shape[0]
+        left = int((new_im.shape[1]-im.shape[1])/2)
+        right = int((new_im.shape[1]-im.shape[1])/2) + im.shape[1]
+        new_im[upper:lower, left:right] = im
+        return new_im
+
 
     def random_depiction(
         self, smiles: str, shape: Tuple[int, int] = (299, 299)
@@ -515,6 +565,7 @@ class random_depictor:
             depiction_function = self.random_choice([self.depict_and_resize_indigo,self.depict_and_resize_cdk])
             depiction = depiction_function(smiles, shape)
         return depiction
+
 
     def imgaug_augment(self, image: np.array) -> np.array:
         """This function applies a random amount of augmentations to a given image (np.array)
@@ -578,7 +629,9 @@ class random_depictor:
         selected_aug_list = self.random_choices(aug_list, aug_number)
         aug = iaa.Sequential(selected_aug_list)
         augmented_image = aug.augment_images([image])[0]
-        augmented_image = resize(augmented_image, original_shape)
+        augmented_image = resize(augmented_image, original_shape, preserve_range=True, anti_aliasing=True)
+        augmented_image = augmented_image.astype(np.uint8)
+        #print(augmented_image)
         return augmented_image
 
     def get_random_label_position(self, width: int, height: int) -> Tuple:
