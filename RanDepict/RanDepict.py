@@ -268,7 +268,7 @@ class random_depictor:
             depiction_settings = self.get_random_rdkit_rendering_settings()
             # Create depiction
             # TODO: Figure out how to depict molecules without kekulization here.
-            # This does not prevent the molecule from being depicted kekulized:
+            # The following line does not prevent the molecule from being depicted kekulized:
             # mol = rdMolDraw2D.PrepareMolForDrawing(mol, kekulize = False)
             # The molecule must get kekulized somewhere "by accident"
 
@@ -631,7 +631,6 @@ class random_depictor:
         augmented_image = aug.augment_images([image])[0]
         augmented_image = resize(augmented_image, original_shape, preserve_range=True, anti_aliasing=True)
         augmented_image = augmented_image.astype(np.uint8)
-        #print(augmented_image)
         return augmented_image
 
     def get_random_label_position(self, width: int, height: int) -> Tuple:
@@ -877,7 +876,7 @@ class random_depictor:
                 )
         return R_group_label
 
-    def add_chemical_label(self, image: np.array, label_type: str) -> np.array:
+    def add_chemical_label(self, image: np.array, label_type: str, foreign_fonts: bool= True) -> np.array:
         '''This function takes an image (np.array) and adds random text that looks like a chemical ID label ,
         an R group label or a reaction condition label around the structure. It returns the modified image.
         The label type is determined by the parameter label_type (str), which needs to be "ID", R_GROUP" or
@@ -886,7 +885,12 @@ class random_depictor:
         orig_image = deepcopy(im)
         width, height = im.size
         # Choose random font
-        font_dir = HERE.joinpath("fonts/")
+        if self.random_choice([True, False]) or not foreign_fonts:
+            font_dir = HERE.joinpath("fonts/")
+        #In half of the cases: Use foreign-looking font to generate bigger noise variety
+        else:
+            font_dir = HERE.joinpath("foreign_fonts/")
+
         fonts = os.listdir(str(font_dir))
         # Choose random font size
         font_sizes = range(10, 20)
