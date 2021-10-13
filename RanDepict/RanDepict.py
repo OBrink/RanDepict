@@ -56,6 +56,9 @@ class random_depictor:
             superatoms = superatoms.readlines()
             self.superatoms = [s[:-2] for s in superatoms]
 
+        # Define PIL resizing methods to choose from:
+        self.PIL_resize_methods = [Image.NEAREST, Image.BOX, Image.BILINEAR, Image.HAMMING, Image.BICUBIC, Image.LANCZOS]
+
         # Set context for multiprocessing but make sure this only happens once
         try:
             set_start_method("spawn")
@@ -201,7 +204,7 @@ class random_depictor:
         temp = renderer.renderToBuffer(molecule)
         temp = io.BytesIO(temp)
         depiction = sk_io.imread(temp) 
-        depiction = resize(depiction, (shape[0], shape[1], 4))
+        depiction = self.resize(depiction, (shape[0], shape[1]))
         depiction = rgba2rgb(depiction)
         depiction = img_as_ubyte(depiction)
         return depiction
@@ -276,7 +279,7 @@ class random_depictor:
             depiction = depiction_settings.GetDrawingText()
             depiction = sk_io.imread(io.BytesIO(depiction))
             # Resize image to desired shape
-            depiction = resize(depiction, shape)
+            depiction = self.resize(depiction, shape)
             depiction = img_as_ubyte(depiction)
             return np.asarray(depiction)
         else: 
@@ -502,7 +505,7 @@ class random_depictor:
         # Normalise padding and get non-distorted image of right size
         depiction = self.normalise_padding(depiction)
         depiction = self.central_square_image(depiction)
-        depiction = resize(depiction, shape)
+        depiction = self.resize(depiction, shape)
         depiction = img_as_ubyte(depiction)
         return depiction
 
@@ -567,6 +570,27 @@ class random_depictor:
         return depiction
 
 
+    def resize(
+        self, image: np.array, shape:Tuple[int]
+        ) -> np.array:
+        """
+        This function takes an image (np.array) and a shape and returns the resized image (np.array).
+        It uses Pillow to do this, as it seems to have a bigger variety of scaling methods than skimage.
+        The up/downscaling method is chosen randomly.
+        ___
+        image: np.array; the input image
+        shape: tuple that describes desired output shape
+        ___
+        Output: np.array; the resized image
+
+        """
+        image = Image.fromarray(image)
+        shape = (shape[0], shape[1])
+        image = image.resize(shape, resample = self.random_choice(self.PIL_resize_methods))
+        return np.asarray(image)
+
+
+
     def imgaug_augment(self, image: np.array) -> np.array:
         """This function applies a random amount of augmentations to a given image (np.array)
         using and returns the augmented image (np.array)."""
@@ -629,7 +653,7 @@ class random_depictor:
         selected_aug_list = self.random_choices(aug_list, aug_number)
         aug = iaa.Sequential(selected_aug_list)
         augmented_image = aug.augment_images([image])[0]
-        augmented_image = resize(augmented_image, original_shape, preserve_range=True, anti_aliasing=True)
+        augmented_image = self.resize(augmented_image, original_shape)
         augmented_image = augmented_image.astype(np.uint8)
         return augmented_image
 
@@ -948,11 +972,10 @@ class random_depictor:
             new_arrow_image_shape = int(
                 (x_max - x_min) / self.random_choice(range(3, 6))
             ), int((y_max - y_min) / self.random_choice(range(3, 6)))
-            arrow_image = arrow_image.resize(
-                new_arrow_image_shape, resample=Image.BICUBIC
-            )
+            arrow_image = self.resize(np.asarray(arrow_image), new_arrow_image_shape)
+            arrow_image = Image.fromarray(arrow_image)
             arrow_image = arrow_image.rotate(
-                self.random_choice(range(360)), resample=Image.BICUBIC, expand=True
+                self.random_choice(range(360)), resample=self.random_choice([Image.BICUBIC, Image.NEAREST, Image.BILINEAR]), expand=True
             )
             # Try different positions with the condition that the arrows are overlapping with non-white pixels (the structure)
             for _ in range(50):
