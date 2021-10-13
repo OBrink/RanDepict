@@ -1105,6 +1105,7 @@ class random_depictor:
         shape: Tuple[int, int] = (299, 299),
         ID_list: List[str] = False,
         processes: int = 4,
+        seed: int = 42,
     ) -> None:
         """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure depictions of each chemical structure
@@ -1119,7 +1120,7 @@ class random_depictor:
                     output_dir,
                     shape,
                     ID_list[n],
-                    (n + 1) * len(smiles_list),  # individual seed
+                    (seed * n + 1) * len(smiles_list),  # individual seed
                 )
                 for n in range(len(smiles_list))
             )
@@ -1139,6 +1140,7 @@ class random_depictor:
         shape: Tuple[int, int] = (299, 299),
         ID_list: List[str] = False,
         processes: int = 4,
+        seed: int = 42,
     ) -> None:
         """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure augmented depictions of each chemical structure
@@ -1153,7 +1155,7 @@ class random_depictor:
                     output_dir,
                     shape,
                     ID_list[n],
-                    (n + 1) * len(smiles_list),  # individual seed
+                    (seed * n + 1) * len(smiles_list),  # individual seed
                 )
                 for n in range(len(smiles_list))
             )
