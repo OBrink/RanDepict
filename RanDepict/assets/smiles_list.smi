@@ -95,7 +95,6 @@
 *[CH-] CH-
 *[2H] D
 *[N]([2H])[2H] ND2
-*[S][2H DS
 *C CH3
 *CC C2H5
 *C(=O)C Ace
@@ -159,14 +158,14 @@
 *C1CCCCC1 cHexyl
 *C1CCCCC1 c-Hexyl
 *I Iodo
-*[Si](C)(C(C)C)C IPDMS
+
 *OC Methoxy
 *COCCOC MEM
 *C1=C(C)C=C(C)C=C1(C) Mesityl
 *COC MOM
 *S(=O)(C)=O Mesyl
 *S(=O)(C)=O Ms
-*N(=O)[O-] Nitro
+
 *CCC nOctyl
 *CCC n-Octyl
 *CCC n-Oct
@@ -192,7 +191,7 @@
 *C(C)C i-Propyl
 *C(C)C i-Pr
 *C(C)C i-Pro
-*ClCOCC[Si](C)(C)C SEM
+
 *C1OCCCC1 THP
 *[Si](C)(C)C TMS
 *[Si](C)(C)C(C)(C)C TBDMS
