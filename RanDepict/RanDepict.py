@@ -63,7 +63,8 @@ class random_depictor:
         Image.BILINEAR, 
         Image.HAMMING, 
         Image.BICUBIC, 
-        Image.LANCZOS]
+        Image.LANCZOS
+        ]
 
         # Set context for multiprocessing but make sure this only happens once
         try:
@@ -465,11 +466,11 @@ class random_depictor:
         # Create an empty image of the right size
         y, x = self.random_image_size(shape)
         # Workaround for structures that are cut off at edged of images:
-        # Make image twice as big, apply Zoom factor of 0.5, then remove white 
+        # Make image twice as big, reduce Zoom factor, then remove white 
         # areas at borders and resize to originally desired shape
         # TODO: Find out why the structures are cut off in the first place
-        y = y * 2
-        x = x * 2
+        y = y * 3
+        x = x * 3
 
         drawArea = JClass("java.awt.Rectangle")(x, y)
         BufferedImage = JClass("java.awt.image.BufferedImage")
@@ -487,7 +488,7 @@ class random_depictor:
             JClass(
                 "org.openscience.cdk.renderer.generators.BasicSceneGenerator.ZoomFactor"
             ),
-            double(0.5),
+            double(0.75),
         )
         g2 = image.getGraphics()
         g2.setColor(JClass("java.awt.Color").WHITE)
