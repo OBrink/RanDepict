@@ -57,7 +57,13 @@ class random_depictor:
             self.superatoms = [s[:-2] for s in superatoms]
 
         # Define PIL resizing methods to choose from:
-        self.PIL_resize_methods = [Image.NEAREST, Image.BOX, Image.BILINEAR, Image.HAMMING, Image.BICUBIC, Image.LANCZOS]
+        self.PIL_resize_methods = [
+        Image.NEAREST, 
+        Image.BOX, 
+        Image.BILINEAR, 
+        Image.HAMMING, 
+        Image.BICUBIC, 
+        Image.LANCZOS]
 
         # Set context for multiprocessing but make sure this only happens once
         try:
@@ -375,7 +381,7 @@ class random_depictor:
         # Right now, this is loaded every time when a structure is depicted. That seems inefficient.
         if self.random_choice([True, False]):
             cdk_superatom_abrv = JClass("org.openscience.cdk.depict.Abbreviations")()
-            abbreviation_path = str(HERE.joinpath("superatom_obabel.smi")).replace(
+            abbreviation_path = str(HERE.joinpath("smiles_list.smi")).replace(
                 "\\", "/"
             )
             abbreviation_path = JClass("java.lang.String")(abbreviation_path)
@@ -943,7 +949,10 @@ class random_depictor:
                 (x_pos, y_pos), label_text, font=font
             )  # left, up, right, low
             paste_region = orig_image.crop(bounding_box)
-            mean = ImageStat.Stat(paste_region).mean
+            try:
+                mean = ImageStat.Stat(paste_region).mean
+            except ZeroDivisionError:
+                return np.asarray(im)
             if sum(mean) / len(mean) == 255:
                 draw.text((x_pos, y_pos), label_text, font=font, fill=(0, 0, 0, 255))
                 break
@@ -1037,7 +1046,7 @@ class random_depictor:
             # Rotate completely randomly in half of the cases and in   180° steps in the other cases (higher probability that pasting works)
             if self.random_choice([True, False]):
                 arrow_image = arrow_image.rotate(
-                    self.random_choice(range(360)), resample=Image.BICUBIC, expand=True
+                    self.random_choice(range(360)), resample=self.random_choice([Image.BICUBIC, Image.NEAREST, Image.BILINEAR]), expand=True
                 )
             else:
                 arrow_image = arrow_image.rotate(self.random_choice([180, 360]))
