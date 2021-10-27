@@ -681,7 +681,7 @@ class random_depictor:
         return self.random_choice(y_range), self.random_choice(x_range)
 
     def ID_label_text(self) -> str:
-        """This function returns a string that resembles a typical chemica ID label"""
+        """This function returns a string that resembles a typical chemical ID label"""
         label_num = range(1, 50)
         label_letters = [
             "a",
