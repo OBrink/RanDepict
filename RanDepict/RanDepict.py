@@ -4,11 +4,10 @@ import pathlib
 import numpy as np
 import io
 from skimage import io as sk_io
-from skimage.transform import resize
 from skimage.color import rgba2rgb, rgb2gray
 from skimage.util import img_as_ubyte, img_as_float
-from PIL import Image, ImageFont, ImageDraw, ImageFilter, ImageStat
-from multiprocessing import Pool, set_start_method, get_context
+from PIL import Image, ImageFont, ImageDraw, ImageStat
+from multiprocessing import set_start_method, get_context
 import imgaug.augmenters as iaa
 import random
 from copy import deepcopy
@@ -18,7 +17,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem.rdAbbreviations import CondenseMolAbbreviations, GetDefaultAbbreviations
 from rdkit.Chem.Draw import rdMolDraw2D
-from indigo import Indigo, IndigoException
+from indigo import Indigo
 from indigo.renderer import IndigoRenderer
 from jpype import *
 import base64
