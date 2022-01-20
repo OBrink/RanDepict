@@ -25,3 +25,4 @@ __all__ = [
 ]
 
 from .RanDepict import random_depictor
+from .depiction_feature_diversity import depiction_features, depiction_feature_ranges
