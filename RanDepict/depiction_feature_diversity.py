@@ -1,6 +1,6 @@
-class depiction_features:
+class DepictionFeatures:
     """
-    A depiction_features objects simply holds all depiction parameters
+    A DepictionFeatures objects simply holds all depiction parameters
     of a chemical structure depiction generated with RanDepict
     """
     def __init__(self):
@@ -73,7 +73,7 @@ class depiction_features:
         
         
         
-class depiction_feature_ranges:
+class DepictionFeatureRanges:
     def __init__(self):       
         pass
         # # Ranges that the parameters above are picked from

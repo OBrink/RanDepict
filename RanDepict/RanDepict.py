@@ -22,13 +22,15 @@ from indigo.renderer import IndigoRenderer
 from jpype import *
 import base64
 
+from depiction_feature_diversity import DepictionFeatures, DepictionFeatureRanges
+
 HERE = pathlib.Path(__file__).resolve().parent.joinpath("assets")
 
 
-class random_depictor:
+class RandomDepictor:
     """This class contains everything necessary to generate a variety of random depictions
     with given SMILES strings.
-    An instance of random_depictor can be called with a SMILES str and returns an np.array
+    An instance of RandomDepictor can be called with a SMILES str and returns an np.array
     that represents the RGB image with the given chemical structure."""
 
     def __init__(self, seed: int = 42):
@@ -40,7 +42,7 @@ class random_depictor:
             print(
                 "If you see this message, for some reason JPype cannot find jvm.dll.",
                 "This indicates that the environment varibale JAVA_HOME is not set properly.",
-                "You can set it or set it manually in the code (see __init__() of random_depictor)",
+                "You can set it or set it manually in the code (see __init__() of RandomDepictor)",
             )
             self.jvmPath = "Define/your/path/or/set/your/JAVA_HOME/variable/properly"
         if not isJVMStarted():
@@ -64,6 +66,8 @@ class random_depictor:
         Image.BICUBIC, 
         Image.LANCZOS
         ]
+
+        self.depiction_features = False
 
         # Set context for multiprocessing but make sure this only happens once
         try:
@@ -108,13 +112,22 @@ class random_depictor:
         # shutdownJVM()
         pass
 
-    def random_choice(self, iterable: List):
+    def random_choice(self, iterable: List, log_attribute: str = False):
         """This function takes an iterable, calls self.random_choice() on it,
         increases random.seed by 1 and returns the result. This way, results
         produced by RanDepict are replicable."""
         self.seed += 1
         random.seed(self.seed)
-        return random.choice(iterable)
+        result = random.choice(iterable)
+        # Add result(s) to augmentation_logger
+        if log_attribute and self.depiction_features:
+            found_logged_attribute = getattr(self.augmentation_logger, log_attribute)
+            # If the attribute is not saved in a list, simply write it, otherwise append it
+            if type(found_logged_attribute) != list:
+                setattr(self.depiction_features, log_attribute, result)
+            else:
+                setattr(self.augmentation_logger, log_attribute, found_logged_attribute + [result])
+        return result
 
     def random_choices(self, iterable: List, k: int) -> List:
         """This function takes an iterable, calls self.random_choices() on it to take k
@@ -1092,7 +1105,7 @@ class random_depictor:
         If an ID is given, it is used as the base filename. Otherwise, the SMILES str is used."""
         # This seems a bit odd but it appears that it is the only way to make the seed tracking work
         # with multiprocessing
-        depictor = random_depictor(seed + 13)
+        depictor = RandomDepictor(seed + 13)
 
         if not ID:
             name = smiles
@@ -1118,7 +1131,7 @@ class random_depictor:
         If an ID is given, it is used as the base filename. Otherwise, the SMILES str is used."""
         # This seems a bit odd but it appears that it is the only way to make the seed tracking work
         # with multiprocessing
-        depictor = random_depictor(seed + 13)
+        depictor = RandomDepictor(seed + 13)
 
         if not ID:
             name = smiles
