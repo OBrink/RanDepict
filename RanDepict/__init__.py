@@ -18,11 +18,11 @@ For comments, bug reports or feature ideas, please raise a issue on the Github r
 
 """
 
-__version__ = "1.0.3"
+__version__ = "1.1.0"
 
 __all__ = [
     "RanDepict",
 ]
 
-from .RanDepict import random_depictor
-from .depiction_feature_diversity import depiction_features, depiction_feature_ranges
+from .RanDepict import RandomDepictor
+from .depiction_feature_diversity import DepictionFeatures, DepictionFeatureRanges

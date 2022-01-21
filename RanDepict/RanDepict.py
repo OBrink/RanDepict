@@ -86,9 +86,9 @@ class RandomDepictor:
         # Each type of label and curved arrows have a 1/6 chance to appear
         # In 33% of the cases, we attempt to insert 1-2 straight arrows
         # (incomplete/fails in most cases because there is not enought space)
-        if self.random_choice([True, False, False, False, False, False]):
+        if self.random_choice([True, False, False, False, False, False], log_attribute='has_curved_arrows'):
             depiction = self.add_curved_arrows_to_structure(depiction)
-        if self.random_choice([True, False, False]):
+        if self.random_choice([True, False, False], log_attribute='has_straight_arrows'):
             depiction = self.add_straight_arrows_to_structure(depiction)
         if self.random_choice([True, False, False, False, False, False]):
             depiction = self.add_chemical_label(depiction, "ID")
@@ -115,7 +115,8 @@ class RandomDepictor:
     def random_choice(self, iterable: List, log_attribute: str = False):
         """This function takes an iterable, calls self.random_choice() on it,
         increases random.seed by 1 and returns the result. This way, results
-        produced by RanDepict are replicable."""
+        produced by RanDepict are replicable.
+        """
         self.seed += 1
         random.seed(self.seed)
         result = random.choice(iterable)
@@ -167,10 +168,10 @@ class RandomDepictor:
         indigo.setOption("render-image-width", x)
         indigo.setOption("render-image-height", y)
         # Set random bond line width
-        bond_line_width = float(self.random_choice(np.arange(0.5, 2.5, 0.5)))
+        bond_line_width = float(self.random_choice(np.arange(0.5, 2.5, 0.5), log_attribute='indigo_bond_line_width'))
         indigo.setOption("render-bond-line-width", bond_line_width)
         # Set random relative thickness
-        relative_thickness = float(self.random_choice(np.arange(0.5, 1.5, 0.1)))
+        relative_thickness = float(self.random_choice(np.arange(0.5, 1.5, 0.1), log_attribute='indigo_relative_thickness'))
         indigo.setOption("render-relative-thickness", relative_thickness)
         # Set random bond length
         # CAREFUL! Changing the bond length does not change the bond length relative to other
@@ -180,9 +181,9 @@ class RandomDepictor:
         # Output_format: PNG
         indigo.setOption("render-output-format", "png")
         # Set random atom label rendering model (standard is rendering terminal groups)
-        if self.random_choice([True] + [False] * 19):
+        if self.random_choice([True] + [False] * 19, log_attribute='indigo_labels_all'):
             indigo.setOption("render-label-mode", "all")  # show all atom labels
-        elif self.random_choice([True] + [False] * 3):
+        elif self.random_choice([True] + [False] * 3, log_attribute='indigo_labels_hetero'):
             indigo.setOption(
                 "render-label-mode", "hetero"
             )  # only hetero atoms, no terminal groups
@@ -193,13 +194,13 @@ class RandomDepictor:
         #    B = str(self.random_choice(np.arange(0.1, 1.0, 0.1)))
         #    indigo.setOption("render-base-color", ", ".join([R,G,B]))
         # Render bold bond for Haworth projection
-        if self.random_choice([True, False]):
+        if self.random_choice([True, False], log_attribute='indigo_render_bold_bond'):
             indigo.setOption("render-bold-bond-detection", "True")
         # Render labels for stereobonds
-        stereo_style = self.random_choice(["ext", "old", "none"])
+        stereo_style = self.random_choice(["ext", "old", "none"], log_attribute='indigo_stereo_label_style')
         indigo.setOption("render-stereo-style", stereo_style)
         # Collapse superatoms (default: expand)
-        if self.random_choice([True, False]):
+        if self.random_choice([True, False], log_attribute='indigo_collapse_superatoms'):
             indigo.setOption("render-superatom-mode", "collapse")
         return indigo, renderer
 
@@ -210,13 +211,11 @@ class RandomDepictor:
         using Indigo with random rendering/depiction settings and returns an RGB image (np.array)
         with the given image shape."""
         # Instantiate Indigo with random settings and IndigoRenderer
-        #try:
         indigo, renderer = self.get_random_indigo_rendering_settings()
-
         # Load molecule
         molecule = indigo.loadMolecule(smiles)
         # Do not kekulize in 20% of cases
-        if self.random_choice([True, True, False, False, False, False]):
+        if self.random_choice([True, False, False], log_attribute='indigo_not_kekulized'):
             molecule.aromatize()
         molecule.layout()
         # Write to buffer
@@ -238,35 +237,35 @@ class RandomDepictor:
         # Instantiate object that saves the settings
         depiction_settings = rdMolDraw2D.MolDraw2DCairo(y, x)
         # Stereo bond annotation
-        if self.random_choice([True, False]):
+        if self.random_choice([True, False], log_attribute='rdkit_add_stereo_annotation'):
             depiction_settings.drawOptions().addStereoAnnotation = True
-        if self.random_choice([True, False]):
+        if self.random_choice([True, False], log_attribute='rdkit_add_chiral_flag_labels'):
             depiction_settings.drawOptions().includeChiralFlagLabel = True
         # Atom indices
-        if self.random_choice([True, False, False, False]):
+        if self.random_choice([True, False, False, False],  log_attribute='rdkit_add_atom_indices'):
             depiction_settings.drawOptions().addAtomIndices = True
         # Bond line width
-        bond_line_width = self.random_choice(range(1, 5))
+        bond_line_width = self.random_choice(range(1, 5), log_attribute='rdkit_bond_line_width')
         depiction_settings.drawOptions().bondLineWidth = bond_line_width
         # Draw terminal methyl groups
-        if self.random_choice([True, False]):
+        if self.random_choice([True, False], log_attribute='rdkit_draw_terminal_methyl'):
             depiction_settings.drawOptions().explicitMethyl = True
         # Label font type and size
         font_dir = HERE.joinpath("fonts/")
         font_path = os.path.join(
-            str(font_dir), self.random_choice(os.listdir(str(font_dir)))
+            str(font_dir), self.random_choice(os.listdir(str(font_dir)), log_attribute='rdkit_label_font')
         )
         depiction_settings.drawOptions().fontFile = font_path
-        min_font_size = self.random_choice(range(10, 20))
+        min_font_size = self.random_choice(range(10, 20), log_attribute='rdkit_min_font_size')
         depiction_settings.drawOptions().minFontSize = min_font_size
         depiction_settings.drawOptions().maxFontSize = 30
         # Rotate the molecule
-        depiction_settings.drawOptions().rotate = self.random_choice(range(360))
+        depiction_settings.drawOptions().rotate = self.random_choice(range(360), log_attribute='rdkit_molecule_rotation')
         # Fixed bond length
-        fixed_bond_length = self.random_choice(range(30, 45))
+        fixed_bond_length = self.random_choice(range(30, 45), log_attribute='rdkit_fixed_bond_length')
         depiction_settings.drawOptions().fixedBondLength = fixed_bond_length
         # Comic mode (looks a bit hand drawn)
-        if self.random_choice([True, False, False, False, False]):
+        if self.random_choice([True, False, False, False, False], log_attribute='rdkit_comic_style'):
             depiction_settings.drawOptions().comicMode = True
         # Keep it black and white
         depiction_settings.drawOptions().useBWAtomPalette()
@@ -283,7 +282,7 @@ class RandomDepictor:
         if mol:
             AllChem.Compute2DCoords(mol)
             # Abbreviate superatoms
-            if self.random_choice([True, False]):
+            if self.random_choice([True, False], log_attribute='rdkit_collapse_superatoms'):
                 abbrevs = GetDefaultAbbreviations()
                 mol = CondenseMolAbbreviations(mol, abbrevs)
             # Get random depiction settings
@@ -317,11 +316,11 @@ class RandomDepictor:
 
         # Define visibility of atom/superatom labels
         SymbolVisibility = JClass("org.openscience.cdk.renderer.SymbolVisibility")
-        if self.random_choice([True] + [False] * 19):
+        if self.random_choice([True] + [False] * 19, log_attribute='cdk_show_all_atom_labels'):
             rendererModel.set(
                 StandardGenerator.Visibility.class_, SymbolVisibility.all()
             )  # show all atom labels
-        elif self.random_choice([True] + [False] * 3):
+        elif self.random_choice([True, False, False, False], log_attribute='cdk_no_terminal_methyl'):
             # only hetero atoms, no terminal alkyl groups
             rendererModel.set(
                 StandardGenerator.Visibility.class_,
@@ -333,30 +332,30 @@ class RandomDepictor:
                 SymbolVisibility.iupacRecommendations(),
             )
         # Define bond line stroke width
-        stroke_width = self.random_choice(np.arange(0.8, 2.0, 0.1))
+        stroke_width = self.random_choice(np.arange(0.8, 2.0, 0.1), log_attribute='cdk_stroke_width')
         rendererModel.set(StandardGenerator.StrokeRatio.class_, stroke_width)
         # Define symbol margin ratio
-        margin_ratio = self.random_choice([0, 1, 2, 2, 2, 3, 4])
+        margin_ratio = self.random_choice([0, 1, 2, 2, 2, 3, 4], log_attribute='cdk_margin_ratio')
         rendererModel.set(
             StandardGenerator.SymbolMarginRatio.class_,
             JClass("java.lang.Double")(margin_ratio),
         )
         # Define bond properties
-        double_bond_dist = self.random_choice(np.arange(0.11, 0.25, 0.01))
+        double_bond_dist = self.random_choice(np.arange(0.11, 0.25, 0.01), log_attribute='cdk_double_bond_dist')
         rendererModel.set(StandardGenerator.BondSeparation.class_, double_bond_dist)
-        wedge_ratio = self.random_choice(np.arange(4.5, 7.5, 0.1))
+        wedge_ratio = self.random_choice(np.arange(4.5, 7.5, 0.1), log_attribute='cdk_wedge_ratio')
         rendererModel.set(
             StandardGenerator.WedgeRatio.class_, JClass("java.lang.Double")(wedge_ratio)
         )
-        if self.random_choice([True, False]):
-            rendererModel.set(StandardGenerator.FancyBoldWedges.class_, False)
-        if self.random_choice([True, False]):
-            rendererModel.set(StandardGenerator.FancyHashedWedges.class_, False)
-        hash_spacing = self.random_choice(np.arange(4.0, 6.0, 0.2))
+        if self.random_choice([True, False], log_attribute='cdk_fancy_bold_wedges'):
+            rendererModel.set(StandardGenerator.FancyBoldWedges.class_, True)
+        if self.random_choice([True, False], log_attribute='cdk_fancy_hashed_wedges'):
+            rendererModel.set(StandardGenerator.FancyHashedWedges.class_, True)
+        hash_spacing = self.random_choice(np.arange(4.0, 6.0, 0.2), log_attribute='cdk_hash_spacing')
         rendererModel.set(StandardGenerator.HashSpacing.class_, hash_spacing)
         # Add CIP labels
         labels = False
-        if self.random_choice([True, True]):
+        if self.random_choice([True, True], log_attribute='cdk_add_CIP_labels'):
             labels = True
             JClass("org.openscience.cdk.geometry.cip.CIPTool").label(molecule)
             for atom in molecule.atoms():
@@ -370,7 +369,7 @@ class RandomDepictor:
                 )
                 bond.setProperty(StandardGenerator.ANNOTATION_LABEL, label)
         # Add atom indices to the depictions
-        if self.random_choice([True, False, False, False]):
+        if self.random_choice([True, False, False, False], log_attribute='cdk_add_atom_indices'):
             labels = True
             for atom in molecule.atoms():
                 label = JClass("java.lang.Integer")(1 + molecule.getAtomNumber(atom))
@@ -382,17 +381,17 @@ class RandomDepictor:
                 JClass("java.awt.Color")(0x000000),
             )
             # Font size of labels
-            font_scale = self.random_choice(np.arange(0.5, 0.8, 0.1))
+            font_scale = self.random_choice(np.arange(0.5, 0.8, 0.1), log_attribute='cdk_label_font_scale')
             rendererModel.set(StandardGenerator.AnnotationFontScale.class_, font_scale)
             # Distance between atom numbering and depiction
-            annotation_distance = self.random_choice(np.arange(0.15, 0.30, 0.05))
+            annotation_distance = self.random_choice(np.arange(0.15, 0.30, 0.05), log_attribute='cdk_annotation_distance')
             rendererModel.set(
                 StandardGenerator.AnnotationDistance.class_, annotation_distance
             )
         # Abbreviate superatom labels in half of the cases
         # TODO: Find a way to define Abbreviations object as a class attribute. Problem: can't be pickled.
         # Right now, this is loaded every time when a structure is depicted. That seems inefficient.
-        if self.random_choice([True, False]):
+        if self.random_choice([True, False], log_attribute='cdk_collapse_superatoms'):
             cdk_superatom_abrv = JClass("org.openscience.cdk.depict.Abbreviations")()
             abbreviation_path = str(HERE.joinpath("smiles_list.smi")).replace(
                 "\\", "/"
@@ -419,14 +418,14 @@ class RandomDepictor:
         SmilesParser = JClass("org.openscience.cdk.smiles.SmilesParser")(
             SCOB.getInstance()
         )
-        if self.random_choice([True, True, False, False, False, False]):
+        if self.random_choice([True, False, False], log_attribute='cdk_kekulized'):
             SmilesParser.kekulise(False)
         molecule = SmilesParser.parseSmiles(smiles)
         
         # Add hydrogens for coordinate generation (to make it look nicer/ avoid overlaps)
         matcher = JClass("org.openscience.cdk.atomtype.CDKAtomTypeMatcher").getInstance(molecule.getBuilder())
         for atom in molecule.atoms():
-            atom_type = matcher.findMatchingAtomType(molecule, atom);
+            atom_type = matcher.findMatchingAtomType(molecule, atom)
             JClass("org.openscience.cdk.tools.manipulator.AtomTypeManipulator").configure(atom, atom_type)
         adder = JClass("org.openscience.cdk.tools.CDKHydrogenAdder").getInstance(molecule.getBuilder())
         adder.addImplicitHydrogens(molecule)
@@ -446,7 +445,7 @@ class RandomDepictor:
         point = JClass("org.openscience.cdk.geometry.GeometryTools").get2DCenter(
             molecule
         )
-        rot_degrees = self.random_choice(range(360))
+        rot_degrees = self.random_choice(range(360), log_attribute='cdk_molecule_rotation')
         JClass("org.openscience.cdk.geometry.GeometryTools").rotate(
             molecule, point, rot_degrees
         )
@@ -457,12 +456,13 @@ class RandomDepictor:
             "org.openscience.cdk.renderer.generators.BasicSceneGenerator"
         )()
         generators.add(BasicSceneGenerator)
-        font_size = self.random_choice(range(10, 20))
+        font_size = self.random_choice(range(10, 20), log_attribute='cdk_atom_label_font_size')
         Font = JClass("java.awt.Font")
         font_name = self.random_choice(
-            ["Verdana", "Times New Roman", "Arial", "Gulliver Regular"]
+            ["Verdana", "Times New Roman", "Arial", "Gulliver Regular"],
+            log_attribute='cdk_atom_label_font'
         )
-        font_style = self.random_choice([Font.PLAIN, Font.BOLD])
+        font_style = self.random_choice([Font.PLAIN, Font.BOLD], log_attribute='cdk_atom_label_font_style')
         font = Font(font_name, font_style, font_size)
         StandardGenerator = JClass(
             "org.openscience.cdk.renderer.generators.standard.StandardGenerator"
@@ -626,50 +626,72 @@ class RandomDepictor:
         image = np.pad(
             image, ((1, 1), (1, 1), (0, 0)), mode="constant", constant_values=255
         )
-        # Set parameters for imgaug via self.random_choice() to keep seed control
-        rot_angle = self.random_choice(np.arange(-10, 10, 1))
-        coarse_dropout_p = self.random_choice(np.arange(0.0002, 0.0015, 0.0001))
-        coarse_dropout_size_percent = self.random_choice(np.arange(1.0, 1.1, 0.01))
-        replace_elementwise_p = self.random_choice(np.arange(0.01, 0.3, 0.01))
-        shear_param = self.random_choice(np.arange(-5, 5, 1))
-        imgcorrupt_severity = self.random_choice(np.arange(1, 2, 1))
-        brightness_adj_param = self.random_choice(np.arange(-50, 50, 1))
-        colour_temp = self.random_choice(np.arange(1100, 10000, 1))
-
-        # Define list of available augmentations
-        aug_list = [
+        
+        def imgaug_rotation():
             # Rotation between -10 and 10 degrees
-            iaa.Affine(rotate=rot_angle, mode="edge", fit_output=True),
+            rot_angle = self.random_choice(np.arange(-10, 10, 1), log_attribute='imgaug_rotation_angle')
+            aug = iaa.Affine(rotate=rot_angle, mode="edge", fit_output=True)
+            return aug
+        
+        def imgaug_black_and_white_noise():
             # Black and white noise
-            iaa.Sequential(
+            coarse_dropout_p = self.random_choice(np.arange(0.0002, 0.0015, 0.0001))
+            coarse_dropout_size_percent = self.random_choice(np.arange(1.0, 1.1, 0.01))
+            replace_elementwise_p = self.random_choice(np.arange(0.01, 0.3, 0.01))
+            aug = iaa.Sequential(
                 [
                     iaa.CoarseDropout(
                         coarse_dropout_p, size_percent=coarse_dropout_size_percent
                     ),
                     iaa.ReplaceElementwise(replace_elementwise_p, 255),
                 ]
-            ),
+            )
+            return aug
+        
+        def imgaug_shearing():
             # Shearing
-            self.random_choice(
+            shear_param = self.random_choice(np.arange(-5, 5, 1))
+            aug = self.random_choice(
                 [
                     iaa.geometric.ShearX(shear_param, mode="edge", fit_output=True),
                     iaa.geometric.ShearY(shear_param, mode="edge", fit_output=True),
                 ]
-            ),
+            )
+            return aug
+        
+        def imgaug_imgcorruption():
             # Jpeg compression or pixelation
-            self.random_choice(
+            imgcorrupt_severity = self.random_choice(np.arange(1, 2, 1))
+            aug = self.random_choice(
                 [
                     iaa.imgcorruptlike.JpegCompression(severity=imgcorrupt_severity),
                     iaa.imgcorruptlike.Pixelate(severity=imgcorrupt_severity),
                 ]
-            ),
+            )
+            return aug
+        
+        def imgaug_brightness_adjustment():
             # Brightness adjustment
-            iaa.WithBrightnessChannels(iaa.Add(brightness_adj_param)),
+            brightness_adj_param = self.random_choice(np.arange(-50, 50, 1))
+            aug = iaa.WithBrightnessChannels(iaa.Add(brightness_adj_param))
+            return aug
+        
+        def imgaug_colour_temp_adjustment():
             # Colour temperature adjustment
-            iaa.ChangeColorTemperature(colour_temp),  # colour temperature adjustment
-        ]
-
+            colour_temp = self.random_choice(np.arange(1100, 10000, 1))
+            aug = iaa.ChangeColorTemperature(colour_temp)
+            return aug
+        
+        # Define list of available augmentations
+        aug_list = [imgaug_rotation,
+                    imgaug_black_and_white_noise,
+                    imgaug_shearing,
+                    imgaug_imgcorruption,
+                    imgaug_brightness_adjustment,
+                    imgaug_colour_temp_adjustment]
+        
         selected_aug_list = self.random_choices(aug_list, aug_number)
+        selected_aug_list = [fun() for fun in selected_aug_list]
         aug = iaa.Sequential(selected_aug_list)
         augmented_image = aug.augment_images([image])[0]
         augmented_image = self.resize(augmented_image, original_shape)
@@ -924,6 +946,7 @@ class RandomDepictor:
         an R group label or a reaction condition label around the structure. It returns the modified image.
         The label type is determined by the parameter label_type (str), which needs to be "ID", R_GROUP" or
         "REACTION"'''
+        
         im = Image.fromarray(image)
         orig_image = deepcopy(im)
         width, height = im.size
@@ -937,7 +960,7 @@ class RandomDepictor:
         fonts = os.listdir(str(font_dir))
         # Choose random font size
         font_sizes = range(10, 20)
-        size = self.random_choice(font_sizes)
+        size = self.random_choice(font_sizes, log_attribute='label_font_sizes')
         # Generate random string that resembles the desired type of chemical label
         if label_type == "ID":
             label_text = self.ID_label_text()
@@ -948,7 +971,7 @@ class RandomDepictor:
 
         try:
             font = ImageFont.truetype(
-                str(os.path.join(str(font_dir), self.random_choice(fonts))), size=size
+                str(os.path.join(str(font_dir), self.random_choice(fonts, log_attribute='label_font_types'))), size=size
             )
         except OSError:
             font = ImageFont.load_default()
@@ -968,6 +991,11 @@ class RandomDepictor:
                 return np.asarray(im)
             if sum(mean) / len(mean) == 255:
                 draw.text((x_pos, y_pos), label_text, font=font, fill=(0, 0, 0, 255))
+                if self.depiction_features:
+                    self.depiction_features.label_types.append(label_type)
+                    self.depiction_features.label_texts.append(label_text)
+                    self.depiction_features.label_paste_x_positions.append(x_pos)
+                    self.depiction_features.label_paste_y_positions.append(y_pos)
                 break
 
         return np.asarray(im)
@@ -988,16 +1016,18 @@ class RandomDepictor:
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(
                 os.path.join(
-                    str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir)))
+                    str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir)), log_attribute='curved_arrow_image_type')
                 )
             )
             new_arrow_image_shape = int(
-                (x_max - x_min) / self.random_choice(range(3, 6))
-            ), int((y_max - y_min) / self.random_choice(range(3, 6)))
+                (x_max - x_min) / self.random_choice(range(3, 6), log_attribute='curved_arrow_shape_x')
+            ), int((y_max - y_min) / self.random_choice(range(3, 6), log_attribute='curved_arrow_shape_y'))
             arrow_image = self.resize(np.asarray(arrow_image), new_arrow_image_shape)
             arrow_image = Image.fromarray(arrow_image)
             arrow_image = arrow_image.rotate(
-                self.random_choice(range(360)), resample=self.random_choice([Image.BICUBIC, Image.NEAREST, Image.BILINEAR]), expand=True
+                self.random_choice(range(360), log_attribute='curved_arrow_rot_angles'), 
+                resample=self.random_choice([Image.BICUBIC, Image.NEAREST, Image.BILINEAR], log_attribute='curved_arrow_rot_resampling_methods'), 
+                expand=True
             )
             # Try different positions with the condition that the arrows are overlapping with non-white pixels (the structure)
             for _ in range(50):
@@ -1018,10 +1048,14 @@ class RandomDepictor:
                 mean = ImageStat.Stat(paste_region).mean
                 if sum(mean) / len(mean) < 252:
                     image.paste(arrow_image, (x_position, y_position), arrow_image)
+                    if self.depiction_features:
+                        # Add paste coordinates if the arrow actually has been pasted
+                        self.depiction_features.curved_arrow_paste_pos_x.append(x_position)
+                        self.depiction_features.curved_arrow_paste_pos_y.append(y_position)
                     break
         return np.asarray(image)
 
-    def get_random_arrow_position(self, width, height):
+    def get_random_straight_arrow_position(self, width, height):
         """Given the width and height of an image (int), this function determines a random
         position to paste a reaction arrow."""
         if self.random_choice([True, False]):
@@ -1050,7 +1084,7 @@ class RandomDepictor:
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(
                 os.path.join(
-                    str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir)))
+                    str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir)), log_attribute='straight_arrow_images')
                 )
             )
             # new_arrow_image_shape = (int(width * self.random_choice(np.arange(0.9, 1.5, 0.1))), int(height/10 * self.random_choice(np.arange(0.7, 1.2, 0.1))))
@@ -1059,14 +1093,16 @@ class RandomDepictor:
             # Rotate completely randomly in half of the cases and in   180° steps in the other cases (higher probability that pasting works)
             if self.random_choice([True, False]):
                 arrow_image = arrow_image.rotate(
-                    self.random_choice(range(360)), resample=self.random_choice([Image.BICUBIC, Image.NEAREST, Image.BILINEAR]), expand=True
+                    self.random_choice(range(360), log_attribute='straight_arrow_rot_angles'), 
+                    resample=self.random_choice([Image.BICUBIC, Image.NEAREST, Image.BILINEAR], log_attribute='straight_arrow_rot_resampling_methods'), 
+                    expand=True
                 )
             else:
                 arrow_image = arrow_image.rotate(self.random_choice([180, 360]))
             new_arrow_image_shape = arrow_image.size
             # Try different positions with the condition that the arrows are overlapping with non-white pixels (the structure)
             for _ in range(50):
-                y_position, x_position = self.get_random_arrow_position(width, height)
+                y_position, x_position = self.get_random_straight_arrow_position(width, height)
                 x2_position = x_position + new_arrow_image_shape[0]
                 y2_position = y_position + new_arrow_image_shape[1]
                 # Make sure we only check a region inside of the image
@@ -1081,6 +1117,9 @@ class RandomDepictor:
                     mean = ImageStat.Stat(paste_region).mean
                     if sum(mean) / len(mean) == 255:
                         image.paste(arrow_image, (x_position, y_position), arrow_image)
+                        if self.depiction_features:
+                            self.depiction_features.straight_arrow_paste_pos_x.append(x_position)
+                            self.depiction_features.straight_arrow_paste_pos_y.append(y_position)
                         break
                 except ZeroDivisionError:
                     pass
