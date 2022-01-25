@@ -22,7 +22,7 @@ from indigo.renderer import IndigoRenderer
 from jpype import *
 import base64
 
-from depiction_feature_diversity import DepictionFeatures, DepictionFeatureRanges
+#from depiction_feature_diversity import DepictionFeatures, DepictionFeatureRanges
 
 HERE = pathlib.Path(__file__).resolve().parent.joinpath("assets")
 
@@ -168,7 +168,7 @@ class RandomDepictor:
         indigo.setOption("render-image-width", x)
         indigo.setOption("render-image-height", y)
         # Set random bond line width
-        bond_line_width = float(self.random_choice(np.arange(0.5, 2.5, 0.5), log_attribute='indigo_bond_line_width'))
+        bond_line_width = float(self.random_choice(np.arange(0.5, 2.5, 0.1), log_attribute='indigo_bond_line_width'))
         indigo.setOption("render-bond-line-width", bond_line_width)
         # Set random relative thickness
         relative_thickness = float(self.random_choice(np.arange(0.5, 1.5, 0.1), log_attribute='indigo_relative_thickness'))
@@ -610,9 +610,10 @@ class RandomDepictor:
 
 
 
-    def imgaug_augment(self, image: np.array) -> np.array:
+    def imgaug_augment(self, image: np.array, call_all: bool = False) -> np.array:
         """This function applies a random amount of augmentations to a given image (np.array)
-        using and returns the augmented image (np.array)."""
+        using and returns the augmented image (np.array).
+        If call_all = True, all augmentation functions will be applied"""
         # Add some padding to make sure rotation does not lead to funny bits at the edges of the image
         # print(image)
         original_shape = image.shape
@@ -690,7 +691,10 @@ class RandomDepictor:
                     imgaug_brightness_adjustment,
                     imgaug_colour_temp_adjustment]
         
-        selected_aug_list = self.random_choices(aug_list, aug_number)
+        if not call_all:
+            selected_aug_list = self.random_choices(aug_list, aug_number)
+        else:
+            selected_aug_list = aug_list
         selected_aug_list = [fun() for fun in selected_aug_list]
         aug = iaa.Sequential(selected_aug_list)
         augmented_image = aug.augment_images([image])[0]

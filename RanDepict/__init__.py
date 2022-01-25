@@ -18,7 +18,7 @@ For comments, bug reports or feature ideas, please raise a issue on the Github r
 
 """
 
-__version__ = "1.1.0"
+__version__ = "1.0.5"
 
 __all__ = [
     "RanDepict",
