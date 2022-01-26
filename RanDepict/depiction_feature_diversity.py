@@ -151,8 +151,9 @@ class DepictionFeatureRanges(RandomDepictor):
             toolkit_range_IDs = [att for att in range_IDs if toolkit in att]
             # Delete toolkit-specific ranges 
             # (The last time this loop runs, only augmentation-related ranges are left)
-            range_IDs -= toolkit_range_IDs
-            toolkit_range_dict = {attr[:-6]: set(getattr(self, attr)) for attr in toolkit_range_IDs}
+            for ID in toolkit_range_IDs:
+                range_IDs.remove(ID)
+            toolkit_range_dict = {attr[:-6]: list(set(getattr(self, attr))) for attr in toolkit_range_IDs}
             fingerprint_scheme = self.generate_fingerprint_scheme(toolkit_range_dict)
             fingerprint_schemes.append(fingerprint_scheme)
         return fingerprint_schemes
@@ -182,7 +183,7 @@ class DepictionFeatureRanges(RandomDepictor):
         for feature_ID in ID_range_map.keys():
             feature_range = ID_range_map[feature_ID]
             # Make sure numeric ranges don't take up more than 5 positions in the fingerprint
-            if type(feature_range[0]) in [int, float] and len(feature_range) > 5:
+            if type(feature_range[0]) in [int, float, np.float64, np.float32] and len(feature_range) > 5:
                 subranges = self.split_into_n_sublists(feature_range, n=5)
                 position_dicts = []
                 for subrange in subranges:

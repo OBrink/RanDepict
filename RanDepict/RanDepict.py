@@ -355,7 +355,7 @@ class RandomDepictor:
         rendererModel.set(StandardGenerator.HashSpacing.class_, hash_spacing)
         # Add CIP labels
         labels = False
-        if self.random_choice([True, True], log_attribute='cdk_add_CIP_labels'):
+        if self.random_choice([True, False], log_attribute='cdk_add_CIP_labels'):
             labels = True
             JClass("org.openscience.cdk.geometry.cip.CIPTool").label(molecule)
             for atom in molecule.atoms():
