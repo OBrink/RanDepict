@@ -1,6 +1,8 @@
 import random
 from typing import List, Dict, Tuple 
 import numpy as np
+from itertools import product
+from multiprocessing import Pool
 from RanDepict import RandomDepictor
 
 class DepictionFeatures:
@@ -250,7 +252,62 @@ class DepictionFeatureRanges(RandomDepictor):
         return possible_combination_count
     
     
+    def get_number_of_possible_fingerprints(self, scheme: Dict):
+        """
+        This function takes a fingerprint scheme (Dict) as returned by generate_fingerprint_scheme()
+        and returns the number of possible fingerprints for that scheme.
+
+        Args:
+            scheme (Dict): Output of generate_fingerprint_scheme()
+
+        Returns:
+            int: Number of possible fingerprints
+        """
+        comb_count = 1
+        for feature_key in scheme.keys():
+            comb_count *= len(scheme[feature_key])
+        return comb_count
     
+    
+    def generate_all_possible_fingerprints(self, scheme: Dict):
+        """
+        This function takes a fingerprint scheme (Dict) as returned by generate_fingerprint_scheme()
+        and returns a List of all possible fingerprints for that scheme.
+
+        Args:
+            scheme (Dict): Output of generate_fingerprint_scheme()
+        """
+        # Determine number and length of fingerprints
+        FP_number = self.get_number_of_possible_fingerprints(scheme)
+        FP_length = scheme[list(scheme.keys())[-1]][-1]['position'] + 1 
+        # Generate all possible permutations of 1 und 0 with given sequence length
+        FPs = list(product([0, 1], repeat=FP_length))
+        # Shorten for test purposes
+        FPs = FPs[:15000]
+        # Remove fingerprints that represent impossible feature combinations
+        FP_index = 0
+        for _ in range(len(FPs)):
+            try:
+                FP = FPs[FP_index]
+            except IndexError:
+                break
+            for feature_key in scheme.keys():
+                # Determine minimal and maximal position for feature in FP
+                min_position = scheme[feature_key][0]['position']
+                max_position = scheme[feature_key][-1]['position']
+                if max_position != min_position:
+                    if sum(FP[min_position:max_position+1]) != 1:
+                        #print(FP)
+                        FPs.remove(FP)
+                        FP_index -= 1
+                        break
+            FP_index += 1
+        
+        
+
+        print(len(FPs))            
+        return FPs
+            
     
     
 # # Ranges that the parameters above are picked from
