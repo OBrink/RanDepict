@@ -265,7 +265,13 @@ class DepictionFeatureRanges(RandomDepictor):
         """
         comb_count = 1
         for feature_key in scheme.keys():
-            comb_count *= len(scheme[feature_key])
+            if len(scheme[feature_key]) != 1:
+                # n fingerprint positions -> n options (because only one position can be [1])
+                # n = 3 --> [1][0][0] or [0][1][0] or [0][0][1]
+                comb_count *= len(scheme[feature_key])
+            else:
+                # One fingerprint position -> two options: [0] or [1]
+                comb_count *= 2
         return comb_count
     
     
@@ -279,33 +285,20 @@ class DepictionFeatureRanges(RandomDepictor):
         """
         # Determine number and length of fingerprints
         FP_number = self.get_number_of_possible_fingerprints(scheme)
+        print("Expected number of fingerprints:", FP_number)
         FP_length = scheme[list(scheme.keys())[-1]][-1]['position'] + 1 
         # Generate all possible permutations of 1 und 0 with given sequence length
         FPs = list(product([0, 1], repeat=FP_length))
-        # Shorten for test purposes
-        FPs = FPs[:15000]
-        # Remove fingerprints that represent impossible feature combinations
-        FP_index = 0
-        for _ in range(len(FPs)):
-            try:
-                FP = FPs[FP_index]
-            except IndexError:
-                break
-            for feature_key in scheme.keys():
-                # Determine minimal and maximal position for feature in FP
-                min_position = scheme[feature_key][0]['position']
-                max_position = scheme[feature_key][-1]['position']
-                if max_position != min_position:
-                    if sum(FP[min_position:max_position+1]) != 1:
-                        #print(FP)
-                        FPs.remove(FP)
-                        FP_index -= 1
-                        break
-            FP_index += 1
-        
-        
-
-        print(len(FPs))            
+        FPs = np.array(FPs)
+        for feature_key in scheme.keys():
+            # Determine minimal and maximal position for feature in FP
+            min_position = scheme[feature_key][0]['position']
+            max_position = scheme[feature_key][-1]['position']
+            if max_position != min_position:
+                split_FP = FPs[:, min_position:max_position+1]
+                split_FP_sum = np.sum(split_FP, axis=1)
+                potentially_valid_FP_indices = np.where(split_FP_sum == 1)            
+                FPs = FPs[potentially_valid_FP_indices, :][0]
         return FPs
             
     
