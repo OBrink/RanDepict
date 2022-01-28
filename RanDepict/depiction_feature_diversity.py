@@ -1,7 +1,8 @@
+from pickletools import int4
 import random
 from typing import List, Dict, Tuple 
 import numpy as np
-from itertools import product
+from itertools import product, islice
 from multiprocessing import Pool
 from RanDepict import RandomDepictor
 
@@ -288,19 +289,56 @@ class DepictionFeatureRanges(RandomDepictor):
         print("Expected number of fingerprints:", FP_number)
         FP_length = scheme[list(scheme.keys())[-1]][-1]['position'] + 1 
         # Generate all possible permutations of 1 und 0 with given sequence length
-        FPs = list(product([0, 1], repeat=FP_length))
-        FPs = np.array(FPs)
+        FP_generator = product([0, 1], repeat=FP_length)
+        # Write the final fingerprints into a file
+        final_FPs = np.memmap('FPs.temp', dtype=bool, mode='w+', shape=(FP_number, FP_length))
+        
+        # If there are a lot of combinations, process them in chunks of 1,000,000 sequences
+        if 2**FP_length > 1000000:
+            chunk_size = 1000000
+        else:
+            chunk_size = 2**FP_length
+        potential_FPs = np.zeros((chunk_size, FP_length), dtype=bool)
+        FP_index = 0
+        valid_FP_index = 0
+        #TEMP_COUNT = 0
+        for FP in FP_generator:
+            potential_FPs[FP_index] = FP
+            FP_index += 1
+            if FP_index % chunk_size == 0:
+                # Identify valids FPs and save them.
+                valid_FPs = self.extract_valid_fingerprints(scheme, potential_FPs)
+                #TEMP_COUNT += len(valid_FPs)
+                #print("TMP count", TEMP_COUNT)
+                # Reset so that we start with new chunk
+                FP_index = 0
+                potential_FPs = np.zeros((chunk_size, FP_length), dtype=bool)
+                for valid_FP in valid_FPs:
+                    final_FPs[valid_FP_index] = valid_FP
+                    valid_FP_index += 1
+        return final_FPs
+
+
+    def extract_valid_fingerprints(self, scheme: Dict, potential_fingerprints: np.array) -> np.array:
+        """
+        This function takes a fingerprint scheme (Dict) as returned by generate_fingerprint_scheme()
+        and an array with potential fingerprints. It filters all potential fingerprints are invalid and
+        returns the filtered array.
+
+        Args:
+            scheme (Dict): Output of generate_fingerprint_scheme()
+            potential_fingerprints (np.array): Array containing potential FPs
+        """
         for feature_key in scheme.keys():
-            # Determine minimal and maximal position for feature in FP
+            # Identify and remove invalid combinations in Fingerprint
             min_position = scheme[feature_key][0]['position']
             max_position = scheme[feature_key][-1]['position']
             if max_position != min_position:
-                split_FP = FPs[:, min_position:max_position+1]
+                split_FP = potential_fingerprints[:, min_position:max_position+1]
                 split_FP_sum = np.sum(split_FP, axis=1)
                 potentially_valid_FP_indices = np.where(split_FP_sum == 1)            
-                FPs = FPs[potentially_valid_FP_indices, :][0]
-        return FPs
-            
+                potential_fingerprints = potential_fingerprints[potentially_valid_FP_indices, :][0]
+        return potential_fingerprints
     
     
 # # Ranges that the parameters above are picked from
