@@ -1,10 +1,12 @@
-from pickletools import int4
 import random
-from typing import List, Dict, Tuple 
+from typing import List, Dict
 import numpy as np
-from itertools import product, islice
+from itertools import product
 from multiprocessing import Pool
 from RanDepict import RandomDepictor
+
+from rdkit import DataStructs
+from rdkit.SimDivFilters.rdSimDivPickers import MaxMinPicker
 
 class DepictionFeatures:
     """
@@ -109,12 +111,19 @@ class DepictionFeatureRanges(RandomDepictor):
         depiction = self.add_chemical_label(depiction, "ID")
         depiction = self.add_chemical_label(depiction, "R_GROUP")
         depiction = self.depiction = self.add_chemical_label(depiction, "REACTION")
+        # Generate schemes for Fingerprint creation
+        self.schemes = self.generate_fingerprint_schemes()
+        self.cdk_scheme, self.rdkit_scheme, self.indigo_scheme, self.aug_scheme = self.schemes
     
     
-    def random_choice(self, iterable: List, log_attribute: str = False):
+    def random_choice(
+        self, 
+        iterable: List, 
+        log_attribute: str = False
+        ):
         """
         In RandomDepictor, this function  would take an iterable, call random_choice() on it,
-        increase random.seed by 1 and return the result.
+        increase the seed attribute by 1 and return the result.
         ___
         Here, this function is overwritten, so that it also sets the class attribute
         $log_attribute_range to contain the iterable.
@@ -138,7 +147,9 @@ class DepictionFeatureRanges(RandomDepictor):
         return result
     
     
-    def generate_fingerprint_schemes(self) -> List[Dict]:
+    def generate_fingerprint_schemes(
+        self
+        ) -> List[Dict]:
         """
         Generates fingerprint schemes (see generate_fingerprint_scheme()) for the depictions
         with CDK, RDKit and Indigo as well as the augmentations.
@@ -162,7 +173,10 @@ class DepictionFeatureRanges(RandomDepictor):
         return fingerprint_schemes
         
             
-    def generate_fingerprint_scheme(self, ID_range_map: Dict) -> Dict:
+    def generate_fingerprint_scheme(
+        self, 
+        ID_range_map: Dict
+        ) -> Dict:
         """
         This function takes the ID_range_map and returns a dictionary that defines
         where each feature is represented in the depiction feature fingerprint.
@@ -178,7 +192,7 @@ class DepictionFeatureRanges(RandomDepictor):
                                 to the feature range itself (some kind of iterable)
 
         Returns:
-            Dict: [description]
+            Dict: Mapping of feature ID (str) and dictionaries that define the fingerprint position and a condition
         """
         
         fingerprint_scheme = {}
@@ -215,7 +229,10 @@ class DepictionFeatureRanges(RandomDepictor):
         return fingerprint_scheme
     
     
-    def split_into_n_sublists(self, iterable, n: int):
+    def split_into_n_sublists(self, 
+                              iterable, 
+                              n: int
+                              ) -> List[List]:
         """
         Takes an iterable, sorts it, splits it evenly into n lists
         and returns the split lists.
@@ -232,7 +249,10 @@ class DepictionFeatureRanges(RandomDepictor):
         return sublists
 
     
-    def count_combinations(self, feature_ranges: List):
+    def count_combinations(
+        self, 
+        feature_ranges: List
+        ) -> int:
         """
         Takes a list of lists and returns the number of possible combinations
         of elements.
@@ -253,7 +273,10 @@ class DepictionFeatureRanges(RandomDepictor):
         return possible_combination_count
     
     
-    def get_number_of_possible_fingerprints(self, scheme: Dict):
+    def get_number_of_possible_fingerprints(
+        self, 
+        scheme: Dict
+        ) -> int:
         """
         This function takes a fingerprint scheme (Dict) as returned by generate_fingerprint_scheme()
         and returns the number of possible fingerprints for that scheme.
@@ -276,135 +299,117 @@ class DepictionFeatureRanges(RandomDepictor):
         return comb_count
     
     
-    def generate_all_possible_fingerprints(self, scheme: Dict):
+    def get_FP_building_blocks(
+        self, 
+        scheme: Dict
+        ) -> List[List[List]]:
+        """
+        This function takes a fingerprint scheme (Dict) as returned by generate_fingerprint_scheme()
+        and returns a list of possible building blocks.
+        Example:
+            scheme = {'thickness': [{'position': 0, 'one_if': 0}, {'position': 1, 'one_if': 1}, 
+                {'position': 2, 'one_if': 2}, {'position': 3, 'one_if': 3}], 
+                'kekulized': [{'position': 4, 'one_if': True}]}
+                
+            --> Output: [((1,0,0,0), (0,1,0,0), (0,0,1,0), (0,0,0,1)), ((1), (0))]
+        
+        Args: 
+            scheme (Dict): Output of generate_fingerprint_scheme()
+        
+        Returns:
+            List that contains the valid fingerprint parts that represent the different features
+        
+        """
+        FP_building_blocks = []
+        for feature_key in scheme.keys():
+            position_condition_dicts = scheme[feature_key]
+            FP_building_blocks.append([])
+            # Add every single valid option to the building block
+            for position_index in range(len(position_condition_dicts)):
+                # Add list of zeros
+                FP_building_blocks[-1].append([0]*len(position_condition_dicts))
+                # Replace one zero with a one
+                FP_building_blocks[-1][-1][position_index] = 1
+            # If a feature is described by only one position in the FP, make sure that 0 and 1 are listed options
+            if FP_building_blocks[-1] == [[1]]:
+                FP_building_blocks[-1].append([0])
+        return FP_building_blocks
+                
+    
+    def generate_all_possible_fingerprints(
+        self, 
+        scheme: Dict,
+        ) -> List[List[int]]:
         """
         This function takes a fingerprint scheme (Dict) as returned by generate_fingerprint_scheme()
         and returns a List of all possible fingerprints for that scheme.
 
         Args:
             scheme (Dict): Output of generate_fingerprint_scheme()
+            
+        Returns:
+            List of fingerprints
+        """        
+        # Determine valid building blocks for fingerprints
+        FP_building_blocks = self.get_FP_building_blocks(scheme)
+        print("Building blocks created")
+        # Determine cartesian product of valid building blocks to get all valid fingerprints
+        FPs = product(*FP_building_blocks)
+        # Flatten to get one dimensional array
+        flattened_fingerprints = []
+        for unstructured_FP in FPs:
+            flattened_FP = [element for sublist in unstructured_FP for element in sublist]
+            flattened_fingerprints.append(flattened_FP)
+        return flattened_fingerprints
+    
+    def convert_to_int_arr(
+        self,
+        fingerprints: List[List[int]]
+        ) -> List[DataStructs.cDataStructs.ExplicitBitVect]:
         """
-        # Determine number and length of fingerprints
-        FP_number = self.get_number_of_possible_fingerprints(scheme)
-        print("Expected number of fingerprints:", FP_number)
-        FP_length = scheme[list(scheme.keys())[-1]][-1]['position'] + 1 
-        # Generate all possible permutations of 1 und 0 with given sequence length
-        FP_generator = product([0, 1], repeat=FP_length)
-        # Write the final fingerprints into a file
-        final_FPs = np.memmap('FPs.temp', dtype=bool, mode='w+', shape=(FP_number, FP_length))
-        
-        # If there are a lot of combinations, process them in chunks of 1,000,000 sequences
-        if 2**FP_length > 1000000:
-            chunk_size = 1000000
-        else:
-            chunk_size = 2**FP_length
-        potential_FPs = np.zeros((chunk_size, FP_length), dtype=bool)
-        FP_index = 0
-        valid_FP_index = 0
-        #TEMP_COUNT = 0
-        for FP in FP_generator:
-            potential_FPs[FP_index] = FP
-            FP_index += 1
-            if FP_index % chunk_size == 0:
-                # Identify valids FPs and save them.
-                valid_FPs = self.extract_valid_fingerprints(scheme, potential_FPs)
-                #TEMP_COUNT += len(valid_FPs)
-                #print("TMP count", TEMP_COUNT)
-                # Reset so that we start with new chunk
-                FP_index = 0
-                potential_FPs = np.zeros((chunk_size, FP_length), dtype=bool)
-                for valid_FP in valid_FPs:
-                    final_FPs[valid_FP_index] = valid_FP
-                    valid_FP_index += 1
-        return final_FPs
-
-
-    def extract_valid_fingerprints(self, scheme: Dict, potential_fingerprints: np.array) -> np.array:
-        """
-        This function takes a fingerprint scheme (Dict) as returned by generate_fingerprint_scheme()
-        and an array with potential fingerprints. It filters all potential fingerprints are invalid and
-        returns the filtered array.
+        Takes a list of fingerprints (List[int]) and returns them as a list of
+        rdkit.DataStructs.cDataStructs.ExplicitBitVect so that they can be 
+        processed by RDKit's MaxMinPicker.
 
         Args:
-            scheme (Dict): Output of generate_fingerprint_scheme()
-            potential_fingerprints (np.array): Array containing potential FPs
-        """
-        for feature_key in scheme.keys():
-            # Identify and remove invalid combinations in Fingerprint
-            min_position = scheme[feature_key][0]['position']
-            max_position = scheme[feature_key][-1]['position']
-            if max_position != min_position:
-                split_FP = potential_fingerprints[:, min_position:max_position+1]
-                split_FP_sum = np.sum(split_FP, axis=1)
-                potentially_valid_FP_indices = np.where(split_FP_sum == 1)            
-                potential_fingerprints = potential_fingerprints[potentially_valid_FP_indices, :][0]
-        return potential_fingerprints
-    
-    
-# # Ranges that the parameters above are picked from
-# self.indigo_bond_line_width_range = None
-# self.indigo_relative_thickness_range = None
-# self.indigo_labels_hetero_range = None
-# self.indigo_render_bold_bond_range = None
-# self.indigo_collapse_superatoms_range = None
-# self.indigo_not_kekulized_range = None
-# # Depiction parameters for RDKit depictions
-# self.rdkit_bond_line_width_range = None
-# self.rdkit_draw_terminal_methyl_range = None
-# self.rdkit_label_font_range = None
-# self.rdkit_min_font_size_range = None
-# self.rdkit_molecule_rotation_range = None
-# self.rdkit_fixed_bond_length_range = None
-# self.rdkit_only_black_and_white_range = None
-# self.rdkit_collapse_superatoms_range = None
-# self.rdkit_default_abbreviations_range = None
-# # Depiction parameters for CDK depictions
-# self.cdk_kekulized_range = None
-# self.cdk_molecule_rotation_range = None
-# self.cdk_label_font_size_range = None
-# self.cdk_label_font_range = None
-# self.cdk_label_font_style_range = None
-# self.cdk_no_terminal_methyl_range = None
-# self.cdk_stroke_width_range = None
-# self.cdk_margin_ratio_range = None
-# self.cdk_double_bond_dist_range = None
-# self.cdk_wedge_ratio_range = None
-# self.cdk_fancy_bold_wedges_range = None
-# self.cdk_fancy_hashed_wedges_range = None
-# self.cdk_collapse_superatoms_range = None
-# self.cdk_default_abbreviations_range = None
-# # Everything related to curved arrows
-# self.has_curved_arrows_range = None
-# self.curved_arrow_images_range = None
-# self.curved_arrow_shape_x_range = None
-# self.curved_arrow_shape_y_range = None
-# self.curved_arrow_rot_angles_range = None
-# self.curved_arrow_rot_resampling_methods_range = None
-# self.curved_arrow_paste_pos_x_range = None
-# self.curved_arrow_paste_pos_y_range = None
-# # Everything related to straight_arrows
-# self.has_straight_arrows_range = None
-# self.straight_arrow_images_range = None
-# self.straight_arrow_rot_angles_range = None
-# self.straight_arrow_rot_resampling_methods_range = None
-# self.straight_arrow_paste_pos_x_range = None
-# self.straight_arrow_paste_pos_y_range = None
-# # Everything related to chemical labels
-# self.has_chemical_label_range = None
-# self.label_types_range = None
-# self.label_texts_range = None
-# self.label_font_types_range = None
-# self.label_font_sizes_range = None
-# # Everything related to atom numbers and chirality labels
-# self.has_atom_numbers_chiral_labels_range = None
-# self.has_chiral_labels_range = None
-# self.atom_number_chiral_label_font_size_range = None
-# self.atom_numbering_chiral_label_font_type_range = None
-# self.atom_number_chiral_label_x_pos_range = None
-# self.atom_number_chiral_label_y_pos_range = None
-# self.atom_numbering_chiral_label_text_range = None
+            fingerprints (List[List[int]]): [description]
 
-# # Everything related to imgaug_augmentations
-# self.imgaug_brightness_adj_range = None
-# self.imgaug_colour_temp_change_range = None
-        
+        Returns:
+            List[]: [description]
+        """
+        converted_fingerprints = []
+        for fp in fingerprints:
+            bitstring = "".join(np.array(fp).astype(str))
+            fp_converted = DataStructs.cDataStructs.CreateFromBitString(bitstring)
+            converted_fingerprints.append(fp_converted)
+        return converted_fingerprints
+
+
+
+    def dice_dist(
+        self,
+        fp_index_1: int, 
+        fp_index_2: int, 
+        fingerprints: List[DataStructs.cDataStructs.ExplicitBitVect]
+        ) -> float:
+        """
+        Returns the dice similarity between two fingerprints.
+        Args:
+            fp_index_1 (int): index of first fingerprint in fingerprints
+            fp_index_2 (int): index of second fingerprint in fingerprints
+            fingerprints (List[DataStructs.cDataStructs.ExplicitBitVect]): List of fingerprints
+
+        Returns:
+            float: Dice similarity between the two fingerprints
+        """
+        return 1-DataStructs.DiceSimilarity(fingerprints[fp_index_1], fingerprints[fp_index_2])
+
+
+    def pick_structures():
+        n_fingerprints = len(fingerprints)
+        picker = MaxMinPicker()
+        pick_indices = picker.LazyPick(dice_dist, n_fingerprints, 4, seed=42)
+        picked_fingerprints = [fingerprints[i]
+                            for i in pick_indices]
+        picked_fingerprints  
+        converted_fingerprints = convert_to_int_arr(fingerprints)
