@@ -525,12 +525,18 @@ class random_depictor:
         ___
         output: the modified image (np.array)
         """
+        # Remove white space at borders
         mask = im > 200 
         all_white = mask.sum(axis=2) > 0
         rows = np.flatnonzero((~all_white).sum(axis=1))
         cols = np.flatnonzero((~all_white).sum(axis=0))
         crop = im[rows.min():rows.max()+1, cols.min():cols.max()+1, :]
-        pad = self.random_choice(np.arange(5, int(crop.shape[0]*0.2), 1))
+        # Add padding again.
+        pad_range = np.arange(5, int(crop.shape[0]*0.2), 1)
+        if len(pad_range) > 0:
+            pad = self.random_choice(np.arange(5, int(crop.shape[0]*0.2), 1))
+        else:
+            pad = 5
         crop = np.pad(crop, pad_width=((pad,pad), (pad,pad), (0,0)), mode='constant', constant_values=255)
         return crop
 
