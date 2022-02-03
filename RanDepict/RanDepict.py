@@ -1,4 +1,3 @@
-import sys
 import os
 import pathlib
 import numpy as np
@@ -11,7 +10,7 @@ from multiprocessing import set_start_method, get_context
 import imgaug.augmenters as iaa
 import random
 from copy import deepcopy
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -66,7 +65,8 @@ class RandomDepictor:
         Image.BICUBIC, 
         Image.LANCZOS
         ]
-
+        
+        self.from_fingerprint = False
         self.depiction_features = False
 
         # Set context for multiprocessing but make sure this only happens once
@@ -112,22 +112,44 @@ class RandomDepictor:
         # shutdownJVM()
         pass
 
-    def random_choice(self, iterable: List, log_attribute: str = False):
+    def random_choice(
+        self, 
+        iterable: List, 
+        log_attribute: str = False):
         """This function takes an iterable, calls self.random_choice() on it,
         increases random.seed by 1 and returns the result. This way, results
         produced by RanDepict are replicable.
         """
         self.seed += 1
         random.seed(self.seed)
+        
+        # Generation from fingerprint:
+        if self.from_fingerprint and log_attribute:
+            # Get dictionaries that define positions and linked conditions
+            pos_cond_dicts = self.active_scheme[log_attribute]
+            for pos_cond_dict in pos_cond_dicts:
+                pos = pos_cond_dict['position']
+                cond = pos_cond_dict['one_if']
+                if self.active_fingerprint[pos]:
+                    # If the one refers to a range: adapt iterable accordingly and go on
+                    if type(cond) == tuple:
+                        iterable = [item for item in iterable
+                                    if item > cond[0] - 0.001
+                                    if item < cond[1] + 0.001]
+                        break
+                    # Otherwise, simply return what the condition value
+                    else:
+                        return cond
+        
         result = random.choice(iterable)
         # Add result(s) to augmentation_logger
         if log_attribute and self.depiction_features:
-            found_logged_attribute = getattr(self.augmentation_logger, log_attribute)
+            found_logged_attribute = getattr(self.depiction_features, log_attribute)
             # If the attribute is not saved in a list, simply write it, otherwise append it
             if type(found_logged_attribute) != list:
                 setattr(self.depiction_features, log_attribute, result)
             else:
-                setattr(self.augmentation_logger, log_attribute, found_logged_attribute + [result])
+                setattr(self.depiction_features, log_attribute, found_logged_attribute + [result])
         return result
 
     def random_choices(self, iterable: List, k: int) -> List:
@@ -554,7 +576,10 @@ class RandomDepictor:
         crop = np.pad(crop, pad_width=((pad,pad), (pad,pad), (0,0)), mode='constant', constant_values=255)
         return crop
 
-    def central_square_image(self, im: np.array) -> np.array:
+    def central_square_image(
+        self, 
+        im: np.array
+        ) -> np.array:
         """
         This function takes image (np.array) and will add white padding 
         so that the image has a square shape with the width/height of the longest side 
@@ -577,7 +602,9 @@ class RandomDepictor:
 
 
     def random_depiction(
-        self, smiles: str, shape: Tuple[int, int] = (299, 299)
+        self, 
+        smiles: str, 
+        shape: Tuple[int, int] = (299, 299)
     ) -> np.array:
         """This function takes a SMILES str and depicts it using Rdkit, Indigo or CDK.
         The depiction method and the specific parameters for the depiction are chosen
@@ -598,7 +625,9 @@ class RandomDepictor:
 
 
     def resize(
-        self, image: np.array, shape:Tuple[int]
+        self, 
+        image: np.array, 
+        shape:Tuple[int]
         ) -> np.array:
         """
         This function takes an image (np.array) and a shape and returns the resized image (np.array).
@@ -617,8 +646,54 @@ class RandomDepictor:
         return np.asarray(image)
 
 
+    def depict_from_fingerprint(
+        self,
+        smiles: str,
+        fingerprint: List[np.array], 
+        scheme: List[Dict]
+        ) -> np.array:
+        """
+        This function takes a SMILES representation of a molecule, a list of one or two fingerprints 
+        and a list of the corresponding fingerprint schemes and generates a chemical structure depiction
+        that fits the fingerprint. 
+        ___
+        If only one fingerprint/scheme is given, we assume that they contain information for
+        a depiction without augmentations. If two are given, we assume that the first one
+        contains information about the depiction and the second one contains information about the 
+        augmentations.
+        ___
+        All this function does is set the class attributes in a manner that random_choice() knows to not to
+        actually pick parameters randomly.
 
-    def imgaug_augment(self, image: np.array, call_all: bool = False) -> np.array:
+        Args:
+            fingerprint (List[np.array]): List of one or two fingerprints
+            scheme (List[Dict]): List of one or two fingerprint schemes
+
+        Returns:
+            np.array: Chemical structure depiction
+        """
+        self.from_fingerprint = True
+        self.active_fingerprint = fingerprint[0]
+        self.active_scheme = scheme[0]
+        # Depict molecule
+        if 'indigo' in list(scheme[0].keys())[0]:
+            depiction = self.depict_and_resize_indigo(smiles)
+        elif 'rdkit' in list(scheme[0].keys())[0]:
+            depiction = self.depict_and_resize_rdkit(smiles)
+        elif 'cdk' in list(scheme[0].keys())[0]:
+            depiction = self.depict_and_resize_cdk(smiles)
+        
+        print("AUGMENTATIONS ARE NOT WORKING YET! DO SOMETHING ABOUT THIS, OTTO!")
+        
+        self.from_fingerprint = False
+        return depiction
+    
+
+    def imgaug_augment(
+        self, 
+        image: np.array, 
+        call_all: bool = False
+        ) -> np.array:
         """This function applies a random amount of augmentations to a given image (np.array)
         using and returns the augmented image (np.array).
         If call_all = True, all augmentation functions will be applied"""

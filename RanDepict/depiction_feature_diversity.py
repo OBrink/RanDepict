@@ -386,30 +386,54 @@ class DepictionFeatureRanges(RandomDepictor):
 
 
 
-    def dice_dist(
+    
+
+
+    def pick_fingerprints(
         self,
-        fp_index_1: int, 
-        fp_index_2: int, 
-        fingerprints: List[DataStructs.cDataStructs.ExplicitBitVect]
-        ) -> float:
+        fingerprints: List[List[int]],
+        n: int,
+        ) -> List[np.array]:
         """
-        Returns the dice similarity between two fingerprints.
+        Given a list of fingerprints and a number n of fingerprints to pick, this function uses 
+        RDKit's MaxMin Picker to pick n fingerprints and returns them.
+        
         Args:
-            fp_index_1 (int): index of first fingerprint in fingerprints
-            fp_index_2 (int): index of second fingerprint in fingerprints
-            fingerprints (List[DataStructs.cDataStructs.ExplicitBitVect]): List of fingerprints
-
+            fingerprints (List[List[int]]): List of fingerprints
+            n (int): Number of fingerprints to pick
+            
         Returns:
-            float: Dice similarity between the two fingerprints
+            Picked fingerprints (List[List[int]])
         """
-        return 1-DataStructs.DiceSimilarity(fingerprints[fp_index_1], fingerprints[fp_index_2])
+        
+        converted_fingerprints = self.convert_to_int_arr(fingerprints)
+        
+        """TODO: I don't like this function definition in the function but according to the 
+        RDKit Documentation, the fingerprints need to be given in the distance function as the
+        default value."""
+        
+        def dice_dist(
+            fp_index_1: int, 
+            fp_index_2: int, 
+            fingerprints: List[DataStructs.cDataStructs.ExplicitBitVect] = converted_fingerprints
+            ) -> float:
+            """
+            Returns the dice similarity between two fingerprints.
+            Args:
+                fp_index_1 (int): index of first fingerprint in fingerprints
+                fp_index_2 (int): index of second fingerprint in fingerprints
+                fingerprints (List[DataStructs.cDataStructs.ExplicitBitVect]): List of fingerprints
 
-
-    def pick_structures():
+            Returns:
+                float: Dice similarity between the two fingerprints
+            """
+            return 1-DataStructs.DiceSimilarity(fingerprints[fp_index_1], fingerprints[fp_index_2])
+        
+        
         n_fingerprints = len(fingerprints)
         picker = MaxMinPicker()
-        pick_indices = picker.LazyPick(dice_dist, n_fingerprints, 4, seed=42)
+        pick_indices = picker.LazyPick(dice_dist, n_fingerprints, n, seed=42)
         picked_fingerprints = [fingerprints[i]
                             for i in pick_indices]
-        picked_fingerprints  
-        converted_fingerprints = convert_to_int_arr(fingerprints)
+        return picked_fingerprints  
+        
