@@ -334,7 +334,26 @@ class DepictionFeatureRanges(RandomDepictor):
             if FP_building_blocks[-1] == [[1]]:
                 FP_building_blocks[-1].append([0])
         return FP_building_blocks
-                
+        
+    def flatten_fingerprint(
+        self, 
+        unflattened_list: List[List],
+        ) -> List:
+        """
+        This function takes a list of lists and returns a list.
+        ___
+        Looks like this could be one line elsewhere but this function used for parallelisation 
+        of FP generation and consequently needs to be wrapped up in a separate function.
+        
+
+        Args:
+            unflattened_list (List[List[X,Y,Z]])
+
+        Returns:
+            flattened_list (List[X,Y,Z]): 
+        """
+        flattened_list = [element for sublist in unflattened_list for element in sublist]
+        return flattened_list
     
     def generate_all_possible_fingerprints(
         self, 
@@ -352,14 +371,11 @@ class DepictionFeatureRanges(RandomDepictor):
         """        
         # Determine valid building blocks for fingerprints
         FP_building_blocks = self.get_FP_building_blocks(scheme)
-        print("Building blocks created")
         # Determine cartesian product of valid building blocks to get all valid fingerprints
         FPs = product(*FP_building_blocks)
         # Flatten to get one dimensional array
-        flattened_fingerprints = []
-        for unstructured_FP in FPs:
-            flattened_FP = [element for sublist in unstructured_FP for element in sublist]
-            flattened_fingerprints.append(flattened_FP)
+        with Pool() as p:
+            flattened_fingerprints = p.map(self.flatten_fingerprint, FPs)
         return flattened_fingerprints
     
     def convert_to_int_arr(
