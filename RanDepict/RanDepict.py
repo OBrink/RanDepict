@@ -83,21 +83,9 @@ class RandomDepictor:
     ):
         # Depict structure with random parameters
         depiction = self.random_depiction(smiles, shape)
-        # Each type of label and curved arrows have a 1/6 chance to appear
-        # In 33% of the cases, we attempt to insert 1-2 straight arrows
-        # (incomplete/fails in most cases because there is not enought space)
-        if self.random_choice([True, False, False, False, False, False], log_attribute='has_curved_arrows'):
-            depiction = self.add_curved_arrows_to_structure(depiction)
-        if self.random_choice([True, False, False], log_attribute='has_straight_arrows'):
-            depiction = self.add_straight_arrows_to_structure(depiction)
-        if self.random_choice([True, False, False, False, False, False]):
-            depiction = self.add_chemical_label(depiction, "ID")
-        if self.random_choice([True, False, False, False, False, False]):
-            depiction = self.add_chemical_label(depiction, "R_GROUP")
-        if self.random_choice([True, False, False, False, False, False]):
-            depiction = self.add_chemical_label(depiction, "REACTION")
         # Add augmentations
-        depiction = self.imgaug_augment(depiction)
+        depiction = self.add_augmentations(depiction)
+        
         if grayscale:
             return self.to_grayscale_float_img(depiction)
         return depiction
