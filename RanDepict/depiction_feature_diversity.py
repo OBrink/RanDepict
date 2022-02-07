@@ -358,13 +358,15 @@ class DepictionFeatureRanges(RandomDepictor):
     def generate_all_possible_fingerprints(
         self, 
         scheme: Dict,
+        name: str,
         ) -> List[List[int]]:
         """
         This function takes a fingerprint scheme (Dict) as returned by generate_fingerprint_scheme()
-        and returns a List of all possible fingerprints for that scheme.
+        and a name (eg. 'CDK') and returns a List of all possible fingerprints for that scheme.
 
         Args:
             scheme (Dict): Output of generate_fingerprint_scheme()
+            name (str): name that is used for filename of saved FPs
             
         Returns:
             List of fingerprints
@@ -372,11 +374,21 @@ class DepictionFeatureRanges(RandomDepictor):
         # Determine valid building blocks for fingerprints
         FP_building_blocks = self.get_FP_building_blocks(scheme)
         # Determine cartesian product of valid building blocks to get all valid fingerprints
-        FPs = product(*FP_building_blocks)
-        # Flatten to get one dimensional array
+        FP_generator = product(*FP_building_blocks)
+        n_FP = self.get_number_of_possible_fingerprints(scheme)
+        print('There are {} {} fingerprint combinations.'.format(n_FP, name))
+        FP_length = scheme[list(scheme.keys())[-1]][-1]['position'] + 1
+        # Generate blank array
+        filename = '{}_FP_pool.memmap'.format(name)
+        fingerprints = np.memmap(filename, np.zeros((n_FP, FP_length)))
+        
+        starmap_tuple_generator = ((filename, index_FP_tup) for index_FP_tup in enumerate(FPs))
+        print("Created_starmap_tuple_generator!")
+        # Fill the blank array
         with Pool() as p:
-            flattened_fingerprints = p.map(self.flatten_fingerprint, FPs)
+            _ = p.map(self.flatten_fingerprint, enumerate(FPs))
         return flattened_fingerprints
+    
     
     def convert_to_int_arr(
         self,
@@ -399,10 +411,6 @@ class DepictionFeatureRanges(RandomDepictor):
             fp_converted = DataStructs.cDataStructs.CreateFromBitString(bitstring)
             converted_fingerprints.append(fp_converted)
         return converted_fingerprints
-
-
-
-    
 
 
     def pick_fingerprints(

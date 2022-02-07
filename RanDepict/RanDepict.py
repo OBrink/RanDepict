@@ -649,8 +649,8 @@ class RandomDepictor:
     def depict_from_fingerprint(
         self,
         smiles: str,
-        fingerprint: List[np.array], 
-        scheme: List[Dict]
+        fingerprints: List[np.array], 
+        schemes: List[Dict]
         ) -> np.array:
         """
         This function takes a SMILES representation of a molecule, a list of one or two fingerprints 
@@ -666,15 +666,15 @@ class RandomDepictor:
         actually pick parameters randomly.
 
         Args:
-            fingerprint (List[np.array]): List of one or two fingerprints
-            scheme (List[Dict]): List of one or two fingerprint schemes
+            fingerprints (List[np.array]): List of one or two fingerprints
+            schemes (List[Dict]): List of one or two fingerprint schemes
 
         Returns:
             np.array: Chemical structure depiction
         """
         self.from_fingerprint = True
-        self.active_fingerprint = fingerprint[0]
-        self.active_scheme = scheme[0]
+        self.active_fingerprint = fingerprints[0]
+        self.active_scheme = schemes[0]
         # Depict molecule
         if 'indigo' in list(scheme[0].keys())[0]:
             depiction = self.depict_and_resize_indigo(smiles)
@@ -683,9 +683,13 @@ class RandomDepictor:
         elif 'cdk' in list(scheme[0].keys())[0]:
             depiction = self.depict_and_resize_cdk(smiles)
         
-        print("AUGMENTATIONS ARE NOT WORKING YET! DO SOMETHING ABOUT THIS, OTTO!")
         
-        self.from_fingerprint = False
+        if len(fingerprints) == 2:
+            self.active_fingerprint = fingerprints[1]
+            self.active_scheme = schemes[1]
+            depiction = self.add_augmentations(depiction)
+        
+        self.from_fingerprint, self.active_fingerprint, self.active_scheme = False, False, False
         return depiction
     
 
@@ -785,7 +789,42 @@ class RandomDepictor:
         augmented_image = augmented_image.astype(np.uint8)
         return augmented_image
 
-    def get_random_label_position(self, width: int, height: int) -> Tuple:
+
+    def add_augmentations(
+        self, 
+        depiction: np.array
+        ) -> np.array:
+        """
+        This function takes a chemical structure depiction (np.array) and returns the same image
+        with added augmentation elements
+ 
+        Args:
+            depiction (np.array): chemical structure depiction
+
+        Returns:
+            np.array: chemical structure depiction with added augmentations
+        """
+        if self.random_choice([True, False, False, False, False, False], log_attribute='has_curved_arrows'):
+            depiction = self.add_curved_arrows_to_structure(depiction)
+        if self.random_choice([True, False, False], log_attribute='has_straight_arrows'):
+            depiction = self.add_straight_arrows_to_structure(depiction)
+        if self.random_choice([True, False, False, False, False, False]):
+            depiction = self.add_chemical_label(depiction, "ID")
+        if self.random_choice([True, False, False, False, False, False]):
+            depiction = self.add_chemical_label(depiction, "R_GROUP")
+        if self.random_choice([True, False, False, False, False, False]):
+            depiction = self.add_chemical_label(depiction, "REACTION")
+        if self.random_choice([True, False, False]):
+            depiction = self.imgaug_augment(depiction)
+        return depiction
+        
+
+
+    def get_random_label_position(
+        self, 
+        width: int, 
+        height: int
+        ) -> Tuple:
         """Given the width and height of an image (int), this function determines a random
         position in the outer 15% of the image and returns a tuple that contain the coordinates
         (y,x) of that position."""
