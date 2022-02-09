@@ -1,8 +1,8 @@
+import os
 import random
 from typing import List, Dict
 import numpy as np
 from itertools import product
-from multiprocessing import Pool
 from RanDepict import RandomDepictor
 
 from rdkit import DataStructs
@@ -114,6 +114,8 @@ class DepictionFeatureRanges(RandomDepictor):
         # Generate schemes for Fingerprint creation
         self.schemes = self.generate_fingerprint_schemes()
         self.cdk_scheme, self.rdkit_scheme, self.indigo_scheme, self.aug_scheme = self.schemes
+        # Generate the pool of all valid fingerprint combinations
+        self.generate_all_possible_fingerprints()
     
     
     def random_choice(
@@ -201,7 +203,7 @@ class DepictionFeatureRanges(RandomDepictor):
             feature_range = ID_range_map[feature_ID]
             # Make sure numeric ranges don't take up more than 5 positions in the fingerprint
             if type(feature_range[0]) in [int, float, np.float64, np.float32] and len(feature_range) > 5:
-                subranges = self.split_into_n_sublists(feature_range, n=5)
+                subranges = self.split_into_n_sublists(feature_range, n=3)
                 position_dicts = []
                 for subrange in subranges:
                     subrange_minmax = (min(subrange), max(subrange))
@@ -355,14 +357,14 @@ class DepictionFeatureRanges(RandomDepictor):
         flattened_list = [element for sublist in unflattened_list for element in sublist]
         return flattened_list
     
-    def generate_all_possible_fingerprints(
+    
+    def generate_all_possible_fingerprints_per_scheme(
         self, 
         scheme: Dict,
-        name: str,
         ) -> List[List[int]]:
         """
         This function takes a fingerprint scheme (Dict) as returned by generate_fingerprint_scheme()
-        and a name (eg. 'CDK') and returns a List of all possible fingerprints for that scheme.
+        and returns a List of all possible fingerprints for that scheme.
 
         Args:
             scheme (Dict): Output of generate_fingerprint_scheme()
@@ -375,19 +377,36 @@ class DepictionFeatureRanges(RandomDepictor):
         FP_building_blocks = self.get_FP_building_blocks(scheme)
         # Determine cartesian product of valid building blocks to get all valid fingerprints
         FP_generator = product(*FP_building_blocks)
-        n_FP = self.get_number_of_possible_fingerprints(scheme)
-        print('There are {} {} fingerprint combinations.'.format(n_FP, name))
-        FP_length = scheme[list(scheme.keys())[-1]][-1]['position'] + 1
-        # Generate blank array
-        filename = '{}_FP_pool.memmap'.format(name)
-        fingerprints = np.memmap(filename, np.zeros((n_FP, FP_length)))
-        
-        starmap_tuple_generator = ((filename, index_FP_tup) for index_FP_tup in enumerate(FPs))
-        print("Created_starmap_tuple_generator!")
-        # Fill the blank array
-        with Pool() as p:
-            _ = p.map(self.flatten_fingerprint, enumerate(FPs))
+        flattened_fingerprints = list(map(self.flatten_fingerprint, FP_generator))
         return flattened_fingerprints
+    
+    
+    def generate_all_possible_fingerprints(self) -> None:
+        """
+        This function generates all possible valid fingerprint combinations for the four
+        available fingerprint schemes if they have not been created already. Otherwise, 
+        they are loaded from files.
+        This function returns None but saves the fingerprint pools as a class attribute $ID_fingerprints 
+        """
+        FP_names = ['CDK', 'RDKit', 'Indigo', 'augmentation']
+        FR = DepictionFeatureRanges()
+        for scheme_index in range(len(FR.schemes)):
+            n_FP = FR.get_number_of_possible_fingerprints(FR.schemes[scheme_index])
+            #print('There are {} {} fingerprints.'.format(n_FP, FP_names[scheme_index]))
+            # Load fingerprint pool from file (if it exists)
+            FP_filename = '{}_fingerprints.npz'.format(FP_names[scheme_index])
+            if os.path.exists(FP_filename):
+                fingerprints = np.load(FP_filename)
+                if len(fingerprints) == n_FP:
+                    exists_already = True
+            # Otherwise, generate the fingerprint pool
+            if not exists_already:
+                print('No pre-computed fingerprints found. The generation may take a minute.')
+                fingerprints = FR.generate_all_possible_fingerprints(FR.schemes[scheme_index])
+                np.savez_compressed(FP_filename, fingerprints)
+                print('{} fingerprints were saved in {}.'.format(FP_names[scheme_index], FP_filename))    
+        setattr(self, "{}_fingerprints", fingerprints)
+        return
     
     
     def convert_to_int_arr(

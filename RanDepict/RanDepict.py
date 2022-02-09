@@ -104,10 +104,15 @@ class RandomDepictor:
         self, 
         iterable: List, 
         log_attribute: str = False):
-        """This function takes an iterable, calls self.random_choice() on it,
+        """This function takes an iterable, calls random.choice() on it,
         increases random.seed by 1 and returns the result. This way, results
         produced by RanDepict are replicable.
+        
+        Additionally, this function handles the generation of depictions and
+        augmentations from given fingerprints by handling all random decisions 
+        according to the fingerprint template.
         """
+        # Keep track of seed and change it with every pseudo-random decision.
         self.seed += 1
         random.seed(self.seed)
         
@@ -119,18 +124,20 @@ class RandomDepictor:
                 pos = pos_cond_dict['position']
                 cond = pos_cond_dict['one_if']
                 if self.active_fingerprint[pos]:
-                    # If the one refers to a range: adapt iterable accordingly and go on
+                    # If the condition is a range: adapt iterable accordingly and go on
                     if type(cond) == tuple:
                         iterable = [item for item in iterable
                                     if item > cond[0] - 0.001
                                     if item < cond[1] + 0.001]
                         break
-                    # Otherwise, simply return what the condition value
+                    # Otherwise, simply return the condition value
                     else:
                         return cond
-        
+        # Pseudo-randomly pick an element from the iterable
         result = random.choice(iterable)
-        # Add result(s) to augmentation_logger
+        
+        # This block takes care of the automated fingerprint generation.
+        # Add result(s) to depiction_features
         if log_attribute and self.depiction_features:
             found_logged_attribute = getattr(self.depiction_features, log_attribute)
             # If the attribute is not saved in a list, simply write it, otherwise append it
@@ -270,7 +277,7 @@ class RandomDepictor:
         depiction_settings.drawOptions().minFontSize = min_font_size
         depiction_settings.drawOptions().maxFontSize = 30
         # Rotate the molecule
-        depiction_settings.drawOptions().rotate = self.random_choice(range(360), log_attribute='rdkit_molecule_rotation')
+        depiction_settings.drawOptions().rotate = self.random_choice(range(360))
         # Fixed bond length
         fixed_bond_length = self.random_choice(range(30, 45), log_attribute='rdkit_fixed_bond_length')
         depiction_settings.drawOptions().fixedBondLength = fixed_bond_length
@@ -336,7 +343,7 @@ class RandomDepictor:
                 StandardGenerator.Visibility.class_,
                 SymbolVisibility.iupacRecommendationsWithoutTerminalCarbon(),
             )
-        else:
+        elif self.random_choice([True, True, False], log_attribute='cdk_symbol_visibility_iupac_recommendation'):
             rendererModel.set(
                 StandardGenerator.Visibility.class_,
                 SymbolVisibility.iupacRecommendations(),
@@ -455,7 +462,7 @@ class RandomDepictor:
         point = JClass("org.openscience.cdk.geometry.GeometryTools").get2DCenter(
             molecule
         )
-        rot_degrees = self.random_choice(range(360), log_attribute='cdk_molecule_rotation')
+        rot_degrees = self.random_choice(range(360))
         JClass("org.openscience.cdk.geometry.GeometryTools").rotate(
             molecule, point, rot_degrees
         )
@@ -470,9 +477,11 @@ class RandomDepictor:
         Font = JClass("java.awt.Font")
         font_name = self.random_choice(
             ["Verdana", "Times New Roman", "Arial", "Gulliver Regular"],
-            log_attribute='cdk_atom_label_font'
+            #log_attribute='cdk_atom_label_font'
         )
-        font_style = self.random_choice([Font.PLAIN, Font.BOLD], log_attribute='cdk_atom_label_font_style')
+        font_style = self.random_choice([Font.PLAIN, Font.BOLD], 
+                                        #log_attribute='cdk_atom_label_font_style'
+                                        )
         font = Font(font_name, font_style, font_size)
         StandardGenerator = JClass(
             "org.openscience.cdk.renderer.generators.standard.StandardGenerator"
@@ -664,14 +673,14 @@ class RandomDepictor:
         self.active_fingerprint = fingerprints[0]
         self.active_scheme = schemes[0]
         # Depict molecule
-        if 'indigo' in list(scheme[0].keys())[0]:
+        if 'indigo' in list(schemes[0].keys())[0]:
             depiction = self.depict_and_resize_indigo(smiles)
-        elif 'rdkit' in list(scheme[0].keys())[0]:
+        elif 'rdkit' in list(schemes[0].keys())[0]:
             depiction = self.depict_and_resize_rdkit(smiles)
-        elif 'cdk' in list(scheme[0].keys())[0]:
+        elif 'cdk' in list(schemes[0].keys())[0]:
             depiction = self.depict_and_resize_cdk(smiles)
         
-        
+        # Add augmentations
         if len(fingerprints) == 2:
             self.active_fingerprint = fingerprints[1]
             self.active_scheme = schemes[1]
@@ -705,7 +714,7 @@ class RandomDepictor:
         
         def imgaug_rotation():
             # Rotation between -10 and 10 degrees
-            rot_angle = self.random_choice(np.arange(-10, 10, 1), log_attribute='imgaug_rotation_angle')
+            rot_angle = self.random_choice(np.arange(-10, 10, 1))
             aug = iaa.Affine(rotate=rot_angle, mode="edge", fit_output=True)
             return aug
         
@@ -767,7 +776,7 @@ class RandomDepictor:
                     imgaug_colour_temp_adjustment]
         
         if not call_all:
-            selected_aug_list = self.random_choices(aug_list, aug_number)
+            selected_aug_list = self.random_choices(aug_list, aug_number, log_attribute="imgaug_method")
         else:
             selected_aug_list = aug_list
         selected_aug_list = [fun() for fun in selected_aug_list]
@@ -1074,7 +1083,7 @@ class RandomDepictor:
         fonts = os.listdir(str(font_dir))
         # Choose random font size
         font_sizes = range(10, 20)
-        size = self.random_choice(font_sizes, log_attribute='label_font_sizes')
+        size = self.random_choice(font_sizes)
         # Generate random string that resembles the desired type of chemical label
         if label_type == "ID":
             label_text = self.ID_label_text()
@@ -1085,7 +1094,7 @@ class RandomDepictor:
 
         try:
             font = ImageFont.truetype(
-                str(os.path.join(str(font_dir), self.random_choice(fonts, log_attribute='label_font_types'))), size=size
+                str(os.path.join(str(font_dir), self.random_choice(fonts))), size=size
             )
         except OSError:
             font = ImageFont.load_default()
@@ -1105,16 +1114,14 @@ class RandomDepictor:
                 return np.asarray(im)
             if sum(mean) / len(mean) == 255:
                 draw.text((x_pos, y_pos), label_text, font=font, fill=(0, 0, 0, 255))
-                if self.depiction_features:
-                    self.depiction_features.label_types.append(label_type)
-                    self.depiction_features.label_texts.append(label_text)
-                    self.depiction_features.label_paste_x_positions.append(x_pos)
-                    self.depiction_features.label_paste_y_positions.append(y_pos)
                 break
 
         return np.asarray(im)
 
-    def add_curved_arrows_to_structure(self, image: np.array) -> np.array:
+    def add_curved_arrows_to_structure(
+        self, 
+        image: np.array
+        ) -> np.array:
         """This function takes an image of a chemical structure (np.array) and adds between 2 and 4 curved arrows
         in random positions in the central part of the image."""
         height, width, _ = image.shape
@@ -1130,17 +1137,17 @@ class RandomDepictor:
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(
                 os.path.join(
-                    str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir)), log_attribute='curved_arrow_image_type')
+                    str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir)))
                 )
             )
             new_arrow_image_shape = int(
-                (x_max - x_min) / self.random_choice(range(3, 6), log_attribute='curved_arrow_shape_x')
-            ), int((y_max - y_min) / self.random_choice(range(3, 6), log_attribute='curved_arrow_shape_y'))
+                (x_max - x_min) / self.random_choice(range(3, 6))
+            ), int((y_max - y_min) / self.random_choice(range(3, 6)))
             arrow_image = self.resize(np.asarray(arrow_image), new_arrow_image_shape)
             arrow_image = Image.fromarray(arrow_image)
             arrow_image = arrow_image.rotate(
-                self.random_choice(range(360), log_attribute='curved_arrow_rot_angles'), 
-                resample=self.random_choice([Image.BICUBIC, Image.NEAREST, Image.BILINEAR], log_attribute='curved_arrow_rot_resampling_methods'), 
+                self.random_choice(range(360)), 
+                resample=self.random_choice([Image.BICUBIC, Image.NEAREST, Image.BILINEAR]), 
                 expand=True
             )
             # Try different positions with the condition that the arrows are overlapping with non-white pixels (the structure)
@@ -1162,10 +1169,7 @@ class RandomDepictor:
                 mean = ImageStat.Stat(paste_region).mean
                 if sum(mean) / len(mean) < 252:
                     image.paste(arrow_image, (x_position, y_position), arrow_image)
-                    if self.depiction_features:
-                        # Add paste coordinates if the arrow actually has been pasted
-                        self.depiction_features.curved_arrow_paste_pos_x.append(x_position)
-                        self.depiction_features.curved_arrow_paste_pos_y.append(y_position)
+
                     break
         return np.asarray(image)
 
@@ -1184,7 +1188,10 @@ class RandomDepictor:
             x_range = range(0, int(0.5 * width))
         return self.random_choice(y_range), self.random_choice(x_range)
 
-    def add_straight_arrows_to_structure(self, image: np.array) -> np.array:
+    def add_straight_arrows_to_structure(
+        self, 
+        image: np.array
+        ) -> np.array:
         """This function takes an image of a chemical structure (np.array) and adds between 1 and 2 straight arrows
         in random positions in the image (no overlap with other elements)"""
         height, width, _ = image.shape
@@ -1198,7 +1205,7 @@ class RandomDepictor:
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(
                 os.path.join(
-                    str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir)), log_attribute='straight_arrow_images')
+                    str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir)))
                 )
             )
             # new_arrow_image_shape = (int(width * self.random_choice(np.arange(0.9, 1.5, 0.1))), int(height/10 * self.random_choice(np.arange(0.7, 1.2, 0.1))))
@@ -1207,7 +1214,7 @@ class RandomDepictor:
             # Rotate completely randomly in half of the cases and in   180° steps in the other cases (higher probability that pasting works)
             if self.random_choice([True, False]):
                 arrow_image = arrow_image.rotate(
-                    self.random_choice(range(360), log_attribute='straight_arrow_rot_angles'), 
+                    self.random_choice(range(360)), 
                     resample=self.random_choice([Image.BICUBIC, Image.NEAREST, Image.BILINEAR], log_attribute='straight_arrow_rot_resampling_methods'), 
                     expand=True
                 )
