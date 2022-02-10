@@ -33,7 +33,7 @@ class DepictionFeatureRanges(RandomDepictor):
         self.schemes = self.generate_fingerprint_schemes()
         self.cdk_scheme, self.rdkit_scheme, self.indigo_scheme, self.aug_scheme = self.schemes
         # Generate the pool of all valid fingerprint combinations
-        #self.generate_all_possible_fingerprints()
+        self.generate_all_possible_fingerprints()
     
     
     def random_choice(
