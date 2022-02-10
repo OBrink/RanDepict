@@ -23,7 +23,7 @@ import base64
 
 #from depiction_feature_diversity import DepictionFeatures, DepictionFeatureRanges
 
-HERE = pathlib.Path(__file__).resolve().parent.joinpath("assets")
+
 
 
 class RandomDepictor:
@@ -34,6 +34,8 @@ class RandomDepictor:
 
     def __init__(self, seed: int = 42):
         """Load the JVM only once, load superatom list (OSRA), set context for multiprocessing"""
+        self.HERE = pathlib.Path(__file__).resolve().parent.joinpath("assets")
+        
         # Start the JVM to access Java classes
         try:
             self.jvmPath = getDefaultJVMPath()
@@ -45,14 +47,16 @@ class RandomDepictor:
             )
             self.jvmPath = "Define/your/path/or/set/your/JAVA_HOME/variable/properly"
         if not isJVMStarted():
-            self.jar_path = HERE.joinpath("jar_files/cdk_2_5.jar")
+            self.jar_path = self.HERE.joinpath("jar_files/cdk_2_5.jar")
             startJVM(self.jvmPath, "-ea", "-Djava.class.path=" + str(self.jar_path))
 
         self.seed = seed
         random.seed(self.seed)
+        
+        
 
         # Load list of superatoms for label generation
-        with open(HERE.joinpath("superatom.txt")) as superatoms:
+        with open(self.HERE.joinpath("superatom.txt")) as superatoms:
             superatoms = superatoms.readlines()
             self.superatoms = [s[:-2] for s in superatoms]
 
@@ -270,7 +274,7 @@ class RandomDepictor:
         if self.random_choice([True, False], log_attribute='rdkit_draw_terminal_methyl'):
             depiction_settings.drawOptions().explicitMethyl = True
         # Label font type and size
-        font_dir = HERE.joinpath("fonts/")
+        font_dir = self.HERE.joinpath("fonts/")
         font_path = os.path.join(
             str(font_dir), self.random_choice(os.listdir(str(font_dir)), log_attribute='rdkit_label_font')
         )
@@ -412,7 +416,7 @@ class RandomDepictor:
         # Right now, this is loaded every time when a structure is depicted. That seems inefficient.
         if self.random_choice([True, False], log_attribute='cdk_collapse_superatoms'):
             cdk_superatom_abrv = JClass("org.openscience.cdk.depict.Abbreviations")()
-            abbreviation_path = str(HERE.joinpath("smiles_list.smi")).replace(
+            abbreviation_path = str(self.HERE.joinpath("smiles_list.smi")).replace(
                 "\\", "/"
             )
             abbreviation_path = JClass("java.lang.String")(abbreviation_path)
@@ -1087,10 +1091,10 @@ class RandomDepictor:
         width, height = im.size
         # Choose random font
         if self.random_choice([True, False]) or not foreign_fonts:
-            font_dir = HERE.joinpath("fonts/")
+            font_dir = self.HERE.joinpath("fonts/")
         #In half of the cases: Use foreign-looking font to generate bigger noise variety
         else:
-            font_dir = HERE.joinpath("foreign_fonts/")
+            font_dir = self.HERE.joinpath("foreign_fonts/")
 
         fonts = os.listdir(str(font_dir))
         # Choose random font size
@@ -1143,7 +1147,7 @@ class RandomDepictor:
         x_min, x_max = (int(0.1 * width), int(0.9 * width))
         y_min, y_max = (int(0.1 * height), int(0.9 * height))
 
-        arrow_dir = os.path.normpath(str(HERE.joinpath("arrow_images/curved_arrows/")))
+        arrow_dir = os.path.normpath(str(self.HERE.joinpath("arrow_images/curved_arrows/")))
 
         for _ in range(self.random_choice(range(2, 4))):
             # Load random curved arrow image, resize and rotate it randomly.
@@ -1210,7 +1214,7 @@ class RandomDepictor:
         image = Image.fromarray(image)
 
         arrow_dir = os.path.normpath(
-            str(HERE.joinpath("arrow_images/straight_arrows/"))
+            str(self.HERE.joinpath("arrow_images/straight_arrows/"))
         )
 
         for _ in range(self.random_choice(range(1, 3))):

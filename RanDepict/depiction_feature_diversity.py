@@ -24,7 +24,7 @@ class DepictionFeatureRanges(RandomDepictor):
         depiction = self.depict_and_resize_indigo(smiles)
         # Call every augmentation function
         depiction = self.add_curved_arrows_to_structure(depiction)
-        depiction = self.imgaug_augment(depiction, call_all=True)
+        depiction = self.imgaug_augment(depiction)
         depiction = self.add_straight_arrows_to_structure(depiction)
         depiction = self.add_chemical_label(depiction, "ID")
         depiction = self.add_chemical_label(depiction, "R_GROUP")
@@ -306,23 +306,25 @@ class DepictionFeatureRanges(RandomDepictor):
         they are loaded from files.
         This function returns None but saves the fingerprint pools as a class attribute $ID_fingerprints 
         """
+        exists_already = False
         FP_names = ['CDK', 'RDKit', 'Indigo', 'augmentation']
         for scheme_index in range(len(self.schemes)):
             n_FP = self.get_number_of_possible_fingerprints(self.schemes[scheme_index])
             #print('There are {} {} fingerprints.'.format(n_FP, FP_names[scheme_index]))
             # Load fingerprint pool from file (if it exists)
             FP_filename = '{}_fingerprints.npz'.format(FP_names[scheme_index])
-            if os.path.exists(FP_filename):
-                fingerprints = np.load(FP_filename)
+            FP_file_path = self.HERE.joinpath(FP_filename)
+            if os.path.exists(FP_file_path):
+                fingerprints = np.load(FP_filename)['arr_0']
                 if len(fingerprints) == n_FP:
                     exists_already = True
             # Otherwise, generate the fingerprint pool
             if not exists_already:
                 print('No pre-computed fingerprints found. The generation may take a minute.')
-                fingerprints = self.generate_all_possible_fingerprints(self.schemes[scheme_index])
-                np.savez_compressed(FP_filename, fingerprints)
-                print('{} fingerprints were saved in {}.'.format(FP_names[scheme_index], FP_filename))    
-        setattr(self, "{}_fingerprints", fingerprints)
+                fingerprints = self.generate_all_possible_fingerprints_per_scheme(self.schemes[scheme_index])
+                np.savez_compressed(FP_file_path, fingerprints)
+                print('{} fingerprints were saved in {}.'.format(FP_names[scheme_index], FP_file_path))    
+            setattr(self, "{}_fingerprints".format(FP_names[scheme_index]), fingerprints)
         return
     
     
