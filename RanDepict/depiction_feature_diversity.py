@@ -307,9 +307,8 @@ class DepictionFeatureRanges(RandomDepictor):
         This function returns None but saves the fingerprint pools as a class attribute $ID_fingerprints 
         """
         FP_names = ['CDK', 'RDKit', 'Indigo', 'augmentation']
-        FR = DepictionFeatureRanges()
-        for scheme_index in range(len(FR.schemes)):
-            n_FP = FR.get_number_of_possible_fingerprints(FR.schemes[scheme_index])
+        for scheme_index in range(len(self.schemes)):
+            n_FP = self.get_number_of_possible_fingerprints(self.schemes[scheme_index])
             #print('There are {} {} fingerprints.'.format(n_FP, FP_names[scheme_index]))
             # Load fingerprint pool from file (if it exists)
             FP_filename = '{}_fingerprints.npz'.format(FP_names[scheme_index])
@@ -320,7 +319,7 @@ class DepictionFeatureRanges(RandomDepictor):
             # Otherwise, generate the fingerprint pool
             if not exists_already:
                 print('No pre-computed fingerprints found. The generation may take a minute.')
-                fingerprints = FR.generate_all_possible_fingerprints(FR.schemes[scheme_index])
+                fingerprints = self.generate_all_possible_fingerprints(self.schemes[scheme_index])
                 np.savez_compressed(FP_filename, fingerprints)
                 print('{} fingerprints were saved in {}.'.format(FP_names[scheme_index], FP_filename))    
         setattr(self, "{}_fingerprints", fingerprints)

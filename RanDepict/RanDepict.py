@@ -233,8 +233,8 @@ class RandomDepictor:
         indigo, renderer = self.get_random_indigo_rendering_settings()
         # Load molecule
         molecule = indigo.loadMolecule(smiles)
-        # Do not kekulize in 20% of cases
-        if self.random_choice([True, False, False], log_attribute='indigo_not_kekulized'):
+        # Kekulize in 67% of cases
+        if not self.random_choice([True, True, False], log_attribute='indigo_kekulized'):
             molecule.aromatize()
         molecule.layout()
         # Write to buffer
@@ -695,12 +695,11 @@ class RandomDepictor:
     def imgaug_augment(
         self, 
         image: np.array, 
-        call_all: bool = False
         ) -> np.array:
-        """This function applies a random amount of augmentations to a given image (np.array)
+        """
+        This function applies a random amount of augmentations to a given image (np.array)
         using and returns the augmented image (np.array).
-        If call_all = True, all augmentation functions will be applied"""
-        # Add some padding to make sure rotation does not lead to funny bits at the edges of the image
+        """       
         # print(image)
         original_shape = image.shape
 
