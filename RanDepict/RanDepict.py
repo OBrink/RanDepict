@@ -148,9 +148,11 @@ class RandomDepictor:
         return result
 
     def random_choices(self, iterable: List, k: int) -> List:
-        """This function takes an iterable, calls self.random_choices() on it to take k
+        """
+        This function takes an iterable, calls self.random_choices() on it to take k
         elements from it,increases random.seed by 1 and returns the result. This way, results
-        produced by RanDepict are replicable."""
+        produced by RanDepict are replicable.
+        """
         self.seed += 1
         random.seed(self.seed)
         return random.choices(iterable, k=k)
@@ -714,12 +716,16 @@ class RandomDepictor:
         
         def imgaug_rotation():
             # Rotation between -10 and 10 degrees
+            if not self.random_choice([True, True, False], log_attribute='has_imgaug_rotation'):
+                return False
             rot_angle = self.random_choice(np.arange(-10, 10, 1))
             aug = iaa.Affine(rotate=rot_angle, mode="edge", fit_output=True)
             return aug
         
         def imgaug_black_and_white_noise():
             # Black and white noise
+            if not self.random_choice([True, True, False], log_attribute='has_imgaug_salt_pepper'):
+                return False
             coarse_dropout_p = self.random_choice(np.arange(0.0002, 0.0015, 0.0001))
             coarse_dropout_size_percent = self.random_choice(np.arange(1.0, 1.1, 0.01))
             replace_elementwise_p = self.random_choice(np.arange(0.01, 0.3, 0.01))
@@ -735,6 +741,8 @@ class RandomDepictor:
         
         def imgaug_shearing():
             # Shearing
+            if not self.random_choice([True, True, False], log_attribute='has_imgaug_shearing'):
+                return False
             shear_param = self.random_choice(np.arange(-5, 5, 1))
             aug = self.random_choice(
                 [
@@ -746,6 +754,8 @@ class RandomDepictor:
         
         def imgaug_imgcorruption():
             # Jpeg compression or pixelation
+            if not self.random_choice([True, True, False], log_attribute='has_imgaug_corruption'):
+                return False
             imgcorrupt_severity = self.random_choice(np.arange(1, 2, 1))
             aug = self.random_choice(
                 [
@@ -757,12 +767,16 @@ class RandomDepictor:
         
         def imgaug_brightness_adjustment():
             # Brightness adjustment
+            if not self.random_choice([True, True, False], log_attribute='has_imgaug_brightness_adj'):
+                return False
             brightness_adj_param = self.random_choice(np.arange(-50, 50, 1))
             aug = iaa.WithBrightnessChannels(iaa.Add(brightness_adj_param))
             return aug
         
         def imgaug_colour_temp_adjustment():
             # Colour temperature adjustment
+            if not self.random_choice([True, True, False], log_attribute='has_imgaug_col_adj'):
+                return False
             colour_temp = self.random_choice(np.arange(1100, 10000, 1))
             aug = iaa.ChangeColorTemperature(colour_temp)
             return aug
@@ -775,12 +789,11 @@ class RandomDepictor:
                     imgaug_brightness_adjustment,
                     imgaug_colour_temp_adjustment]
         
-        if not call_all:
-            selected_aug_list = self.random_choices(aug_list, aug_number, log_attribute="imgaug_method")
-        else:
-            selected_aug_list = aug_list
-        selected_aug_list = [fun() for fun in selected_aug_list]
-        aug = iaa.Sequential(selected_aug_list)
+        # Every one of them has a 1/3 chance of returning False
+        aug_list = [fun() for fun in aug_list]
+        aug_list = [fun for fun in aug_list
+                             if fun]
+        aug = iaa.Sequential(aug_list)
         augmented_image = aug.augment_images([image])[0]
         augmented_image = self.resize(augmented_image, original_shape)
         augmented_image = augmented_image.astype(np.uint8)
@@ -805,11 +818,11 @@ class RandomDepictor:
             depiction = self.add_curved_arrows_to_structure(depiction)
         if self.random_choice([True, False, False], log_attribute='has_straight_arrows'):
             depiction = self.add_straight_arrows_to_structure(depiction)
-        if self.random_choice([True, False, False, False, False, False]):
+        if self.random_choice([True, False, False, False, False, False], log_attribute='has_id_label'):
             depiction = self.add_chemical_label(depiction, "ID")
-        if self.random_choice([True, False, False, False, False, False]):
+        if self.random_choice([True, False, False, False, False, False], log_attribute='has_R_group_label'):
             depiction = self.add_chemical_label(depiction, "R_GROUP")
-        if self.random_choice([True, False, False, False, False, False]):
+        if self.random_choice([True, False, False, False, False, False], log_attribute='has_reaction_label'):
             depiction = self.add_chemical_label(depiction, "REACTION")
         if self.random_choice([True, False, False]):
             depiction = self.imgaug_augment(depiction)
@@ -1215,7 +1228,7 @@ class RandomDepictor:
             if self.random_choice([True, False]):
                 arrow_image = arrow_image.rotate(
                     self.random_choice(range(360)), 
-                    resample=self.random_choice([Image.BICUBIC, Image.NEAREST, Image.BILINEAR], log_attribute='straight_arrow_rot_resampling_methods'), 
+                    resample=self.random_choice([Image.BICUBIC, Image.NEAREST, Image.BILINEAR]), 
                     expand=True
                 )
             else:
