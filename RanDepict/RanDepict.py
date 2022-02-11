@@ -159,6 +159,7 @@ class RandomDepictor:
         x = int(shape[1] * self.random_choice(np.arange(0.9, 1.1, 0.02)))
         return y, x
 
+
     def get_random_indigo_rendering_settings(
         self, shape: Tuple[int, int] = (299, 299)
     ) -> Indigo:
@@ -1252,16 +1253,17 @@ class RandomDepictor:
         smiles: str,
         images_per_structure: int,
         output_dir: str,
+        augment: bool,
+        ID: str,
         shape: Tuple[int, int] = (299, 299),
-        ID=False,
         seed: int = 0,
     ):
         """This function takes a SMILES str, the amount of images to create per SMILES str and the path
         of an output directory. It then creates images_per_structure depictions of the chemical structure
         that is represented by the SMILES str and saves it as PNG images in output_dir.
+        If augment == True, it adds augmentations to the structure depiction.
         If an ID is given, it is used as the base filename. Otherwise, the SMILES str is used."""
-        # This seems a bit odd but it appears that it is the only way to make the seed tracking work
-        # with multiprocessing
+
         depictor = RandomDepictor(seed + 13)
 
         if not ID:
@@ -1269,103 +1271,51 @@ class RandomDepictor:
         else:
             name = ID
         for n in range(images_per_structure):
-            image = depictor.random_depiction(smiles, shape)
+            if augment:
+                image = depictor(smiles, shape)
+            else:
+                image = depictor.random_depiction(smiles, shape)
             output_file_path = os.path.join(output_dir, name + "_" + str(n) + ".png")
             sk_io.imsave(output_file_path, img_as_ubyte(image))
 
-    def depict_augment_save(
-        self,
-        smiles: str,
-        images_per_structure: int,
-        output_dir: str,
-        shape: Tuple[int, int] = (299, 299),
-        ID=False,
-        seed: int = 0,
-    ) -> None:
-        """This function takes a SMILES str, the amount of images to create per SMILES str and the path
-        of an output directory. It then creates images_per_structure augmented depictions of the chemical structure
-        that is represented by the SMILES str and saves it as PNG images in output_dir.
-        If an ID is given, it is used as the base filename. Otherwise, the SMILES str is used."""
-        # This seems a bit odd but it appears that it is the only way to make the seed tracking work
-        # with multiprocessing
-        depictor = RandomDepictor(seed + 13)
-
-        if not ID:
-            name = smiles
-        else:
-            name = ID
-        for n in range(images_per_structure):
-            image = depictor(smiles, shape)
-            output_file_path = os.path.join(output_dir, name + "_" + str(n) + ".png")
-            sk_io.imsave(output_file_path, img_as_ubyte(image))
 
     def batch_depict_save(
         self,
         smiles_list: List[str],
         images_per_structure: int,
         output_dir: str,
+        augment: bool,
+        ID_list: List[str],
         shape: Tuple[int, int] = (299, 299),
-        ID_list: List[str] = False,
         processes: int = 4,
         seed: int = 42,
     ) -> None:
-        """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
-        of an output directory. It then creates images_per_structure depictions of each chemical structure
-        that is represented by a SMILES str and saves them as PNG images in output_dir.
-        If an ID list (list with names of same length as smiles_list that contains unique IDs), the IDs will be used
-        to name the files. Otherwise, the SMILES str is used as a filename."""
-        if ID_list:
-            starmap_tuple_generator = (
-                (
-                    smiles_list[n],
-                    images_per_structure,
-                    output_dir,
-                    shape,
-                    ID_list[n],
-                    (seed * n + 1) * len(smiles_list),  # individual seed
-                )
-                for n in range(len(smiles_list))
+        """
+        Batch generation of chemical structure depictions without usage of fingerprints.
+
+        Args:
+            smiles_list (List[str]): List of SMILES str
+            images_per_structure (int): Amount of images to create per SMILES str
+            output_dir (str): Output directory
+            augment (bool): Boolean that indicates whether or not to use augmentations
+            ID_list (List[str]): List of IDs (should be as long as smiles_list)
+            shape (Tuple[int, int], optional): [description]. Defaults to (299, 299).
+            processes (int, optional): Number of parallel threads. Defaults to 4.
+            seed (int, optional): Seed for pseudo-random decisions. Defaults to 42.
+        """
+        starmap_tuple_generator = (
+            (
+                smiles_list[n],
+                images_per_structure,
+                output_dir,
+                augment,
+                ID_list[n],
+                shape,
+                (seed * n + 1) * len(smiles_list),  # individual seed
             )
-        else:
-            starmap_tuple_generator = (
-                (smiles, images_per_structure, output_dir, shape)
-                for smiles in smiles_list
-            )
+            for n in range(len(smiles_list))
+        )
         with get_context("spawn").Pool(processes) as p:
             p.starmap(self.depict_save, starmap_tuple_generator)
 
-    def batch_depict_augment_save(
-        self,
-        smiles_list: List[str],
-        images_per_structure: int,
-        output_dir: str,
-        shape: Tuple[int, int] = (299, 299),
-        ID_list: List[str] = False,
-        processes: int = 4,
-        seed: int = 42,
-    ) -> None:
-        """This function takes a list of SMILES str, the amount of images to create per SMILES str and the path
-        of an output directory. It then creates images_per_structure augmented depictions of each chemical structure
-        that is represented by a SMILES str and saves them as PNG images in output_dir.
-        If an ID list (list with names of same length as smiles_list that contains unique IDs), the IDs will be used
-        to name the files. Otherwise, the SMILES str is used as a filename."""
-        if ID_list:
-            starmap_tuple_generator = (
-                (
-                    smiles_list[n],
-                    images_per_structure,
-                    output_dir,
-                    shape,
-                    ID_list[n],
-                    (seed * n + 1) * len(smiles_list),  # individual seed
-                )
-                for n in range(len(smiles_list))
-            )
-
-        else:
-            starmap_tuple_generator = (
-                (smiles, images_per_structure, output_dir, shape)
-                for smiles in smiles_list
-            )
-        with get_context("spawn").Pool(processes) as p:
-            p.starmap(self.depict_augment_save, starmap_tuple_generator)
+    
