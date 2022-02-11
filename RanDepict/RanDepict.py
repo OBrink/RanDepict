@@ -151,15 +151,6 @@ class RandomDepictor:
         return result
 
 
-    def get_nonexisting_image_name(
-        self, path: str = "./temp/", format: str = "PNG"
-    ) -> str:
-        """This function returns a random file name that does not already exist at path"""
-        for _ in range(100):
-            file_name = str(self.random_choice(range(10000))) + "." + format
-            if not os.path.exists(os.path.join(path, file_name)):
-                return file_name
-
     def random_image_size(self, shape: Tuple[int, int]) -> Tuple[int, int]:
         """This function takes a random image shape and returns an image shape where the
         first two dimensions are slightly distorted."""
