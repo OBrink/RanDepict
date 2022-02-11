@@ -54,7 +54,6 @@ class RandomDepictor:
         random.seed(self.seed)
         
         
-
         # Load list of superatoms for label generation
         with open(self.HERE.joinpath("superatom.txt")) as superatoms:
             superatoms = superatoms.readlines()
@@ -151,15 +150,6 @@ class RandomDepictor:
                 setattr(self.depiction_features, log_attribute, found_logged_attribute + [result])
         return result
 
-    def random_choices(self, iterable: List, k: int) -> List:
-        """
-        This function takes an iterable, calls self.random_choices() on it to take k
-        elements from it,increases random.seed by 1 and returns the result. This way, results
-        produced by RanDepict are replicable.
-        """
-        self.seed += 1
-        random.seed(self.seed)
-        return random.choices(iterable, k=k)
 
     def get_nonexisting_image_name(
         self, path: str = "./temp/", format: str = "PNG"

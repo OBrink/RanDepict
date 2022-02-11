@@ -1,6 +1,6 @@
 import os
 import random
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import numpy as np
 from itertools import product
 from RanDepict import RandomDepictor
@@ -31,7 +31,7 @@ class DepictionFeatureRanges(RandomDepictor):
         depiction = self.depiction = self.add_chemical_label(depiction, "REACTION")
         # Generate schemes for Fingerprint creation
         self.schemes = self.generate_fingerprint_schemes()
-        self.cdk_scheme, self.rdkit_scheme, self.indigo_scheme, self.aug_scheme = self.schemes
+        self.CDK_scheme, self.RDKit_scheme, self.Indigo_scheme, self.augmentation_scheme = self.schemes
         # Generate the pool of all valid fingerprint combinations
         self.generate_all_possible_fingerprints()
     
@@ -391,7 +391,6 @@ class DepictionFeatureRanges(RandomDepictor):
             """
             return 1-DataStructs.DiceSimilarity(fingerprints[fp_index_1], fingerprints[fp_index_2])
         
-        
         n_fingerprints = len(fingerprints)
         picker = MaxMinPicker()
         pick_indices = picker.LazyPick(dice_dist, n_fingerprints, n, seed=42)
@@ -400,84 +399,51 @@ class DepictionFeatureRanges(RandomDepictor):
         return picked_fingerprints  
 
 
+    def generate_fingerprints_for_dataset(
+        self,
+        size: int,
+        indigo_proportion: float = 0.15,
+        rdkit_proportion: float = 0.3,
+        cdk_proportion: float = 0.55,
+        aug_proportion: float = 0.5,
+        ) -> Tuple[List[int]]:
+        """Given a dataset size (int) and (optional) proportions for the different types of fingerprints
+
+        Args:
+            size (int): Desired dataset size, number of returned Indigo/RDKit/CDK fingerprints
+            indigo_proportion (float, optional): Proportion of Indigo fingerprints. Defaults to 0.15.
+            rdkit_proportion (float, optional): Proportion of RDKit fingerprints. Defaults to 0.3.
+            cdk_proportion (float, optional): Proportion of CDK fingerprints. Defaults to 0.55.
+            aug_proportion (float, optional): Proportion of Augmentation fingerprints. Defaults to 0.5.
+
+        Raises:
+            ValueError: 
+                - If the sum of Indigo, RDKit and CDK proportions is not 1
+                - If the augmentation proportion is > 1
+        
+        Returns:
+            Tuple[List[int]]: Tuple of lists of indigo, rdkit, cdk and augmentation fingerprints
+
+        """
+        # Make sure that the given proportion arguments make sense
+        if sum(indigo_proportion, rdkit_proportion, cdk_proportion) != 1:
+            raise ValueError("Sum of Indigo, CDK and RDKitproportion arguments needs to be 1.")
+        if aug_proportion > 1:
+            raise ValueError("The proportion of augmentation fingerprints can't be > 1.")
+        # Pick and return diverse fingerprints
+        picked_Indigo_fingerprints = self.pick_fingerprints(self.Indigo_fingerprints, int(size*indigo_proportion))
+        picked_RDKit_fingerprints = self.pick_fingerprints(self.RDKit_fingerprints, int(size*rdkit_proportion))
+        picked_CDK_fingerprints = self.pick_fingerprints(self.CDK_fingerprints, int(size*cdk_proportion))
+        picked_augmentation_fingerprints = self.pick_fingerprints(self.augmentation_fingerprints, int(size*aug_proportion)) 
+        return (picked_Indigo_fingerprints,
+                picked_RDKit_fingerprints,
+                picked_CDK_fingerprints,
+                picked_augmentation_fingerprints)
+
 class DepictionFeatures:
     """
     A DepictionFeatures objects simply holds all depiction parameters
     of a chemical structure depiction generated with RanDepict
     """
     def __init__(self):
-        # Depiction parameters for Indigo depictions
-        self.indigo_bond_line_width = None
-        self.indigo_relative_thickness = None
-        self.indigo_labels_all = None
-        self.indigo_labels_hetero = None
-        self.indigo_render_bold_bond = None
-        self.indigo_stereo_label_style = None
-        self.indigo_collapse_superatoms = None
-        self.indigo_not_kekulized = None
-        # Depiction parameters for RDKit depictions
-        self.rdkit_add_stereo_annotation = None
-        self.rdkit_add_chiral_flag_labels = None
-        self.rdkit_add_atom_indices = None
-        self.rdkit_bond_line_width = None
-        self.rdkit_draw_terminal_methyl = None
-        self.rdkit_label_font = None
-        self.rdkit_min_font_size = None
-        self.rdkit_molecule_rotation = None
-        self.rdkit_fixed_bond_length = None
-        self.rdkit_comic_style = None
-        self.rdkit_collapse_superatoms = None
-        # Depiction parameters for CDK depictions
-        self.cdk_kekulized = None
-        self.cdk_molecule_rotation = None
-        self.cdk_atom_label_font_size = None
-        self.cdk_atom_label_font = None
-        self.cdk_atom_label_font_style = None
-        self.cdk_show_all_atom_labels = None
-        self.cdk_no_terminal_methyl = None
-        self.cdk_stroke_width = None
-        self.cdk_margin_ratio = None
-        self.cdk_double_bond_dist = None
-        self.cdk_wedge_ratio = None
-        self.cdk_fancy_bold_wedges = None
-        self.cdk_fancy_hashed_wedges = None
-        self.cdk_hash_spacing = None
-        self.cdk_add_CIP_labels = None
-        self.cdk_add_atom_indices = None
-        self.cdk_label_font_scale = None
-        self.cdk_annotation_distance = None
-        self.cdk_collapse_superatoms = None
-        # Everything related to curved arrows
-        self.has_curved_arrows = None
-        self.curved_arrow_image_type = []
-        self.curved_arrow_shape_x = []
-        self.curved_arrow_shape_y = []
-        self.curved_arrow_rot_angles = []
-        self.curved_arrow_rot_resampling_methods = []
-        self.curved_arrow_paste_pos_x = []
-        self.curved_arrow_paste_pos_y = []
-        # Everything related to straight_arrows
-        self.has_straight_arrows = None
-        self.straight_arrow_images = []
-        self.straight_arrow_rot_angles = []
-        self.straight_arrow_rot_resampling_methods = []
-        self.straight_arrow_paste_pos_x = [] 
-        self.straight_arrow_paste_pos_y = []
-        # Everything related to chemical labels
-        self.label_types = []
-        self.label_texts = [] # not used for fingerprint
-        self.label_font_types = []
-        self.label_font_sizes = []
-        self.label_paste_x_positions = []
-        self.label_paste_y_position = []
-        
-        # Everything related to imgaug_augmentations
-        self.imgaug_rotation_angle = None
-        self.imgaug_coarse_dropout_p = None
-        self.imgaug_coarse_dropout_size_percent = None
-        self.imgaug_replace_elementwise_p = None
-        self.imgaug_shear_param = None
-        self.imgaug_imgcorrupt_severity = None
-        self.imgaug_brightness_adj = None
-        self.imgaug_colour_temp_change = None
-  
+        pass
