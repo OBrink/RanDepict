@@ -680,6 +680,46 @@ class RandomDepictor:
         return depiction
     
 
+    def depict_save_from_fingerprint(
+        self,
+        smiles: str,
+        fingerprints: List[np.array], 
+        schemes: List[Dict],
+        output_dir: str,
+        filename: str,
+        shape: Tuple[int,int] = (299,299),
+        ) -> None:
+        """
+        This function takes a SMILES representation of a molecule, a list of one or two fingerprints 
+        and a list of the corresponding fingerprint schemes, generates a chemical structure depiction
+        that fits the fingerprint and saves the resulting image at a given path.
+        ___
+        If only one fingerprint/scheme is given, we assume that they contain information for
+        a depiction without augmentations. If two are given, we assume that the first one
+        contains information about the depiction and the second one contains information about the 
+        augmentations.
+        ___
+        All this function does is set the class attributes in a manner that random_choice() knows to not to
+        actually pick parameters randomly.
+
+        Args:
+            smiles (str): SMILES representation of molecule  
+            fingerprints (List[np.array]): List of one or two fingerprints
+            schemes (List[Dict]): List of one or two fingerprint schemes
+            output_dir (str): output directory
+            filename (str): filename
+            shape (Tuple[int,int]): Desired output image shape Defaults to (299,299).
+
+        Returns:
+            np.array: Chemical structure depiction
+        """
+        # Generate chemical structure depiction
+        image = self.depict_from_fingerprint(smiles, fingerprints, schemes, shape)
+        # Save ot at given_path:
+        output_file_path = os.path.join(output_dir, filename + ".png")
+        sk_io.imsave(output_file_path, img_as_ubyte(image))
+    
+
     def imgaug_augment(
         self, 
         image: np.array, 
@@ -1363,22 +1403,30 @@ class RandomDepictor:
                                                      cdk_proportion,
                                                      aug_proportion)
         indigo_FPs, rdkit_FPs, CDK_FPs, aug_FPs = FP_ds
-        
+        # Distribute augmentation_fingerprints over
         fingerprint_tuples = FR.distribute_elements_evenly(aug_FPs,
                                                              indigo_FPs,
                                                              rdkit_FPs,
                                                              CDK_FPs)
-        
-        
-        # Distribute augmentation_fingerprints over 
+        """
+        depict_save_from_fingerprint(
+        self,
+        smiles: str,
+        fingerprints: List[np.array], 
+        schemes: List[Dict],
+        output_dir: str,
+        filename: str,
+        shape: Tuple[int,int] = (299,299),
+        ) -> None:
+        """
         starmap_tuple_generator = (
             (
                 smiles_list[n],
-                images_per_structure,
+                fingerprint_tuples[n],
+                [FR.FP_length_scheme_dict[len(element)] for element in fingerprint_tuples[n]],
                 output_dir,
                 ID_list[n],
                 shape,
-                (seed * n + 1) * len(smiles_list),  # individual seed
             )
             for n in range(len(smiles_list))
         )
@@ -1400,18 +1448,18 @@ class DepictionFeatureRanges(RandomDepictor):
         depiction = self.depict_and_resize_cdk(smiles)
         depiction = self.depict_and_resize_rdkit(smiles)
         depiction = self.depict_and_resize_indigo(smiles)
-        # Call every augmentation function
-        depiction = self.add_curved_arrows_to_structure(depiction)
-        depiction = self.imgaug_augment(depiction)
-        depiction = self.add_straight_arrows_to_structure(depiction)
-        depiction = self.add_chemical_label(depiction, "ID")
-        depiction = self.add_chemical_label(depiction, "R_GROUP")
-        depiction = self.depiction = self.add_chemical_label(depiction, "REACTION")
+        # Call augmentation function
+        depiction = self.add_augmentations(depiction)
         # Generate schemes for Fingerprint creation
         self.schemes = self.generate_fingerprint_schemes()
         self.CDK_scheme, self.RDKit_scheme, self.Indigo_scheme, self.augmentation_scheme = self.schemes
         # Generate the pool of all valid fingerprint combinations
+        
         self.generate_all_possible_fingerprints()
+        FP_length_scheme_dict = {len(self.CDK_fingerprints): self.CDK_scheme,
+                                 len(self.RDKit_fingerprints): self.RDKit_scheme,
+                                 len(self.Indigo_fingerprints): self.Indigo_scheme,
+                                 len(self.augmentation_fingerprints): self.augmentation_scheme,}
     
     
     def random_choice(
@@ -1492,7 +1540,6 @@ class DepictionFeatureRanges(RandomDepictor):
         Returns:
             Dict: Mapping of feature ID (str) and dictionaries that define the fingerprint position and a condition
         """
-        
         fingerprint_scheme = {}
         position = 0
         for feature_ID in ID_range_map.keys():

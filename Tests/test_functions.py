@@ -23,4 +23,3 @@ def test_distribute_elements_evenly():
                                          elements_1,
                                          elements_2)
     assert expected_result == actual_result
-
