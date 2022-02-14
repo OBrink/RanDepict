@@ -7,9 +7,9 @@ This repository contains RanDepict, an easy-to-use utility to generate a big var
 
 Typical usage example:
 
-from RanDepict import random_depictor
+from RanDepict import RandomDepictor
 smiles = "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
-with random_depictor() as depictor:
+with RandomDepictor() as depictor:
     image = depictor(smiles)
 
 Have a look in the RanDepictNotebook.ipynb for more examples.
@@ -24,5 +24,8 @@ __all__ = [
     "RanDepict",
 ]
 
-from .RanDepict import RandomDepictor
-from .depiction_feature_diversity import DepictionFeatures, DepictionFeatureRanges
+
+from .randepict import RandomDepictor, DepictionFeatures, DepictionFeatureRanges
+
+
+
