@@ -1369,6 +1369,7 @@ class RandomDepictor:
                                                              rdkit_FPs,
                                                              CDK_FPs)
         
+        
         # Distribute augmentation_fingerprints over 
         starmap_tuple_generator = (
             (
