@@ -1387,8 +1387,6 @@ class RandomDepictor:
     
     
             
-            
-            
 class DepictionFeatureRanges(RandomDepictor):
     """Class for depiction feature fingerprint generation"""
     def __init__(self):
