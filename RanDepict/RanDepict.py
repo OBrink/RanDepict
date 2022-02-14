@@ -1384,8 +1384,6 @@ class RandomDepictor:
         with get_context("spawn").Pool(processes) as p:
             p.starmap(self.depict_save, starmap_tuple_generator)
             
-    
-    
             
 class DepictionFeatureRanges(RandomDepictor):
     """Class for depiction feature fingerprint generation"""
