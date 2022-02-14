@@ -1375,7 +1375,6 @@ class RandomDepictor:
                 smiles_list[n],
                 images_per_structure,
                 output_dir,
-                augment,
                 ID_list[n],
                 shape,
                 (seed * n + 1) * len(smiles_list),  # individual seed
