@@ -1373,7 +1373,6 @@ class RandomDepictor:
         aug_proportion: float = 0.5,
         shape: Tuple[int, int] = (299, 299),
         processes: int = 4,
-        seed: int = 42,
     ) -> None:
         """
         Batch generation of chemical structure depictions with usage of fingerprints.
@@ -1389,7 +1388,6 @@ class RandomDepictor:
             aug_proportion (float, optional): Proportion of Augmentation fingerprints. Defaults to 0.5.
             shape (Tuple[int, int], optional): [description]. Defaults to (299, 299).
             processes (int, optional): Number of parallel threads. Defaults to 4.
-            seed (int, optional): Seed for pseudo-random decisions. Defaults to 42.
         """
         # Duplicate elements in smiles_list images_per_structure times
         smiles_list = [smi for smi in smiles_list 
@@ -1408,17 +1406,7 @@ class RandomDepictor:
                                                              indigo_FPs,
                                                              rdkit_FPs,
                                                              CDK_FPs)
-        """
-        depict_save_from_fingerprint(
-        self,
-        smiles: str,
-        fingerprints: List[np.array], 
-        schemes: List[Dict],
-        output_dir: str,
-        filename: str,
-        shape: Tuple[int,int] = (299,299),
-        ) -> None:
-        """
+        
         starmap_tuple_generator = (
             (
                 smiles_list[n],
@@ -1432,6 +1420,7 @@ class RandomDepictor:
         )
         with get_context("spawn").Pool(processes) as p:
             p.starmap(self.depict_save, starmap_tuple_generator)
+        return None
             
             
 class DepictionFeatureRanges(RandomDepictor):
@@ -1456,7 +1445,7 @@ class DepictionFeatureRanges(RandomDepictor):
         # Generate the pool of all valid fingerprint combinations
         
         self.generate_all_possible_fingerprints()
-        FP_length_scheme_dict = {len(self.CDK_fingerprints): self.CDK_scheme,
+        self.FP_length_scheme_dict = {len(self.CDK_fingerprints): self.CDK_scheme,
                                  len(self.RDKit_fingerprints): self.RDKit_scheme,
                                  len(self.Indigo_fingerprints): self.Indigo_scheme,
                                  len(self.augmentation_fingerprints): self.augmentation_scheme,}
@@ -1489,7 +1478,7 @@ class DepictionFeatureRanges(RandomDepictor):
             if type(found_logged_attribute) != list:
                 setattr(self.depiction_features, log_attribute, result)
             else:
-                setattr(self.augmentation_logger, log_attribute, found_logged_attribute + [result])
+                setattr(self.depiction_features, log_attribute, found_logged_attribute + [result])
         return result
     
     
@@ -1529,7 +1518,7 @@ class DepictionFeatureRanges(RandomDepictor):
         ___
         Example:
         >> example_ID_range_map = {'thickness': [0, 1, 2, 3], 'kekulized': [True, False]}
-        >> DepictionFeatures().generate_fingerprint_scheme(example_ID_range_map)
+        >> DepictionFeatureRanges().generate_fingerprint_scheme(example_ID_range_map)
         >>>> {'thickness': [{'position': 0, 'one_if': 0}, {'position': 1, 'one_if': 1}, 
             {'position': 2, 'one_if': 2}, {'position': 3, 'one_if': 3}], 
             'kekulized': [{'position': 4, 'one_if': True}]}
@@ -1592,30 +1581,6 @@ class DepictionFeatureRanges(RandomDepictor):
         for i in range(0, iter_len, int(np.ceil(iter_len/n))):
             sublists.append(iterable[i:i + int(np.ceil(iter_len/n))])
         return sublists
-
-    
-    def count_combinations(
-        self, 
-        feature_ranges: List
-        ) -> int:
-        """
-        Takes a list of lists and returns the number of possible combinations
-        of elements.
-        Example: 
-        Input: [[1, 2][3, 4]]
-        Combinations: (1,3), (1,4), (2,3), (2,4) 
-        Output: 4
-        
-        Args:
-            feature_ranges (List): List of lists of features to choose from when depicting a molecule
-
-        Returns:
-            [int]: Number of possible feature combinations
-        """
-        possible_combination_count = 1
-        for feature_range in feature_ranges:
-            possible_combination_count *= len(set(feature_range))
-        return possible_combination_count
     
     
     def get_number_of_possible_fingerprints(
