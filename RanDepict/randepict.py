@@ -1376,6 +1376,8 @@ class RandomDepictor:
     ) -> None:
         """
         Batch generation of chemical structure depictions with usage of fingerprints.
+        This takes longer than the procedure with batch_depict_save but the diversity of the 
+        depictions and augmentations is ensured.
 
         Args:
             smiles_list (List[str]): List of SMILES str
@@ -1406,7 +1408,9 @@ class RandomDepictor:
                                                              indigo_FPs,
                                                              rdkit_FPs,
                                                              CDK_FPs)
-        
+        # Shuffle fingerprint tuples randomly to avoid the same smiles always being depicted
+        # with the same cheminformatics toolkit
+        random.shuffle(fingerprint_tuples)
         starmap_tuple_generator = (
             (
                 smiles_list[n],
@@ -1419,7 +1423,7 @@ class RandomDepictor:
             for n in range(len(smiles_list))
         )
         with get_context("spawn").Pool(processes) as p:
-            p.starmap(self.depict_save, starmap_tuple_generator)
+            p.starmap(self.depict_save_from_fingerprint, starmap_tuple_generator)
         return None
             
             
@@ -1445,10 +1449,10 @@ class DepictionFeatureRanges(RandomDepictor):
         # Generate the pool of all valid fingerprint combinations
         
         self.generate_all_possible_fingerprints()
-        self.FP_length_scheme_dict = {len(self.CDK_fingerprints): self.CDK_scheme,
-                                 len(self.RDKit_fingerprints): self.RDKit_scheme,
-                                 len(self.Indigo_fingerprints): self.Indigo_scheme,
-                                 len(self.augmentation_fingerprints): self.augmentation_scheme,}
+        self.FP_length_scheme_dict = {len(self.CDK_fingerprints[0]): self.CDK_scheme,
+                                 len(self.RDKit_fingerprints[0]): self.RDKit_scheme,
+                                 len(self.Indigo_fingerprints[0]): self.Indigo_scheme,
+                                 len(self.augmentation_fingerprints[0]): self.augmentation_scheme,}
     
     
     def random_choice(
