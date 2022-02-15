@@ -1621,7 +1621,7 @@ class DepictionFeatureRanges(RandomDepictor):
                 {'position': 2, 'one_if': 2}, {'position': 3, 'one_if': 3}], 
                 'kekulized': [{'position': 4, 'one_if': True}]}
                 
-            --> Output: [((1,0,0,0), (0,1,0,0), (0,0,1,0), (0,0,0,1)), ((1), (0))]
+            --> Output: [[[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]], [[1], [0]]]
         
         Args: 
             scheme (Dict): Output of generate_fingerprint_scheme()
