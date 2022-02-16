@@ -1486,6 +1486,7 @@ class RandomDepictor:
         fingerprints: List[np.array],
         schemes: List[Dict],
         shape: Tuple[int, int] = (299, 299),
+        seed: int = 42
     ) -> np.array:
         """
         This function takes a SMILES representation of a molecule,
@@ -1509,16 +1510,19 @@ class RandomDepictor:
         Returns:
             np.array: Chemical structure depiction
         """
+        # This needs to be done to ensure that the Java Virtual Machine is
+        # running when working with multiproessing
+        depictor = RandomDepictor(seed=seed)
         self.from_fingerprint = True
         self.active_fingerprint = fingerprints[0]
         self.active_scheme = schemes[0]
         # Depict molecule
         if "indigo" in list(schemes[0].keys())[0]:
-            depiction = self.depict_and_resize_indigo(smiles, shape)
+            depiction = depictor.depict_and_resize_indigo(smiles, shape)
         elif "rdkit" in list(schemes[0].keys())[0]:
-            depiction = self.depict_and_resize_rdkit(smiles, shape)
+            depiction = depictor.depict_and_resize_rdkit(smiles, shape)
         elif "cdk" in list(schemes[0].keys())[0]:
-            depiction = self.depict_and_resize_cdk(smiles, shape)
+            depiction = depictor.depict_and_resize_cdk(smiles, shape)
 
         # Add augmentations
         if len(fingerprints) == 2:
@@ -1569,12 +1573,10 @@ class RandomDepictor:
         Returns:
             np.array: Chemical structure depiction
         """
-        # This needs to be done to ensure that the Java Virtual Machine is
-        # running when working with multiproessing
-        depictor = RandomDepictor(seed = seed)
+
         # Generate chemical structure depiction
-        image = depictor.depict_from_fingerprint(
-            smiles, fingerprints, schemes, shape)
+        image = self.depict_from_fingerprint(
+            smiles, fingerprints, schemes, shape, seed)
         # Save at given_path:
         output_file_path = os.path.join(output_dir, filename + ".png")
         sk_io.imsave(output_file_path, img_as_ubyte(image))
@@ -1635,7 +1637,7 @@ class RandomDepictor:
                 output_dir,
                 ID_list[n],
                 shape,
-                n
+                n*100
             )
             for n in range(len(smiles_list))
         )
@@ -1643,6 +1645,67 @@ class RandomDepictor:
             p.starmap(self.depict_save_from_fingerprint,
                       starmap_tuple_generator)
         return None
+
+    def batch_depict_with_fingerprints(
+            self,
+            smiles_list: List[str],
+            images_per_structure: int,
+            indigo_proportion: float = 0.15,
+            rdkit_proportion: float = 0.3,
+            cdk_proportion: float = 0.55,
+            aug_proportion: float = 0.5,
+            shape: Tuple[int, int] = (299, 299),
+            processes: int = 4,
+            ) -> None:
+        """
+        Batch generation of chemical structure depictions with usage
+        of fingerprints. This takes longer than the procedure with
+        batch_depict_save but the diversity of the depictions and
+        augmentations is ensured. The images are saved in the given
+        output_directory
+
+        Args:
+            smiles_list (List[str]): List of SMILES str
+            images_per_structure (int): Amount of images to create per SMILES
+            output_dir (str): Output directory
+            ID_list (List[str]): IDs (len: smiles_list * images_per_structure)
+            indigo_proportion (float): Indigo proportion. Defaults to 0.15.
+            rdkit_proportion (float): RDKit proportion. Defaults to 0.3.
+            cdk_proportion (float): CDK proportion. Defaults to 0.55.
+            aug_proportion (float): Augmentation proportion. Defaults to 0.5.
+            shape (Tuple[int, int]): [description]. Defaults to (299, 299).
+            processes (int, optional): Number of threads. Defaults to 4.
+        """
+        # Duplicate elements in smiles_list images_per_structure times
+        smiles_list = [smi for smi in smiles_list for _ in range(
+            images_per_structure)]
+        # Generate corresponding amount of fingerprints
+        dataset_size = len(smiles_list)
+        FR = DepictionFeatureRanges()
+        fingerprint_tuples = FR.generate_fingerprints_for_dataset(
+            dataset_size,
+            indigo_proportion,
+            rdkit_proportion,
+            cdk_proportion,
+            aug_proportion,
+        )
+        starmap_tuple_generator = (
+            (
+                smiles_list[n],
+                fingerprint_tuples[n],
+                [
+                    FR.FP_length_scheme_dict[len(element)]
+                    for element in fingerprint_tuples[n]
+                ],
+                shape,
+                n*100
+            )
+            for n in range(len(smiles_list))
+        )
+        with get_context("spawn").Pool(processes) as p:
+            depictions = p.starmap(self.depict_from_fingerprint,
+                                   starmap_tuple_generator)
+        return list(depictions)
 
 
 class DepictionFeatureRanges(RandomDepictor):
