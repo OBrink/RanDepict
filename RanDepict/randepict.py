@@ -376,30 +376,29 @@ class RandomDepictor:
         )
 
         # Define visibility of atom/superatom labels
+        symbol_visibility = self.random_choice([
+            "iupac_recommendation",
+            "no_terminal_methyl",
+            "show_all_atom_labels"
+        ], log_attribute='cdk_symbol_visibility')
         SymbolVisibility = JClass(
             "org.openscience.cdk.renderer.SymbolVisibility")
-        if self.random_choice(
-            [True] + [False] * 19, log_attribute="cdk_show_all_atom_labels"
-        ):
+        if symbol_visibility == "iupac_recommendation":
             rendererModel.set(
-                StandardGenerator.Visibility.class_, SymbolVisibility.all()
-            )  # show all atom labels
-        elif self.random_choice(
-            [True, False, False, False], log_attribute="cdk_no_terminal_methyl"
-        ):
+                StandardGenerator.Visibility.class_,
+                SymbolVisibility.iupacRecommendations(),
+            )
+        elif symbol_visibility == "no_terminal_methyl":
             # only hetero atoms, no terminal alkyl groups
             rendererModel.set(
                 StandardGenerator.Visibility.class_,
                 SymbolVisibility.iupacRecommendationsWithoutTerminalCarbon(),
             )
-        elif self.random_choice(
-            [True, True, False],
-            log_attribute="cdk_symbol_visibility_iupac_recommendation",
-        ):
+        elif symbol_visibility == "show_all_atom_labels":
             rendererModel.set(
-                StandardGenerator.Visibility.class_,
-                SymbolVisibility.iupacRecommendations(),
-            )
+                StandardGenerator.Visibility.class_, SymbolVisibility.all()
+            )  # show all atom labels
+
         # Define bond line stroke width
         stroke_width = self.random_choice(
             np.arange(0.8, 2.0, 0.1), log_attribute="cdk_stroke_width"
@@ -1542,6 +1541,7 @@ class RandomDepictor:
         output_dir: str,
         filename: str,
         shape: Tuple[int, int] = (299, 299),
+        seed: int = 42,
     ) -> None:
         """
         This function takes a SMILES representation of a molecule, a list
@@ -1564,12 +1564,16 @@ class RandomDepictor:
             output_dir (str): output directory
             filename (str): filename
             shape (Tuple[int,int]): output image shape Defaults to (299,299).
+            seed (int): Seed for remaining random decisions
 
         Returns:
             np.array: Chemical structure depiction
         """
+        # This needs to be done to ensure that the Java Virtual Machine is
+        # running when working with multiproessing
+        depictor = RandomDepictor(seed = seed)
         # Generate chemical structure depiction
-        image = self.depict_from_fingerprint(
+        image = depictor.depict_from_fingerprint(
             smiles, fingerprints, schemes, shape)
         # Save at given_path:
         output_file_path = os.path.join(output_dir, filename + ".png")
@@ -1592,13 +1596,14 @@ class RandomDepictor:
         Batch generation of chemical structure depictions with usage
         of fingerprints. This takes longer than the procedure with
         batch_depict_save but the diversity of the depictions and
-        augmentations is ensured.
+        augmentations is ensured. The images are saved in the given
+        output_directory
 
         Args:
             smiles_list (List[str]): List of SMILES str
             images_per_structure (int): Amount of images to create per SMILES
             output_dir (str): Output directory
-            ID_list (List[str]): List of IDs (should be as long as smiles_list)
+            ID_list (List[str]): IDs (len: smiles_list * images_per_structure)
             indigo_proportion (float): Indigo proportion. Defaults to 0.15.
             rdkit_proportion (float): RDKit proportion. Defaults to 0.3.
             cdk_proportion (float): CDK proportion. Defaults to 0.55.
@@ -1612,22 +1617,13 @@ class RandomDepictor:
         # Generate corresponding amount of fingerprints
         dataset_size = len(smiles_list)
         FR = DepictionFeatureRanges()
-        FP_ds = FR.generate_fingerprints_for_dataset(
+        fingerprint_tuples = FR.generate_fingerprints_for_dataset(
             dataset_size,
             indigo_proportion,
             rdkit_proportion,
             cdk_proportion,
             aug_proportion,
         )
-        indigo_FPs, rdkit_FPs, CDK_FPs, aug_FPs = FP_ds
-        # Distribute augmentation_fingerprints over
-        fingerprint_tuples = FR.distribute_elements_evenly(
-            aug_FPs, indigo_FPs, rdkit_FPs, CDK_FPs
-        )
-        # Shuffle fingerprint tuples randomly to avoid the same smiles
-        # always being depicted with the same cheminformatics toolkit
-        random.seed(FR.seed)
-        random.shuffle(fingerprint_tuples)
         starmap_tuple_generator = (
             (
                 smiles_list[n],
@@ -1639,6 +1635,7 @@ class RandomDepictor:
                 output_dir,
                 ID_list[n],
                 shape,
+                n
             )
             for n in range(len(smiles_list))
         )
@@ -2073,7 +2070,7 @@ class DepictionFeatureRanges(RandomDepictor):
             ___
             Depending on augmentation_proportion, the depiction fingerprints
             are paired with augmentation fingerprints or not.
-    
+
         Example output:
             [[$some_depiction_fingerprint, $some augmentation_fingerprint],
              [$another_depiction_fingerprint]
