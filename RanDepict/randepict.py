@@ -749,100 +749,6 @@ class RandomDepictor:
         )
         return np.asarray(image)
 
-    def depict_from_fingerprint(
-        self,
-        smiles: str,
-        fingerprints: List[np.array],
-        schemes: List[Dict],
-        shape: Tuple[int, int] = (299, 299),
-    ) -> np.array:
-        """
-        This function takes a SMILES representation of a molecule,
-        a list of one or two fingerprints and a list of the corresponding
-        fingerprint schemes and generates a chemical structure depiction
-        that fits the fingerprint.
-        ___
-        If only one fingerprint/scheme is given, we assume that they contain
-        information for a depiction without augmentations. If two are given,
-        we assume that the first one contains information about the depiction
-        and the second one contains information about the augmentations.
-        ___
-        All this function does is set the class attributes in a manner that
-        random_choice() knows to not to actually pick parameters randomly.
-
-        Args:
-            fingerprints (List[np.array]): List of one or two fingerprints
-            schemes (List[Dict]): List of one or two fingerprint schemes
-            shape (Tuple[int,int]): Desired output image shape
-
-        Returns:
-            np.array: Chemical structure depiction
-        """
-        self.from_fingerprint = True
-        self.active_fingerprint = fingerprints[0]
-        self.active_scheme = schemes[0]
-        # Depict molecule
-        if "indigo" in list(schemes[0].keys())[0]:
-            depiction = self.depict_and_resize_indigo(smiles, shape)
-        elif "rdkit" in list(schemes[0].keys())[0]:
-            depiction = self.depict_and_resize_rdkit(smiles, shape)
-        elif "cdk" in list(schemes[0].keys())[0]:
-            depiction = self.depict_and_resize_cdk(smiles, shape)
-
-        # Add augmentations
-        if len(fingerprints) == 2:
-            self.active_fingerprint = fingerprints[1]
-            self.active_scheme = schemes[1]
-            depiction = self.add_augmentations(depiction)
-
-        self.from_fingerprint, self.active_fingerprint, self.active_scheme = (
-            False,
-            False,
-            False,
-        )
-        return depiction
-
-    def depict_save_from_fingerprint(
-        self,
-        smiles: str,
-        fingerprints: List[np.array],
-        schemes: List[Dict],
-        output_dir: str,
-        filename: str,
-        shape: Tuple[int, int] = (299, 299),
-    ) -> None:
-        """
-        This function takes a SMILES representation of a molecule, a list
-        of one or two fingerprints and a list of the corresponding fingerprint
-        schemes, generates a chemical structure depiction that fits the
-        fingerprint and saves the resulting image at a given path.
-        ___
-        If only one fingerprint/scheme is given, we assume that they contain
-        information for a depiction without augmentations. If two are given,
-        we assume that the first one contains information about the depiction
-        and the second one contains information about the augmentations.
-        ___
-        All this function does is set the class attributes in a manner that
-        random_choice() knows to not to actually pick parameters randomly.
-
-        Args:
-            smiles (str): SMILES representation of molecule
-            fingerprints (List[np.array]): List of one or two fingerprints
-            schemes (List[Dict]): List of one or two fingerprint schemes
-            output_dir (str): output directory
-            filename (str): filename
-            shape (Tuple[int,int]): output image shape Defaults to (299,299).
-
-        Returns:
-            np.array: Chemical structure depiction
-        """
-        # Generate chemical structure depiction
-        image = self.depict_from_fingerprint(
-            smiles, fingerprints, schemes, shape)
-        # Save ot at given_path:
-        output_file_path = os.path.join(output_dir, filename + ".png")
-        sk_io.imsave(output_file_path, img_as_ubyte(image))
-
     def imgaug_augment(
         self,
         image: np.array,
@@ -1509,7 +1415,7 @@ class RandomDepictor:
     ) -> None:
         """
         Batch generation of chemical structure depictions without usage of
-        fingerprints.
+        fingerprints. The images are saved at a given path.
 
         Args:
             smiles_list (List[str]): List of SMILES str
@@ -1535,6 +1441,139 @@ class RandomDepictor:
         )
         with get_context("spawn").Pool(processes) as p:
             p.starmap(self.depict_save, starmap_tuple_generator)
+
+    # def batch_depict(
+    #     self,
+    #     smiles_list: List[str],
+    #     images_per_structure: int,
+    #     augment: bool,
+    #     shape: Tuple[int, int] = (299, 299),
+    #     processes: int = 4,
+    #     seed: int = 42,
+    # ) -> List[np.array]:
+    #     """
+    #     Batch generation of chemical structure depictions without usage of
+    #     fingerprints without saving the images.
+
+    #     Args:
+    #         smiles_list (List[str]): List of SMILES str
+    #         images_per_structure (int): Amount of images to create per SMILES
+    #         augment (bool):  indicates whether or not to use augmentations
+    #         shape (Tuple[int, int], optional): Defaults to (299, 299).
+    #         processes (int, optional): Number of threads. Defaults to 4.
+    #         seed (int, optional): Seed for random decisions. Defaults to 42.
+
+    #     Returns:
+    #         depictions (List[np.array]): Chemical structure depictions
+    #     """
+    #     smiles_list = [smi for smi in smiles_list
+    #                    for _ in range(images_per_structure)]
+    #     starmap_tuple_generator = (
+    #         (
+    #             smiles_list[n],
+    #             augment,
+    #             shape,
+    #             (seed * n + 1) * len(smiles_list),  # individual seed
+    #         )
+    #         for n in range(len(smiles_list))
+    #     )
+    #     if augment:
+    #         with get_context("spawn").Pool(processes) as p:
+    #             p.starmap(self.depict_save, starmap_tuple_generator)
+
+    def depict_from_fingerprint(
+        self,
+        smiles: str,
+        fingerprints: List[np.array],
+        schemes: List[Dict],
+        shape: Tuple[int, int] = (299, 299),
+    ) -> np.array:
+        """
+        This function takes a SMILES representation of a molecule,
+        a list of one or two fingerprints and a list of the corresponding
+        fingerprint schemes and generates a chemical structure depiction
+        that fits the fingerprint.
+        ___
+        If only one fingerprint/scheme is given, we assume that they contain
+        information for a depiction without augmentations. If two are given,
+        we assume that the first one contains information about the depiction
+        and the second one contains information about the augmentations.
+        ___
+        All this function does is set the class attributes in a manner that
+        random_choice() knows to not to actually pick parameters randomly.
+
+        Args:
+            fingerprints (List[np.array]): List of one or two fingerprints
+            schemes (List[Dict]): List of one or two fingerprint schemes
+            shape (Tuple[int,int]): Desired output image shape
+
+        Returns:
+            np.array: Chemical structure depiction
+        """
+        self.from_fingerprint = True
+        self.active_fingerprint = fingerprints[0]
+        self.active_scheme = schemes[0]
+        # Depict molecule
+        if "indigo" in list(schemes[0].keys())[0]:
+            depiction = self.depict_and_resize_indigo(smiles, shape)
+        elif "rdkit" in list(schemes[0].keys())[0]:
+            depiction = self.depict_and_resize_rdkit(smiles, shape)
+        elif "cdk" in list(schemes[0].keys())[0]:
+            depiction = self.depict_and_resize_cdk(smiles, shape)
+
+        # Add augmentations
+        if len(fingerprints) == 2:
+            self.active_fingerprint = fingerprints[1]
+            self.active_scheme = schemes[1]
+            depiction = self.add_augmentations(depiction)
+
+        self.from_fingerprint, self.active_fingerprint, self.active_scheme = (
+            False,
+            False,
+            False,
+        )
+        return depiction
+
+    def depict_save_from_fingerprint(
+        self,
+        smiles: str,
+        fingerprints: List[np.array],
+        schemes: List[Dict],
+        output_dir: str,
+        filename: str,
+        shape: Tuple[int, int] = (299, 299),
+    ) -> None:
+        """
+        This function takes a SMILES representation of a molecule, a list
+        of one or two fingerprints and a list of the corresponding fingerprint
+        schemes, generates a chemical structure depiction that fits the
+        fingerprint and saves the resulting image at a given path.
+        ___
+        If only one fingerprint/scheme is given, we assume that they contain
+        information for a depiction without augmentations. If two are given,
+        we assume that the first one contains information about the depiction
+        and the second one contains information about the augmentations.
+        ___
+        All this function does is set the class attributes in a manner that
+        random_choice() knows to not to actually pick parameters randomly.
+
+        Args:
+            smiles (str): SMILES representation of molecule
+            fingerprints (List[np.array]): List of one or two fingerprints
+            schemes (List[Dict]): List of one or two fingerprint schemes
+            output_dir (str): output directory
+            filename (str): filename
+            shape (Tuple[int,int]): output image shape Defaults to (299,299).
+
+        Returns:
+            np.array: Chemical structure depiction
+        """
+        # Generate chemical structure depiction
+        image = self.depict_from_fingerprint(
+            smiles, fingerprints, schemes, shape)
+        # Save at given_path:
+        output_file_path = os.path.join(output_dir, filename + ".png")
+        sk_io.imsave(output_file_path, img_as_ubyte(image))
 
     def batch_depict_save_with_fingerprints(
         self,
@@ -1587,6 +1626,7 @@ class RandomDepictor:
         )
         # Shuffle fingerprint tuples randomly to avoid the same smiles
         # always being depicted with the same cheminformatics toolkit
+        random.seed(FR.seed)
         random.shuffle(fingerprint_tuples)
         starmap_tuple_generator = (
             (
@@ -2012,9 +2052,9 @@ class DepictionFeatureRanges(RandomDepictor):
         rdkit_proportion: float = 0.3,
         cdk_proportion: float = 0.55,
         aug_proportion: float = 0.5,
-    ) -> Tuple[List[int]]:
+    ) -> List[List[int]]:
         """Given a dataset size (int) and (optional) proportions for the
-        different types of fingerprints
+        different types of fingerprints, this function returns
 
         Args:
             size (int): Desired dataset size, number of returned  fingerprints
@@ -2029,7 +2069,15 @@ class DepictionFeatureRanges(RandomDepictor):
                 - If the augmentation proportion is > 1
 
         Returns:
-            Tuple[List[int]]: Tuple of lists of indigo, rdkit, cdk and aug fps
+            List[List[int]]: List of lists containing the fingerprints.
+            ___
+            Depending on augmentation_proportion, the depiction fingerprints
+            are paired with augmentation fingerprints or not.
+    
+        Example output:
+            [[$some_depiction_fingerprint, $some augmentation_fingerprint],
+             [$another_depiction_fingerprint]
+             [$yet_another_depiction_fingerprint]]
 
         """
         # Make sure that the given proportion arguments make sense
@@ -2054,16 +2102,22 @@ class DepictionFeatureRanges(RandomDepictor):
         picked_augmentation_fingerprints = self.pick_fingerprints(
             self.augmentation_fingerprints, int(size * aug_proportion)
         )
-        return (
+        # Distribute augmentation_fingerprints over depiction fingerprints
+        fingerprint_tuples = self.distribute_elements_evenly(
+            picked_augmentation_fingerprints,
             picked_Indigo_fingerprints,
             picked_RDKit_fingerprints,
-            picked_CDK_fingerprints,
-            picked_augmentation_fingerprints,
+            picked_CDK_fingerprints
         )
+        # Shuffle fingerprint tuples randomly to avoid the same smiles
+        # always being depicted with the same cheminformatics toolkit
+        random.seed(self.seed)
+        random.shuffle(fingerprint_tuples)
+        return fingerprint_tuples
 
     def distribute_elements_evenly(
         self, elements_to_be_distributed: List[Any], *args: List[Any]
-    ) -> List[Tuple[Any]]:
+    ) -> List[List[Any]]:
         """
         This function distributes the elements from elements_to_be_distributed
         evenly over the lists of elements given in args. It can be used to link
@@ -2071,7 +2125,7 @@ class DepictionFeatureRanges(RandomDepictor):
 
         Example:
         distribute_elements_evenly(["A", "B", "C", "D"], [1, 2, 3], [4, 5, 6])
-        Output: [(1, "A"), (2, "B"), (3), (4, "C"), (5, "D"), (6)]
+        Output: [[1, "A"], [2, "B"], [3], [4, "C"], [5, "D"], [6]]
         --> see test_distribute_elements_evenly() in ../Tests/test_functions.py
 
         Args:
@@ -2079,10 +2133,9 @@ class DepictionFeatureRanges(RandomDepictor):
             args: Every arg is a list of elements (B)
 
         Returns:
-            List[Tuple[Any]]: List of Tuples (B, A) where the elements A are
-                              distributed evenly over the elements B according
-                              to the length of the list of elements B
-
+            List[List[Any]]: List of Lists (B, A) where the elements A are
+                             distributed evenly over the elements B according
+                             to the length of the list of elements B
         """
         # Make sure that the input is valid
         args_total_len = len(
@@ -2107,13 +2160,13 @@ class DepictionFeatureRanges(RandomDepictor):
             for element_index in range(len(element_list)):
                 if element_index < len(select_elements_to_be_distributed):
                     output.append(
-                        (
+                        [
                             element_list[element_index],
                             select_elements_to_be_distributed[element_index],
-                        )
+                        ]
                     )
                 else:
-                    output.append((element_list[element_index]))
+                    output.append([element_list[element_index]])
             start_index = start_index + int(
                 sublist_len / args_total_len * len(elements_to_be_distributed)
             )

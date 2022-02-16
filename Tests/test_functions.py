@@ -174,7 +174,8 @@ class TestDepictionFeatureRanges:
 
     def test_generate_fingerprints_for_dataset(self):
         # Difficult to test this
-        # --> Assert that the number of fingerprints fits the given proportions
+        # --> Assert that the total number of fingerprints fits
+        # --> Assert that number of depiction fingerprints fits
         fingerprints = self.DFR.generate_fingerprints_for_dataset(
             size=100,
             indigo_proportion=0.15,
@@ -182,11 +183,14 @@ class TestDepictionFeatureRanges:
             cdk_proportion=0.55,
             aug_proportion=0.5,
         )
-        indigo_fps, rdkit_fps, cdk_fps, aug_fps = fingerprints
-        assert len(indigo_fps) == 15
-        assert len(rdkit_fps) == 30
-        assert len(cdk_fps) == 55
-        assert len(aug_fps) == 50
+
+        assert len(fingerprints) == 100
+        num_aug_fps = len([fp for fp in fingerprints
+                           if len(fp) != 1])
+        # 49 is the expected outcome here as 50 fingerprints cannot be evenly
+        # distributed while keeping the proportions. The function rounds the
+        # indices. Nothing to worry about.
+        assert num_aug_fps == 49
 
     def test_distribute_elements_evenly(self):
         # Assert that the elements from elements_to_be_distributed are
@@ -194,7 +198,7 @@ class TestDepictionFeatureRanges:
         elements_to_be_distributed = ["A", "B", "C", "D"]
         fixed_elements_1 = [1, 2, 3]
         fixed_elements_2 = [4, 5, 6]
-        expected_output = [(1, "A"), (2, "B"), (3), (4, "C"), (5, "D"), (6)]
+        expected_output = [[1, "A"], [2, "B"], [3], [4, "C"], [5, "D"], [6]]
         actual_output = self.DFR.distribute_elements_evenly(
             elements_to_be_distributed, fixed_elements_1, fixed_elements_2
         )
