@@ -8,3 +8,4 @@
 - randepict_batch_run_tfrecord_output.py: A script for the generation of random depictions with and without augmentations using a test file containing an ID,
 the SMILES and some sort of annotation per line. This script saves batches of images and annotations in tfrecord files instead of generating image files. This makes handling big datasets a lot easier when working with Tensorflow. 
     - python3 randepict_batch_run_tfrecord_output.py tfrecord_creation_data_sample.txt
+    - If you want to use this script, you need to install Tensorflow 2.X
