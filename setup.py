@@ -7,9 +7,9 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="RanDepict",
-    version="1.0.4",
+    version="1.0.5",
     author="Otto Brinkhaus",
-    author_email="henning.brinkhaus@uni-jena.de, kohulan.rajan@uni-jena.de",
+    author_email="otto.brinkhaus@uni-jena.de, kohulan.rajan@uni-jena.de",
     maintainer="Otto Brinkhaus, Kohulan Rajan",
     maintainer_email="henning.brinkhaus@uni-jena.de, kohulan.rajan@uni-jena.de",
     description="RanDepict is an easy-to-use utility to generate a big variety of chemical structure depictions (random depiction styles and image augmentations).",
