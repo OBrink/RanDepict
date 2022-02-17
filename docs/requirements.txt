@@ -1,3 +1,3 @@
 nbsphinx
 sphinx-autodoc-typehints
-sphinx-press-theme
+insipid-sphinx-theme

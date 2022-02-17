@@ -33,7 +33,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx_autodoc_typehints",
     "sphinx.ext.autosummary",
-
+    "insipid_sphinx_theme",
     "nbsphinx",
     "sphinx.ext.mathjax",
     'sphinx.ext.githubpages',
@@ -57,25 +57,35 @@ master_doc = 'index'
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
+# The name of the Pygments (syntax highlighting) style to use.
+pygments_style = None
+
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-# html_theme = 'alabaster'
-# pygments_style = 'sphinx'
-pygments_style = None
+html_permalinks_icon = '§'
+html_theme = 'insipid'
 
-# import sphinx_rtd_theme
-# html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-# html_theme = "sphinx_rtd_theme"
-html_theme = "press"
-
-html_show_sourcelink = True
+# Theme options are theme-specific and customize the look and feel of a theme
+# further.  For a list of options available for each theme, see the
+# documentation.
+#
+# html_theme_options = {}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+html_favicon = '_static/Untitled-1.png'
+# Custom sidebar templates, must be a dictionary that maps document names
+# to template names.
+#
+# The default sidebars (for documents that don't match any pattern) are
+# defined by theme itself.  Builtin themes are using these templates by
+# default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
+# 'searchbox.html']``.
+#
 
-html_sidebars = {'**': ['util/sidetoc.html']}
