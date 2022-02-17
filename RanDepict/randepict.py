@@ -130,7 +130,7 @@ class RandomDepictor:
                                            Defaults to False.
 
         Returns:
-            _type_: _description_
+            Any: "Randomly" picked element
         """
         # Keep track of seed and change it with every pseudo-random decision.
         self.seed += 1
@@ -161,19 +161,41 @@ class RandomDepictor:
 
         return result
 
-    def random_image_size(self, shape: Tuple[int, int]) -> Tuple[int, int]:
-        """This function takes a random image shape and returns an image shape
-        where the first two dimensions are slightly distorted."""
+    def random_image_size(
+            self,
+            shape: Tuple[int, int]
+            ) -> Tuple[int, int]:
+        """
+        This function takes a random image shape and returns an image shape
+        where the first two dimensions are slightly distorted
+        (90-110% of original value).
+
+        Args:
+            shape (Tuple[int, int]): original shape
+
+        Returns:
+            Tuple[int, int]: distorted shape
+        """
         # Set random depiction image shape (to cause a slight distortion)
         y = int(shape[0] * self.random_choice(np.arange(0.9, 1.1, 0.02)))
         x = int(shape[1] * self.random_choice(np.arange(0.9, 1.1, 0.02)))
         return y, x
 
     def get_random_indigo_rendering_settings(
-        self, shape: Tuple[int, int] = (299, 299)
-    ) -> Indigo:
-        """This function defines random rendering options for the structure depictions
-        created using Indigo. It returns an Indigo object with the settings."""
+            self,
+            shape: Tuple[int, int] = (299, 299)
+            ) -> Indigo:
+        """
+        This function defines random rendering options for the structure
+        depictions created using Indigo.
+        It returns an Indigo object with the settings.
+
+        Args:
+            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+
+        Returns:
+            Indigo: Indigo object that contains depictions settings
+        """
         # Define random shape for depiction (within boundaries);)
         indigo = Indigo()
         renderer = IndigoRenderer(indigo)
@@ -241,12 +263,23 @@ class RandomDepictor:
         return indigo, renderer
 
     def depict_and_resize_indigo(
-        self, smiles: str, shape: Tuple[int, int] = (299, 299)
-    ) -> np.array:
-        """This function takes a smiles str and an image shape.
+            self,
+            smiles: str,
+            shape: Tuple[int, int] = (299, 299)
+            ) -> np.array:
+        """
+        This function takes a smiles str and an image shape.
         It renders the chemical structures using Indigo with random
         rendering/depiction settings and returns an RGB image (np.array)
-        with the given image shape."""
+        with the given image shape.
+
+        Args:
+            smiles (str): SMILES representation of molecule
+            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+
+        Returns:
+            np.array: Chemical structure depiction
+        """
         # Instantiate Indigo with random settings and IndigoRenderer
         indigo, renderer = self.get_random_indigo_rendering_settings()
         # Load molecule
@@ -267,11 +300,20 @@ class RandomDepictor:
         return depiction
 
     def get_random_rdkit_rendering_settings(
-        self, shape: Tuple[int, int] = (299, 299)
-    ) -> rdMolDraw2D.MolDraw2DCairo:
-        """This function defines random rendering options for the structure
+            self,
+            shape: Tuple[int, int] = (299, 299)
+            ) -> rdMolDraw2D.MolDraw2DCairo:
+        """
+        This function defines random rendering options for the structure
         depictions created using rdkit. It returns an MolDraw2DCairo object
-        with the settings."""
+        with the settings.
+
+        Args:
+            shape (Tuple[int, int], optional): im_shape. Defaults to (299, 299)
+
+        Returns:
+            rdMolDraw2D.MolDraw2DCairo: Object that contains depiction settings
+        """
         # Get slightly distorted shape
         y, x = self.random_image_size(shape)
         # Instantiate object that saves the settings
@@ -334,12 +376,23 @@ class RandomDepictor:
         return depiction_settings
 
     def depict_and_resize_rdkit(
-        self, smiles: str, shape: Tuple[int, int] = (299, 299)
-    ) -> np.array:
-        """This function takes a smiles str and an image shape.
+            self,
+            smiles: str,
+            shape: Tuple[int, int] = (299, 299)
+            ) -> np.array:
+        """
+        This function takes a smiles str and an image shape.
         It renders the chemical structuresusing Rdkit with random
         rendering/depiction settings and returns an RGB image (np.array)
-        with the given image shape."""
+        with the given image shape.
+
+        Args:
+            smiles (str): SMILES representation of molecule_
+            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+
+        Returns:
+            np.array: Chemical structure depiction
+        """
 
         # Generate mol object from smiles str
         mol = Chem.MolFromSmiles(smiles)
@@ -370,14 +423,26 @@ class RandomDepictor:
         else:
             print("RDKit was unable to read SMILES: {}".format(smiles))
 
-    def get_random_cdk_rendering_settings(self, rendererModel, molecule):
-        """This function defines random rendering options for the structure depictions
+    def get_random_cdk_rendering_settings(
+            self,
+            rendererModel,
+            molecule):
+        """
+        This function defines random rendering options for the structure depictions
         created using CDK.
         It takes a cdk.renderer.AtomContainerRenderer.2DModel
         and a cdk.AtomContainer and returns the 2DModel object with random
         rendering settings and the AtomContainer.
         I followed https://github.com/cdk/cdk/wiki/Standard-Generator while
-        creating this."""
+        creating this.
+
+        Args:
+            rendererModel (cdk.renderer.AtomContainerRenderer.2DModel)
+            molecule (cdk.AtomContainer): Atom container
+
+        Returns:
+            rendererModel, molecule: Objects that hold depiction parameters
+        """
         cdk_base = 'org.openscience.cdk'
 
         StandardGenerator = JClass(
@@ -507,9 +572,12 @@ class RandomDepictor:
         return rendererModel, molecule
 
     def depict_and_resize_cdk(
-        self, smiles: str, shape: Tuple[int, int] = (299, 299)
-    ) -> np.array:
-        """This function takes a smiles str and an image shape.
+            self,
+            smiles: str,
+            shape: Tuple[int, int] = (299, 299)
+            ) -> np.array:
+        """
+        This function takes a smiles str and an image shape.
         It renders the chemical structures using CDK with random
         rendering/depiction settings and returns an RGB image (np.array)
         with the given image shape.
@@ -519,7 +587,15 @@ class RandomDepictor:
         https://egonw.github.io/cdkbook/ctr.html#depict-a-compound-as-an-image
         with additional adaptations to create all the different depiction
         types from
-        https://github.com/cdk/cdk/wiki/Standard-Generator"""
+        https://github.com/cdk/cdk/wiki/Standard-Generator
+
+        Args:
+            smiles (str): SMILES representation of molecule
+            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+
+        Returns:
+            np.array: Chemical structure depiction
+        """
         cdk_base = 'org.openscience.cdk'
 
         # Read molecule from SMILES str
@@ -662,7 +738,10 @@ class RandomDepictor:
         depiction = img_as_ubyte(depiction)
         return depiction
 
-    def normalise_padding(self, im: np.array) -> np.array:
+    def normalise_padding(
+            self,
+            im: np.array
+            ) -> np.array:
         """This function takes an RGB image (np.array) and deletes white space at
         the borders. Then 0-10% of the image width/height is added as padding
         again. The modified image is returned
@@ -698,10 +777,12 @@ class RandomDepictor:
         This function takes image (np.array) and will add white padding
         so that the image has a square shape with the width/height of the
         longest side of the original image.
-        ___
-        im: np.array
-        ___
-        output: np.array
+
+        Args:
+            im (np.array): Input image
+
+        Returns:
+            np.array: Output image
         """
         # Create new blank white image
         max_wh = max(im.shape)
@@ -715,12 +796,23 @@ class RandomDepictor:
         return new_im
 
     def random_depiction(
-        self, smiles: str, shape: Tuple[int, int] = (299, 299)
-    ) -> np.array:
-        """This function takes a SMILES str and depicts it using Rdkit, Indigo or CDK.
+            self,
+            smiles: str,
+            shape: Tuple[int, int] = (299, 299)
+            ) -> np.array:
+        """
+        This function takes a SMILES str and depicts it using Rdkit, Indigo or CDK.
         The depiction method and the specific parameters for the depiction are
         chosen completely randomly. The purpose of this function is to enable
-        depicting a diverse variety of chemical structure depictions."""
+        depicting a diverse variety of chemical structure depictions.
+
+        Args:
+            smiles (str): SMILES representation of molecule
+            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+
+        Returns:
+            np.array: Chemical structure depiction
+        """
         depiction_functions = [
             self.depict_and_resize_rdkit,
             self.depict_and_resize_indigo,
@@ -737,17 +829,23 @@ class RandomDepictor:
             depiction = depiction_function(smiles, shape)
         return depiction
 
-    def resize(self, image: np.array, shape: Tuple[int]) -> np.array:
+    def resize(
+            self,
+            image: np.array,
+            shape: Tuple[int]
+            ) -> np.array:
         """
         This function takes an image (np.array) and a shape and returns
         the resized image (np.array). It uses Pillow to do this, as it
         seems to have a bigger variety of scaling methods than skimage.
         The up/downscaling method is chosen randomly.
+        
+        Args:
+            image (np.array): the input image
+            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
         ___
-        image: np.array; the input image
-        shape: tuple that describes desired output shape
-        ___
-        Output: np.array; the resized image
+        Returns: 
+            np.array: the resized image
 
         """
         image = Image.fromarray(image)
@@ -758,13 +856,19 @@ class RandomDepictor:
         return np.asarray(image)
 
     def imgaug_augment(
-        self,
-        image: np.array,
-    ) -> np.array:
+            self,
+            image: np.array,
+            ) -> np.array:
         """
         This function applies a random amount of augmentations to
         a given image (np.array) using and returns the augmented image
         (np.array).
+
+        Args:
+            image (np.array): input image
+
+        Returns:
+            np.array: output image (augmented)
         """
         original_shape = image.shape
 
@@ -885,7 +989,10 @@ class RandomDepictor:
         augmented_image = augmented_image.astype(np.uint8)
         return augmented_image
 
-    def add_augmentations(self, depiction: np.array) -> np.array:
+    def add_augmentations(
+            self,
+            depiction: np.array
+            ) -> np.array:
         """
         This function takes a chemical structure depiction (np.array)
         and returns the same image with added augmentation elements
@@ -924,10 +1031,23 @@ class RandomDepictor:
             depiction = self.imgaug_augment(depiction)
         return depiction
 
-    def get_random_label_position(self, width: int, height: int) -> Tuple:
-        """Given the width and height of an image (int), this function
+    def get_random_label_position(
+            self,
+            width: int,
+            height: int
+            ) -> Tuple[int, int]:
+        """
+        Given the width and height of an image (int), this function
         determines a random position in the outer 15% of the image and
-        returns a tuple that contain the coordinates (y,x) of that position."""
+        returns a tuple that contain the coordinates (y,x) of that position.
+
+        Args:
+            width (int): image width
+            height (int): image height
+
+        Returns:
+            Tuple[int, int]: Random label position
+        """
         if self.random_choice([True, False]):
             y_range = range(0, height)
             x_range = list(range(0, int(0.15 * width))) + list(
@@ -940,9 +1060,16 @@ class RandomDepictor:
             x_range = range(0, width)
         return self.random_choice(y_range), self.random_choice(x_range)
 
-    def ID_label_text(self) -> str:
-        """This function returns a string that resembles a typical
-        chemical ID label"""
+    def ID_label_text(
+            self
+            ) -> str:
+        """
+        This function returns a string that resembles a typical
+        chemical ID label
+
+        Returns:
+            str: Label text
+        """
         label_num = range(1, 50)
         label_letters = [
             "a",
@@ -987,8 +1114,15 @@ class RandomDepictor:
                 + self.random_choice(label_letters)
             )
 
-    def new_reaction_condition_elements(self) -> Tuple[str, str, str]:
-        """Randomly redefine reaction_time, solvent and other_reactand."""
+    def new_reaction_condition_elements(
+            self
+            ) -> Tuple[str, str, str]:
+        """
+        Randomly redefine reaction_time, solvent and other_reactand.
+
+        Returns:
+            Tuple[str, str, str]: Reaction time, solvent, reactand
+        """
         reaction_time = self.random_choice(
             [str(num) for num in range(30)]
         ) + self.random_choice([" h", " min"])
@@ -1033,8 +1167,13 @@ class RandomDepictor:
         return reaction_time, solvent, other_reactand
 
     def reaction_condition_label_text(self) -> str:
-        """This function returns a random string that looks like a
-        reaction condition label."""
+        """
+        This function returns a random string that looks like a
+        reaction condition label.
+
+        Returns:
+            str: Reaction condition label text
+        """
         reaction_condition_label = ""
         label_type = self.random_choice(["A", "B", "C", "D"])
         if label_type in ["A", "B"]:
@@ -1082,9 +1221,14 @@ class RandomDepictor:
         return reaction_condition_label
 
     def make_R_group_str(self) -> str:
-        """This function returns a random string that looks like an R group label.
+        """
+        This function returns a random string that looks like an R group label.
         It generates them by inserting randomly chosen elements into one of
-        five templates."""
+        five templates.
+
+        Returns:
+            str: R group label text
+        """
         rest_variables = [
             "X",
             "Y",
@@ -1172,13 +1316,26 @@ class RandomDepictor:
         return R_group_label
 
     def add_chemical_label(
-        self, image: np.array, label_type: str, foreign_fonts: bool = True
-    ) -> np.array:
-        """This function takes an image (np.array) and adds random text that
+            self,
+            image: np.array,
+            label_type: str,
+            foreign_fonts: bool = True
+            ) -> np.array:
+        """
+        This function takes an image (np.array) and adds random text that
         looks like a chemical ID label, an R group label or a reaction
         condition label around the structure. It returns the modified image.
         The label type is determined by the parameter label_type (str),
-        which needs to be 'ID', 'R_GROUP' or 'REACTION'"""
+        which needs to be 'ID', 'R_GROUP' or 'REACTION'
+
+        Args:
+            image (np.array): Chemical structure depiction
+            label_type (str): 'ID', 'R_GROUP' or 'REACTION'
+            foreign_fonts (bool, optional): Defaults to True.
+
+        Returns:
+            np.array: Chemical structure depiction with label
+        """
         im = Image.fromarray(image)
         orig_image = deepcopy(im)
         width, height = im.size
@@ -1228,13 +1385,20 @@ class RandomDepictor:
                 draw.text((x_pos, y_pos), label_text,
                           font=font, fill=(0, 0, 0, 255))
                 break
-
         return np.asarray(im)
 
     def add_curved_arrows_to_structure(self, image: np.array) -> np.array:
-        """This function takes an image of a chemical structure (np.array)
+        """
+        This function takes an image of a chemical structure (np.array)
         and adds between 2 and 4 curved arrows in random positions in the
-        central part of the image."""
+        central part of the image.
+
+        Args:
+            image (np.array): Chemical structure depiction
+
+        Returns:
+            np.array: Chemical structure depiction with curved arrows
+        """
         height, width, _ = image.shape
         image = Image.fromarray(image)
         orig_image = deepcopy(image)
@@ -1292,9 +1456,23 @@ class RandomDepictor:
                     break
         return np.asarray(image)
 
-    def get_random_arrow_position(self, width, height):
-        """Given the width and height of an image (int), this function determines
-        a random position to paste a reaction arrow."""
+    def get_random_arrow_position(
+            self,
+            width: int,
+            height: int
+            ) -> Tuple[int, int]:
+        """
+        Given the width and height of an image (int), this function determines
+        a random position to paste a reaction arrow in the outer 15% frame of
+        the image
+
+        Args:
+            width (_type_): image width
+            height (_type_): image height
+
+        Returns:
+            Tuple[int, int]: Random arrow position
+        """
         if self.random_choice([True, False]):
             y_range = range(0, height)
             x_range = list(range(0, int(0.15 * width))) + list(
@@ -1308,9 +1486,17 @@ class RandomDepictor:
         return self.random_choice(y_range), self.random_choice(x_range)
 
     def add_straight_arrows_to_structure(self, image: np.array) -> np.array:
-        """This function takes an image of a chemical structure (np.array)
+        """
+        This function takes an image of a chemical structure (np.array)
         and adds between 1 and 2 straight arrows in random positions in the
-        image (no overlap with other elements)"""
+        image (no overlap with other elements)
+
+        Args:
+            image (np.array): Chemical structure depiction
+
+        Returns:
+            np.array: Chemical structure depiction with straight arrow
+        """
         height, width, _ = image.shape
         image = Image.fromarray(image)
 
@@ -1372,9 +1558,20 @@ class RandomDepictor:
                     pass
         return np.asarray(image)
 
-    def to_grayscale_float_img(self, image: np.array) -> np.array:
-        """This function takes an image (np.array), converts it to grayscale
-        and returns it."""
+    def to_grayscale_float_img(
+            self,
+            image: np.array
+            ) -> np.array:
+        """
+        This function takes an image (np.array), converts it to grayscale
+        and returns it.
+
+        Args:
+            image (np.array): image
+
+        Returns:
+            np.array: grayscale float image
+        """
         return img_as_float(rgb2gray(image))
 
     def depict_save(
@@ -1385,15 +1582,26 @@ class RandomDepictor:
         augment: bool,
         ID: str,
         shape: Tuple[int, int] = (299, 299),
-        seed: int = 0,
+        seed: int = 42,
     ):
-        """This function takes a SMILES str, the amount of images to create
+        """
+        This function takes a SMILES str, the amount of images to create
         per SMILES str and the path of an output directory. It then creates
         images_per_structure depictions of the chemical structure that is
         represented by the SMILES str and saves it as PNG images in output_dir.
         If augment == True, it adds augmentations to the structure depiction.
         If an ID is given, it is used as the base filename. Otherwise, the
-        SMILES str is used."""
+        SMILES str is used.
+
+        Args:
+            smiles (str): SMILES representation of molecule
+            images_per_structure (int): Number of images to create per SMILES
+            output_dir (str): output directory path
+            augment (bool): Add augmentations (if True)
+            ID (str): ID (used for name of saved image)
+            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+            seed (int, optional): Seed. Defaults to 42.
+        """
 
         depictor = RandomDepictor(seed + 13)
 
@@ -1450,53 +1658,14 @@ class RandomDepictor:
         with get_context("spawn").Pool(processes) as p:
             p.starmap(self.depict_save, starmap_tuple_generator)
 
-    # def batch_depict(
-    #     self,
-    #     smiles_list: List[str],
-    #     images_per_structure: int,
-    #     augment: bool,
-    #     shape: Tuple[int, int] = (299, 299),
-    #     processes: int = 4,
-    #     seed: int = 42,
-    # ) -> List[np.array]:
-    #     """
-    #     Batch generation of chemical structure depictions without usage of
-    #     fingerprints without saving the images.
-
-    #     Args:
-    #         smiles_list (List[str]): List of SMILES str
-    #         images_per_structure (int): Amount of images to create per SMILES
-    #         augment (bool):  indicates whether or not to use augmentations
-    #         shape (Tuple[int, int], optional): Defaults to (299, 299).
-    #         processes (int, optional): Number of threads. Defaults to 4.
-    #         seed (int, optional): Seed for random decisions. Defaults to 42.
-
-    #     Returns:
-    #         depictions (List[np.array]): Chemical structure depictions
-    #     """
-    #     smiles_list = [smi for smi in smiles_list
-    #                    for _ in range(images_per_structure)]
-    #     starmap_tuple_generator = (
-    #         (
-    #             smiles_list[n],
-    #             augment,
-    #             shape,
-    #             (seed * n + 1) * len(smiles_list),  # individual seed
-    #         )
-    #         for n in range(len(smiles_list))
-    #     )
-    #     if augment:
-    #         with get_context("spawn").Pool(processes) as p:
-    #             p.starmap(self.depict_save, starmap_tuple_generator)
-
     def depict_from_fingerprint(
-        self,
-        smiles: str,
-        fingerprints: List[np.array],
-        schemes: List[Dict],
-        shape: Tuple[int, int] = (299, 299),
-        seed: int = 42
-    ) -> np.array:
+            self,
+            smiles: str,
+            fingerprints: List[np.array],
+            schemes: List[Dict],
+            shape: Tuple[int, int] = (299, 299),
+            seed: int = 42
+            ) -> np.array:
         """
         This function takes a SMILES representation of a molecule,
         a list of one or two fingerprints and a list of the corresponding
@@ -1755,7 +1924,11 @@ class DepictionFeatureRanges(RandomDepictor):
             len(self.augmentation_fingerprints[0]): self.augmentation_scheme,
         }
 
-    def random_choice(self, iterable: List, log_attribute: str = False):
+    def random_choice(
+            self,
+            iterable: List,
+            log_attribute: str = False
+            ) -> Any:
         """
         In RandomDepictor, this function  would take an iterable, call
         random_choice() on it,  increase the seed attribute by 1 and return
@@ -1766,6 +1939,13 @@ class DepictionFeatureRanges(RandomDepictor):
         This way, a DepictionFeatureRanges object can easily be filled with
         all the iterables that define the complete depiction feature space.
         ___
+        Args:
+            iterable (List): iterable to pick from
+            log_attribute (str, optional): ID for fingerprint.
+                                           Defaults to False.
+
+        Returns:
+            Any: "Randomly" picked element
         """
         if log_attribute:
             setattr(self, "{}_range".format(log_attribute), iterable)
@@ -1788,14 +1968,17 @@ class DepictionFeatureRanges(RandomDepictor):
                 )
         return result
 
-    def generate_fingerprint_schemes(self) -> List[Dict]:
+    def generate_fingerprint_schemes(
+            self
+            ) -> List[Dict]:
         """
         Generates fingerprint schemes (see generate_fingerprint_scheme())
         for the depictions with CDK, RDKit and Indigo as well as the
         augmentations.
         ___
-        --> Returns [cdk_scheme: Dict, rdkit_scheme: Dict,
-                     indigo_scheme: Dict, augmentation_scheme: Dict]
+         Returns:
+            List[Dict]: [cdk_scheme: Dict, rdkit_scheme: Dict,
+                         indigo_scheme: Dict, augmentation_scheme: Dict]
         """
         fingerprint_schemes = []
         range_IDs = [att for att in dir(self) if "range" in att]
@@ -1817,7 +2000,10 @@ class DepictionFeatureRanges(RandomDepictor):
             fingerprint_schemes.append(fingerprint_scheme)
         return fingerprint_schemes
 
-    def generate_fingerprint_scheme(self, ID_range_map: Dict) -> Dict:
+    def generate_fingerprint_scheme(
+            self,
+            ID_range_map: Dict
+            ) -> Dict:
         """
         This function takes the ID_range_map and returns a dictionary that
         defines where each feature is represented in the depiction feature
@@ -1876,7 +2062,10 @@ class DepictionFeatureRanges(RandomDepictor):
                 fingerprint_scheme[feature_ID] = position_dicts
         return fingerprint_scheme
 
-    def split_into_n_sublists(self, iterable, n: int) -> List[List]:
+    def split_into_n_sublists(
+            self,
+            iterable, n: int
+            ) -> List[List]:
         """
         Takes an iterable, sorts it, splits it evenly into n lists
         and returns the split lists.
@@ -1884,6 +2073,8 @@ class DepictionFeatureRanges(RandomDepictor):
         Args:
             iterable ([type]): Iterable that is supposed to be split
             n (int): Amount of sublists to return
+        Returns:
+            List[List]: Split list
         """
         iterable = sorted(iterable)
         iter_len = len(iterable)
@@ -1892,7 +2083,10 @@ class DepictionFeatureRanges(RandomDepictor):
             sublists.append(iterable[i: i + int(np.ceil(iter_len / n))])
         return sublists
 
-    def get_number_of_possible_fingerprints(self, scheme: Dict) -> int:
+    def get_number_of_possible_fingerprints(
+            self,
+            scheme: Dict
+            ) -> int:
         """
         This function takes a fingerprint scheme (Dict) as returned by
         generate_fingerprint_scheme()
@@ -1916,7 +2110,10 @@ class DepictionFeatureRanges(RandomDepictor):
                 comb_count *= 2
         return comb_count
 
-    def get_FP_building_blocks(self, scheme: Dict) -> List[List[List]]:
+    def get_FP_building_blocks(
+            self,
+            scheme: Dict
+            ) -> List[List[List]]:
         """
         This function takes a fingerprint scheme (Dict) as returned by
         generate_fingerprint_scheme()
@@ -1957,9 +2154,9 @@ class DepictionFeatureRanges(RandomDepictor):
         return FP_building_blocks
 
     def flatten_fingerprint(
-        self,
-        unflattened_list: List[List],
-    ) -> List:
+            self,
+            unflattened_list: List[List],
+            ) -> List:
         """
         This function takes a list of lists and returns a list.
         ___
@@ -1979,9 +2176,9 @@ class DepictionFeatureRanges(RandomDepictor):
         return flattened_list
 
     def generate_all_possible_fingerprints_per_scheme(
-        self,
-        scheme: Dict,
-    ) -> List[List[int]]:
+            self,
+            scheme: Dict,
+            ) -> List[List[int]]:
         """
         This function takes a fingerprint scheme (Dict) as returned by
         generate_fingerprint_scheme()
@@ -1992,7 +2189,7 @@ class DepictionFeatureRanges(RandomDepictor):
             name (str): name that is used for filename of saved FPs
 
         Returns:
-            List of fingerprints
+            List[List[int]]: List of fingerprints
         """
         # Determine valid building blocks for fingerprints
         FP_building_blocks = self.get_FP_building_blocks(scheme)
@@ -2003,7 +2200,9 @@ class DepictionFeatureRanges(RandomDepictor):
             map(self.flatten_fingerprint, FP_generator))
         return flattened_fingerprints
 
-    def generate_all_possible_fingerprints(self) -> None:
+    def generate_all_possible_fingerprints(
+            self
+            ) -> None:
         """
         This function generates all possible valid fingerprint combinations
         for the four available fingerprint schemes if they have not been
@@ -2044,8 +2243,9 @@ class DepictionFeatureRanges(RandomDepictor):
         return
 
     def convert_to_int_arr(
-        self, fingerprints: List[List[int]]
-    ) -> List[DataStructs.cDataStructs.ExplicitBitVect]:
+            self,
+            fingerprints: List[List[int]]
+            ) -> List[DataStructs.cDataStructs.ExplicitBitVect]:
         """
         Takes a list of fingerprints (List[int]) and returns them as a list of
         rdkit.DataStructs.cDataStructs.ExplicitBitVect so that they can be
@@ -2066,10 +2266,10 @@ class DepictionFeatureRanges(RandomDepictor):
         return converted_fingerprints
 
     def pick_fingerprints(
-        self,
-        fingerprints: List[List[int]],
-        n: int,
-    ) -> List[np.array]:
+            self,
+            fingerprints: List[List[int]],
+            n: int,
+            ) -> List[np.array]:
         """
         Given a list of fingerprints and a number n of fingerprints to pick,
         this function uses RDKit's MaxMin Picker to pick n fingerprints and
@@ -2080,7 +2280,7 @@ class DepictionFeatureRanges(RandomDepictor):
             n (int): Number of fingerprints to pick
 
         Returns:
-            Picked fingerprints (List[List[int]])
+            List[List[int]]: Picked fingerprints
         """
 
         converted_fingerprints = self.convert_to_int_arr(fingerprints)
