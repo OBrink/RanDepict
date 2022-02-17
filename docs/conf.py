@@ -33,7 +33,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx_autodoc_typehints",
     "sphinx.ext.autosummary",
-    "press",
+    "sphinx_press_theme",
     "nbsphinx",
     "sphinx.ext.mathjax",
     'sphinx.ext.githubpages',
