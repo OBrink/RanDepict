@@ -4,11 +4,7 @@ from itertools import cycle
 from typing import List
 
 
-def create_depiction_grid(
-        images: List,
-        im_per_row: int,
-        im_per_col: int
-        ) -> Image:
+def create_depiction_grid(images: List, im_per_row: int, im_per_col: int) -> Image:
     """
     Generates a grid of depictions (see figures in our publication)
     ___
@@ -23,10 +19,10 @@ def create_depiction_grid(
         PIL.Image: Grid of images
     """
     y, x, _ = images[0].shape
-    fig = Image.new('RGB', (x * im_per_row, y * im_per_col))
+    fig = Image.new("RGB", (x * im_per_row, y * im_per_col))
     y_iter = cycle([y * i for i in range(im_per_col)])
     for im_index in range(len(images)):
-        x_pos = int(im_index/im_per_col) * x
+        x_pos = int(im_index / im_per_col) * x
         y_pos = next(y_iter)
         pos = (x_pos, y_pos)
         fig.paste(Image.fromarray(images[im_index]), pos)
@@ -44,18 +40,16 @@ def main() -> None:
 
     with RandomDepictor(42) as depictor:
         # Depict given SMILES 20 times without additional augmentation
-        images = depictor.batch_depict_with_fingerprints([smiles],
-                                                         20,
-                                                         aug_proportion=0)
-        aug_images = depictor.batch_depict_with_fingerprints([smiles],
-                                                             20,
-                                                             aug_proportion=1)
+        images = depictor.batch_depict_with_fingerprints([smiles], 20, aug_proportion=0)
+        aug_images = depictor.batch_depict_with_fingerprints(
+            [smiles], 20, aug_proportion=1
+        )
     # Generate and save grid of structure depictions
     figure_2 = create_depiction_grid(images, 5, 4)
-    figure_2.save('figure_2.png')
+    figure_2.save("figure_2.png")
     figure_3 = create_depiction_grid(aug_images, 5, 4)
-    figure_3.save('figure_3.png')
+    figure_3.save("figure_3.png")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -11,12 +11,10 @@ from RanDepict import RandomDepictor
 
 
 class RandomDepictor(RandomDepictor):
-    '''This function is a child of RanDepict.random_depictor and contains some
-    additional functions to write the images into tfrecord files.'''
-    def __init__(
-            self,
-            seed=42
-            ) -> None:
+    """This function is a child of RanDepict.random_depictor and contains some
+    additional functions to write the images into tfrecord files."""
+
+    def __init__(self, seed=42) -> None:
         super().__init__(seed=seed)
 
     def batch_depict_save(
@@ -39,12 +37,12 @@ class RandomDepictor(RandomDepictor):
         If an ID list (list with names of same length as smiles_list that
         contains unique IDs), the IDs will be used to name the files."""
 
-        counter = (n for n in range(int(len(smiles_list)/chunksize)))
+        counter = (n for n in range(int(len(smiles_list) / chunksize)))
 
         def chunks(lst, n):
             """Yield successive n-sized chunks from lst."""
             for i in range(0, len(lst), n):
-                yield lst[i:i + n]
+                yield lst[i : i + n]
 
         smiles_list = chunks(smiles_list, chunksize)
         tokens = chunks(tokens, chunksize)
@@ -89,12 +87,10 @@ class RandomDepictor(RandomDepictor):
         It then creates images_per_structure depictions of the chemical
         structure that is represented by the SMILES strings and saves it
         in a tfrecord file in output_dir.
-        The given ID is used as the base filename. """
+        The given ID is used as the base filename."""
         depictor = RandomDepictor(seed + 13)
-  
-        tfrecord_name = "tfrecord_ds/dataset_DS-{}.tfrecord".format(
-            ID[0]
-            )
+
+        tfrecord_name = "tfrecord_ds/dataset_DS-{}.tfrecord".format(ID[0])
         writer = tf.io.TFRecordWriter(tfrecord_name)
         for smiles_index in range(len(smiles)):
             smi = smiles[smiles_index]
@@ -102,40 +98,43 @@ class RandomDepictor(RandomDepictor):
             for _ in range(n_augmented):
                 for _ in range(5):
                     try:
-                        self.save_in_tfrecord(token_list, depictor(smi, shape),
-                                              writer)
+                        self.save_in_tfrecord(token_list, depictor(smi, shape), writer)
                         break
                     except Exception as e:
-                        print('An exception occured:\n{}\n'.format(e),
-                              'It is ignored for now and we',
-                              'simply try to depict this structure again...')
+                        print(
+                            "An exception occured:\n{}\n".format(e),
+                            "It is ignored for now and we",
+                            "simply try to depict this structure again...",
+                        )
                 else:
-                    print('FAILED depicting structure: {}.'.format(smi),
-                          'Tried five times.')
+                    print(
+                        "FAILED depicting structure: {}.".format(smi),
+                        "Tried five times.",
+                    )
 
             for _ in range(n_non_augmented):
                 for _ in range(5):
                     try:
-                        self.save_in_tfrecord(token_list,
-                                              depictor.random_depiction(smi,
-                                                                        shape),
-                                              writer)
+                        self.save_in_tfrecord(
+                            token_list, depictor.random_depiction(smi, shape), writer
+                        )
                         break
                     except Exception as e:
-                        print('An exception occured:\n{}\n'.format(e),
-                              'It is ignored for now and we',
-                              'simply try to depict this structure again...')
+                        print(
+                            "An exception occured:\n{}\n".format(e),
+                            "It is ignored for now and we",
+                            "simply try to depict this structure again...",
+                        )
                 else:
-                    print('FAILED depicting structure: {}.'.format(smi),
-                          'Tried five times.')
+                    print(
+                        "FAILED depicting structure: {}.".format(smi),
+                        "Tried five times.",
+                    )
         return
 
     def save_in_tfrecord(
-            self,
-            train_caption: np.array,
-            image: np.array,
-            writer: tf.io.TFRecordWriter
-            ) -> None:
+        self, train_caption: np.array, image: np.array, writer: tf.io.TFRecordWriter
+    ) -> None:
         """
         This function takes a list of captions (token list, np.array)
         and a list of images (np.array) as well as a file index.
@@ -146,8 +145,8 @@ class RandomDepictor(RandomDepictor):
             images (List[np.array]): array representing the structure depiction
             file_index (int): index for naming tfrecord files
         """
-        if not os.path.exists('tfrecord_ds'):
-            os.mkdir('tfrecord_ds')
+        if not os.path.exists("tfrecord_ds"):
+            os.mkdir("tfrecord_ds")
         image = Image.fromarray(image)
         with io.BytesIO() as output:
             image.save(output, format="PNG")
@@ -176,7 +175,7 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def main() -> None:
-    '''
+    """
     This script reads a SMILES, the annotationa and IDs from a file and
     generates three augmented and three non-augmented depictions per chemical
     structure. The images are saved in tfrecord files.
@@ -187,7 +186,7 @@ def main() -> None:
     (...)
     Here, the annotation is an array saved as a str ([1  2  3  4  ..  .. X])
     ___
-    '''
+    """
 
     # Parse arguments
     args = parse_arguments()
@@ -199,7 +198,7 @@ def main() -> None:
         tokens_list = []
         with open(file_in, "r") as fp:
             for line in fp.readlines():
-                if line[-1] == '\n':
+                if line[-1] == "\n":
                     line = line[:-1]
                 line = line.replace("  ", " ").replace(" ", ",")
                 ID, smiles, tokens = line.split(";")
@@ -212,8 +211,8 @@ def main() -> None:
     im_per_SMILES_aug = 3
     depiction_img_shape = (299, 299)
 
-    if not os.path.exists('tfrecord_ds'):
-        os.mkdir('tfrecord_ds')
+    if not os.path.exists("tfrecord_ds"):
+        os.mkdir("tfrecord_ds")
 
     # If SMILES_chunksize is 100,
     # then 100*im_per_SMILES_noaug*im_per_SMILES_aug are
@@ -229,8 +228,9 @@ def main() -> None:
             SMILES_chunksize,
             depiction_img_shape,
             None,
-            random.randint(0, 100))
+            random.randint(0, 100),
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
