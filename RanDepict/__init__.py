@@ -2,7 +2,9 @@
 
 """
 RanDepict Python Package.
-This repository contains RanDepict, an easy-to-use utility to generate a big variety of chemical structure depictions (random depiction styles and image augmentations).
+This repository contains RanDepict,
+an easy-to-use utility to generate a big variety of
+chemical structure depictions (random depiction styles and image augmentations).
 
 
 Typical usage example:
@@ -14,7 +16,8 @@ with RandomDepictor() as depictor:
 
 Have a look in the RanDepictNotebook.ipynb for more examples.
 
-For comments, bug reports or feature ideas, please raise a issue on the Github repository.
+For comments, bug reports or feature ideas,
+please raise a issue on the Github repository.
 
 """
 
@@ -26,6 +29,3 @@ __all__ = [
 
 
 from .randepict import RandomDepictor, DepictionFeatures, DepictionFeatureRanges
-
-
-
