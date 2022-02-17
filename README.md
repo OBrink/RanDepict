@@ -1,12 +1,14 @@
 [![License](https://img.shields.io/badge/License-MIT%202.0-blue.svg)](https://opensource.org/licenses/MIt)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-blue.svg)](https://github.com/OBrink/RanDepict/graphs/commit-activity)
+![GitHub Logo](https://github.com/OBrink/RanDepict/blob/main/RanDepict/logo_bg_white-1.png?raw=true)
 [![GitHub issues](https://img.shields.io/github/issues/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/issues/)
 [![GitHub contributors](https://img.shields.io/github/contributors/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/graphs/contributors/)
 [![GitHub release](https://img.shields.io/github/release/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/releases/)
 [![PyPI version fury.io](https://badge.fury.io/py/RanDepict.svg)](https://pypi.python.org/pypi/RanDepict/)
 ![versions](https://img.shields.io/pypi/pyversions/RanDepict.svg)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5531702.svg)](https://doi.org/10.5281/zenodo.5531702)
-![GitHub Logo](https://github.com/OBrink/RanDepict/blob/main/RanDepict/logo_bg_white-1.png?raw=true)
+![example workflow](https://github.com/OBrink/RanDepict/actions/workflows/ci_pytest.yml/badge.svg)
+
 This repository contains RanDepict, an easy-to-use utility to generate a big variety of chemical structure depictions (random depiction styles and image augmentations) based on RDKit, CDK and Indigo.
 
 ## Usage
