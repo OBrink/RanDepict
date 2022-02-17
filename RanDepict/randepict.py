@@ -115,13 +115,22 @@ class RandomDepictor:
         pass
 
     def random_choice(self, iterable: List, log_attribute: str = False):
-        """This function takes an iterable, calls random.choice() on it,
+        """
+        This function takes an iterable, calls random.choice() on it,
         increases random.seed by 1 and returns the result. This way, results
         produced by RanDepict are replicable.
 
         Additionally, this function handles the generation of depictions and
         augmentations from given fingerprints by handling all random decisions
         according to the fingerprint template.
+
+        Args:
+            iterable (List): iterable to pick from
+            log_attribute (str, optional): ID for fingerprint.
+                                           Defaults to False.
+
+        Returns:
+            _type_: _description_
         """
         # Keep track of seed and change it with every pseudo-random decision.
         self.seed += 1
@@ -1593,6 +1602,7 @@ class RandomDepictor:
         aug_proportion: float = 0.5,
         shape: Tuple[int, int] = (299, 299),
         processes: int = 4,
+        seed: int = 42
     ) -> None:
         """
         Batch generation of chemical structure depictions with usage
@@ -1637,7 +1647,7 @@ class RandomDepictor:
                 output_dir,
                 ID_list[n],
                 shape,
-                n*100
+                n*100*seed
             )
             for n in range(len(smiles_list))
         )
@@ -1656,6 +1666,7 @@ class RandomDepictor:
             aug_proportion: float = 0.5,
             shape: Tuple[int, int] = (299, 299),
             processes: int = 4,
+            seed: int = 42,
             ) -> None:
         """
         Batch generation of chemical structure depictions with usage
@@ -1698,7 +1709,7 @@ class RandomDepictor:
                     for element in fingerprint_tuples[n]
                 ],
                 shape,
-                n*100
+                n*100*seed
             )
             for n in range(len(smiles_list))
         )
