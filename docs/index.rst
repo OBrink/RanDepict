@@ -4,6 +4,10 @@
 Welcome to RanDepict's documentation!
 =====================================
 
+.. image:: https://github.com/OBrink/RanDepict/blob/main/Untitled-1.png?raw=true
+  :width: 500
+  :align: center
+
 RanDepict, an easy-to-use utility to generate a big variety of chemical structure depictions (random depiction styles and image augmentations) based on RDKit, CDK and Indigo.
 
 This library is intended to be light-weight and easy to use.

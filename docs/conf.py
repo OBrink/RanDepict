@@ -80,6 +80,7 @@ html_theme = 'insipid'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 html_favicon = '_static/Untitled-1.png'
+html_logo = '_static/Untitled-1.png'
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
 #
@@ -87,5 +88,4 @@ html_favicon = '_static/Untitled-1.png'
 # defined by theme itself.  Builtin themes are using these templates by
 # default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
 # 'searchbox.html']``.
-#
 
