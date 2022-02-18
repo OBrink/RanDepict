@@ -1,0 +1,16 @@
+Depiction of 1000 structures without augmentations with fingerprint picking
+373.55289602279663 seconds 
+ ___
+
+Depiction of 1000 structures with augmentations with fingerprint picking
+379.4188075065613 seconds 
+ ___
+
+Depiction of 1000 structures without augmentations without fingerprint picking
+45.28384208679199 seconds 
+ ___
+
+Depiction of 1000 structures wit augmentations without fingerprint picking
+81.47554469108582 seconds 
+ ___
+

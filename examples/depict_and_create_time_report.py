@@ -37,20 +37,20 @@ def main():
 
             # Depict SMILES 1000 times without augmentation without FP picking
             start = time.time()
-            for _ in 1000:
+            for _ in range(1000):
                 _ = depictor.random_depiction(smiles)
             end = time.time()
             time_report.write('Depiction of 1000 structures without ' +
-                              'augmentations with fingerprint picking\n')
+                              'augmentations without fingerprint picking\n')
             time_report.write('{} seconds \n ___\n\n'.format(end-start))
 
             # Depict SMILES 1000 times with augmentation without FP picking
             start = time.time()
-            for _ in 1000:
+            for _ in range(1000):
                 _ = depictor(smiles)
             end = time.time()
-            time_report.write('Depiction of 1000 structures without ' +
-                              'augmentations with fingerprint picking\n')
+            time_report.write('Depiction of 1000 structures with ' +
+                              'augmentations without fingerprint picking\n')
             time_report.write('{} seconds \n ___\n\n'.format(end-start))
     return
 
