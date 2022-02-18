@@ -18,7 +18,7 @@ or send an email to otto.brinkhaus@uni-jena.de and kohulan.rajan@uni-jena.de
 Installation
 ============
 
-Install SELFIES in the command line using pip:
+Install RanDepict in the command line using pip:
 
 .. code-block::
 

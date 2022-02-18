@@ -18,8 +18,8 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "RanDepict"
-copyright = "2022, Otto brinkaus & Kohulan Rajan"
-author = "Otto brinkaus & Kohulan Rajan"
+copyright = "2022, Otto Brinkhaus & Kohulan Rajan"
+author = "Otto Brinkhaus & Kohulan Rajan"
 
 # The full version, including alpha/beta/rc tags
 release = "1.0.5"
@@ -33,7 +33,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx_autodoc_typehints",
     "sphinx.ext.autosummary",
-    "insipid_sphinx_theme",
+    "sphinx_rtd_theme",
     "nbsphinx",
     "sphinx.ext.mathjax",
     'sphinx.ext.githubpages',
@@ -66,8 +66,7 @@ pygments_style = None
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_permalinks_icon = '§'
-html_theme = 'insipid'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

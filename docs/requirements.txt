@@ -1,6 +1,6 @@
 nbsphinx
 sphinx-autodoc-typehints
-insipid-sphinx-theme
+sphinx_rtd_theme
 numpy>=1.19
 imgaug
 scikit-image
