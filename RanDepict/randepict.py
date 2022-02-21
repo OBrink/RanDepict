@@ -2194,7 +2194,7 @@ class DepictionFeatureRanges(RandomDepictor):
         self,
         fingerprints: List[List[int]],
         n: int,
-    ) -> List[np.array]:
+    ) -> np.array:
         """
         Given a list of fingerprints and a number n of fingerprints to pick,
         this function uses RDKit's MaxMin Picker to pick n fingerprints and
@@ -2205,7 +2205,7 @@ class DepictionFeatureRanges(RandomDepictor):
             n (int): Number of fingerprints to pick
 
         Returns:
-            List[List[int]]: Picked fingerprints
+            np.array: Picked fingerprints
         """
 
         converted_fingerprints = self.convert_to_int_arr(fingerprints)
@@ -2244,11 +2244,16 @@ class DepictionFeatureRanges(RandomDepictor):
             picked_fingerprints = fingerprints * oversize_factor
             n = n - n_fingerprints * oversize_factor
         else:
-            picked_fingerprints = []
+            picked_fingerprints = False
 
         picker = MaxMinPicker()
         pick_indices = picker.LazyPick(dice_dist, n_fingerprints, n, seed=42)
-        picked_fingerprints += [fingerprints[i] for i in pick_indices]
+        if isinstance(picked_fingerprints, bool):
+            picked_fingerprints = np.array([fingerprints[i] for i in pick_indices])
+        else:
+            picked_fingerprints = np.concatenate((picked_fingerprints,
+                                                  np.array([fingerprints[i]
+                                                            for i in pick_indices])))
         return picked_fingerprints
 
     def generate_fingerprints_for_dataset(

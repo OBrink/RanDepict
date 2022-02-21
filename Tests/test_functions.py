@@ -1,5 +1,6 @@
 from RanDepict import DepictionFeatureRanges
 from rdkit import DataStructs
+import numpy as np
 
 
 class TestDepictionFeatureRanges:
@@ -168,37 +169,50 @@ class TestDepictionFeatureRanges:
     def test_pick_fingerprints_small_number(self):
         # Assert that a diverse subset is picked when less than the
         # available amount of fingerprints is picked
-        example_pool = [[1, 0, 0],
+        example_pool = np.array(
+                        [[1, 0, 0],
                         [1, 0, 0],
                         [1, 0, 0],
                         [0, 1, 0],
-                        [0, 0, 1]]
+                        [0, 0, 1]])
         number = 3
-        expected_subset = [[1, 0, 0],
+        expected_subset = np.array(
+                          [[1, 0, 0],
                            [0, 1, 0],
-                           [0, 0, 1]]
+                           [0, 0, 1]])
         actual_subset = self.DFR.pick_fingerprints(example_pool, number)
-        assert actual_subset == expected_subset
+        
+        assert np.array_equal(actual_subset, expected_subset)
 
     def test_pick_fingerprints_big_number(self):
         # Assert that a diverse subset is picked when more than the
         # available amount of fingerprints is picked
-        example_pool = [[1, 0, 0],
+        example_pool = np.array(
+                        [[1, 0, 0],
                         [1, 0, 0],
                         [1, 0, 0],
                         [0, 1, 0],
-                        [0, 0, 1]]
+                        [0, 0, 1]])
         number = 8
-        expected_subset = [[1, 0, 0],
+        expected_subset = np.array(
+                          [[1, 0, 0],
                            [1, 0, 0],
                            [1, 0, 0],
                            [0, 1, 0],
                            [0, 0, 1],
                            [1, 0, 0],
                            [0, 1, 0],
-                           [0, 0, 1]]
+                           [0, 0, 1]])
         actual_subset = self.DFR.pick_fingerprints(example_pool, number)
-        assert actual_subset == expected_subset
+        assert np.array_equal(actual_subset, expected_subset)
+        
+    def test_pick_fingerprints_big_number_indigo(self):
+        # Assert that picking given amount of fingerprints from an actual 
+        # fingerprint pool works when it is bigger than the pool itself
+        example_pool = self.DFR.Indigo_fingerprints
+        number = 1000
+        actual_subset = self.DFR.pick_fingerprints(example_pool, number)
+        assert len(actual_subset) == number
 
     def test_generate_fingerprints_for_dataset(self):
         # Difficult to test this
