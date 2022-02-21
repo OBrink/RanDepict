@@ -2236,9 +2236,19 @@ class DepictionFeatureRanges(RandomDepictor):
             )
 
         n_fingerprints = len(fingerprints)
+        # If we want to pick more fingerprints than there are in the pool,
+        # simply distribute the complete pool as often as possible and pick
+        # the amount that is not dividable by the size of the pool
+        if n > n_fingerprints:
+            oversize_factor = int(n / n_fingerprints)
+            picked_fingerprints = fingerprints * oversize_factor
+            n = n - n_fingerprints * oversize_factor
+        else:
+            picked_fingerprints = []
+
         picker = MaxMinPicker()
         pick_indices = picker.LazyPick(dice_dist, n_fingerprints, n, seed=42)
-        picked_fingerprints = [fingerprints[i] for i in pick_indices]
+        picked_fingerprints += [fingerprints[i] for i in pick_indices]
         return picked_fingerprints
 
     def generate_fingerprints_for_dataset(

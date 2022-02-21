@@ -165,11 +165,39 @@ class TestDepictionFeatureRanges:
                     == example_input[arr_index][value_index]
                 )
 
-    def test_pick_fingerprints(self):
-        # Assert that a diverse subset is picked
-        example_input = [[1, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]]
-        expected_subset = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-        actual_subset = self.DFR.pick_fingerprints(example_input, 3)
+    def test_pick_fingerprints_small_number(self):
+        # Assert that a diverse subset is picked when less than the
+        # available amount of fingerprints is picked
+        example_pool = [[1, 0, 0],
+                        [1, 0, 0],
+                        [1, 0, 0],
+                        [0, 1, 0],
+                        [0, 0, 1]]
+        number = 3
+        expected_subset = [[1, 0, 0],
+                           [0, 1, 0],
+                           [0, 0, 1]]
+        actual_subset = self.DFR.pick_fingerprints(example_pool, number)
+        assert actual_subset == expected_subset
+
+    def test_pick_fingerprints_big_number(self):
+        # Assert that a diverse subset is picked when more than the
+        # available amount of fingerprints is picked
+        example_pool = [[1, 0, 0],
+                        [1, 0, 0],
+                        [1, 0, 0],
+                        [0, 1, 0],
+                        [0, 0, 1]]
+        number = 8
+        expected_subset = [[1, 0, 0],
+                           [1, 0, 0],
+                           [1, 0, 0],
+                           [0, 1, 0],
+                           [0, 0, 1],
+                           [1, 0, 0],
+                           [0, 1, 0],
+                           [0, 0, 1]]
+        actual_subset = self.DFR.pick_fingerprints(example_pool, number)
         assert actual_subset == expected_subset
 
     def test_generate_fingerprints_for_dataset(self):
