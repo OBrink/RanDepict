@@ -1765,7 +1765,7 @@ class RandomDepictor:
                 shape,
                 n * 100 * seed,
             )
-            for n in range(len(smiles_list))
+            for n in range(len(fingerprint_tuples))
         )
         with get_context("spawn").Pool(processes) as p:
             p.starmap(
@@ -1828,7 +1828,7 @@ class RandomDepictor:
                 shape,
                 n * 100 * seed,
             )
-            for n in range(len(smiles_list))
+            for n in range(len(fingerprint_tuples))
         )
         with get_context("spawn").Pool(processes) as p:
             depictions = p.starmap(
