@@ -73,9 +73,9 @@ Here are some examples of depictions of caffeine without augmentations (left) an
 
 
 ## Cite Us
-```Text
-Brinkhaus HO, Rajan K, Zielesny A, Steinbeck C. RanDepict - Random Chemical Structure Depiction Generator. ChemRxiv 2022. doi:10.26434/chemrxiv-2022-t1kbb. This content is a preprint and has not been peer-reviewed.
- ```
+
+- Brinkhaus, H.O., Rajan, K., Zielesny, A. et al. RanDepict: Random chemical structure depiction generator. J Cheminform 14, 31 (2022). https://doi.org/10.1186/s13321-022-00609-4
+
 ## More information about our research group
 
 [![GitHub Logo](https://github.com/Kohulan/DECIMER-Image-to-SMILES/blob/master/assets/CheminfGit.png?raw=true)](https://cheminf.uni-jena.de)
