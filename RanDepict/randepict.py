@@ -27,6 +27,12 @@ from jpype import startJVM, getDefaultJVMPath
 from jpype import JClass, JVMNotFoundException, isJVMStarted
 import base64
 
+import glob
+import cv2
+from degrade_final import degrade_img
+from augment_final import augment_mol, augment_bkg
+
+
 
 class RandomDepictor:
     """
@@ -36,7 +42,7 @@ class RandomDepictor:
     the RGB image with the given chemical structure.
     """
 
-    def __init__(self, seed: int = 42):
+    def __init__(self, seed: int = 42, hand_drawn: bool = False):
         """
         Load the JVM only once, load superatom list (OSRA),
         set context for multiprocessing
@@ -62,6 +68,7 @@ class RandomDepictor:
                      "-Djava.class.path=" + str(self.jar_path))
 
         self.seed = seed
+        self.hand_drawn = hand_drawn
         random.seed(self.seed)
 
         # Load list of superatoms for label generation
@@ -93,11 +100,16 @@ class RandomDepictor:
         smiles: str,
         shape: Tuple[int, int, int] = (299, 299),
         grayscale: bool = False,
+        hand_drawn: bool = False
     ):
         # Depict structure with random parameters
-        depiction = self.random_depiction(smiles, shape)
-        # Add augmentations
-        depiction = self.add_augmentations(depiction)
+        hand_drawn = self.hand_drawn
+        if hand_drawn:
+            depiction = self.random_depiction(smiles, shape)
+        else:
+            depiction = self.random_depiction(smiles, shape)
+            # Add augmentations
+            depiction = self.add_augmentations(depiction)
 
         if grayscale:
             return self.to_grayscale_float_img(depiction)
@@ -193,6 +205,7 @@ class RandomDepictor:
             Indigo: Indigo object that contains depictions settings
         """
         # Define random shape for depiction (within boundaries);)
+
         indigo = Indigo()
         renderer = IndigoRenderer(indigo)
         # Get slightly distorted shape
@@ -773,7 +786,8 @@ class RandomDepictor:
         return new_im
 
     def random_depiction(
-        self, smiles: str, shape: Tuple[int, int] = (299, 299)
+        self, smiles: str, shape: Tuple[int, int] = (299, 299), 
+        path_bkg = "/media/isabel/expansion/Jena/3_CNN_drawn_depicted/backgrounds_extra_reduced/",
     ) -> np.array:
         """
         This function takes a SMILES and depicts it using Rdkit, Indigo or CDK.
@@ -802,6 +816,35 @@ class RandomDepictor:
                 [self.depict_and_resize_indigo, self.depict_and_resize_cdk]
             )
             depiction = depiction_function(smiles, shape)
+
+		# Add random augmentation, background and degradation using 
+		# ChemPix workflow implemented
+        if self.hand_drawn == True:
+            #Augment molecule image
+            mol_aug = augment_mol(depiction)
+
+            # Randomly select background image and use is as it is
+            backgroud_selected = random.choice(os.listdir(path_bkg))
+            bkg = cv2.imread(path_bkg+backgroud_selected)
+            bkg = cv2.resize(bkg,(256,256))
+            # Combine augmented molecule and augmented background
+            p=0.7
+            mol_bkg = cv2.addWeighted(mol_aug, p, bkg , 1-p, gamma=0)
+            
+            '''
+            If you want to randomly augment the background as well,
+            simply comment the previous section and uncomment the next one. 
+            '''
+            
+            '''# Randomly select background image and augment it
+            bkg_aug = augment_bkg(bkg)
+            bkg_aug = cv2.resize(bkg_aug,(256,256))
+            # Combine augmented molecule and augmented background
+            p=0.7
+            mol_bkg = cv2.addWeighted(mol_aug, p, bkg_aug, 1-p, gamma=0)'''
+            
+			# Degrade total image
+            depiction = degrade_img(mol_bkg)
         return depiction
 
     def resize(self, image: np.array, shape: Tuple[int]) -> np.array:
@@ -991,7 +1034,7 @@ class RandomDepictor:
             log_attribute="has_reaction_label",
         ):
             depiction = self.add_chemical_label(depiction, "REACTION")
-        if self.random_choice([True, False, False]):
+        if self.random_choice([True, False, False]) and self.hand_drawn == False:
             depiction = self.imgaug_augment(depiction)
         return depiction
 
@@ -1612,6 +1655,7 @@ class RandomDepictor:
         schemes: List[Dict],
         shape: Tuple[int, int] = (299, 299),
         seed: int = 42,
+        path_bkg = "/media/isabel/expansion/Jena/3_CNN_drawn_depicted/backgrounds_extra_reduced/",
     ) -> np.array:
         """
         This function takes a SMILES representation of a molecule,
@@ -1654,7 +1698,37 @@ class RandomDepictor:
             self.active_fingerprint = fingerprints[1]
             self.active_scheme = schemes[1]
             depiction = self.add_augmentations(depiction)
+		
+		# Add random augmentation, background and degradation using 
+		# ChemPix workflow implemented
+        hand_drawn = self.hand_drawn
+        if hand_drawn == True:
+            #Augment molecule image
+            mol_aug = augment_mol(depiction)
 
+            # Randomly select background image and use is as it is
+            backgroud_selected = random.choice(os.listdir(path_bkg))
+            bkg = cv2.imread(path_bkg+backgroud_selected)
+            bkg = cv2.resize(bkg,(256,256))
+            # Combine augmented molecule and augmented background
+            p=0.7
+            mol_bkg = cv2.addWeighted(mol_aug, p, bkg , 1-p, gamma=0)
+            
+            '''
+            If you want to randomly augment the background as well,
+            simply comment the previous section and uncomment the next one. 
+            '''
+            
+            '''# Randomly select background image and augment it
+            bkg_aug = augment_bkg(bkg)
+            bkg_aug = cv2.resize(bkg_aug,(256,256))
+            # Combine augmented molecule and augmented background
+            p=0.7
+            mol_bkg = cv2.addWeighted(mol_aug, p, bkg_aug, 1-p, gamma=0)'''
+            
+			# Degrade total image
+            depiction = degrade_img(mol_bkg)
+		
         self.from_fingerprint, self.active_fingerprint, self.active_scheme = (
             False,
             False,
