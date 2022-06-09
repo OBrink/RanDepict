@@ -787,7 +787,7 @@ class RandomDepictor:
 
     def random_depiction(
         self, smiles: str, shape: Tuple[int, int] = (299, 299), 
-        path_bkg = "/media/isabel/expansion/Jena/3_CNN_drawn_depicted/backgrounds_extra_reduced/",
+        path_bkg = "./backgrounds/",
     ) -> np.array:
         """
         This function takes a SMILES and depicts it using Rdkit, Indigo or CDK.
@@ -1655,7 +1655,7 @@ class RandomDepictor:
         schemes: List[Dict],
         shape: Tuple[int, int] = (299, 299),
         seed: int = 42,
-        path_bkg = "/media/isabel/expansion/Jena/3_CNN_drawn_depicted/backgrounds_extra_reduced/",
+        path_bkg = "./backgrounds/",
     ) -> np.array:
         """
         This function takes a SMILES representation of a molecule,
