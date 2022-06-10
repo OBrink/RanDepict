@@ -17,7 +17,7 @@ def contrast(img):
     
     Args:
         img: the image to modify in array format.
-    Returns: 
+    Returns:
         img: the image with the contrast changes.
     """
     if np.random.uniform(0,1)<0.8: # increase contrast
@@ -37,7 +37,7 @@ def brightness(img):
     
     Args:
         img: the image to modify in array format.
-    Returns: 
+    Returns:
         img: the image with the brightness changes.
     """
     f = np.random.uniform(0.4,1.1)
@@ -54,7 +54,7 @@ def sharpness(img):
     
     Args:
         img: the image to modify in array format.
-    Returns: 
+    Returns:
         img: the image with the sharpness changes.
     """
     if np.random.uniform(0,1)<0.5: # increase sharpness
@@ -74,7 +74,7 @@ def s_and_p(img):
     
     Args:
         img: the image to modify in array format.
-    Returns: 
+    Returns:
         out: the image with the s&p changes.
     """
     amount = np.random.uniform(0.001, 0.01)
@@ -102,7 +102,7 @@ def scale(img):
     
     Args:
         img: the image to modify in array format.
-    Returns: 
+    Returns:
         res: the scaled image.
     """
     f = np.random.uniform(0.5,1.5)
@@ -115,18 +115,18 @@ def scale(img):
 
 def degrade_img(img):
     """
-    This function randomly degrades the input image by applying different 
+    This function randomly degrades the input image by applying different
     degradation steps with different robabilities.
-    
+
     Args:
         img: the image to modify in array format.
-    Returns: 
+    Returns:
         img: the degraded image.
     """
     # s+p    
     if np.random.uniform(0,1) < 0.1:
         img = s_and_p(img)
-    
+
     # scale
     if np.random.uniform(0,1) < 0.5:
         img = scale(img)
@@ -134,16 +134,16 @@ def degrade_img(img):
     # brightness
     if np.random.uniform(0,1) < 0.7:
         img = brightness(img)        
-    
+
     # contrast
     if np.random.uniform(0,1) < 0.7:
         img = contrast(img)
-        
+
     # sharpness
     if np.random.uniform(0,1) < 0.5:
         img = sharpness(img)
-    
+
     #Modify the next line if you want a particular image size as output
     #img = cv2.resize(img, (256,256))
-    
+
     return img
