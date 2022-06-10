@@ -29,12 +29,12 @@ def elastic_transform(image,alpha_sigma, random_state=None):
     This function distords an image randomly changing the alpha and gamma
     values.
 
-     Args:
+    Args:
         image: the image to modify in array format.
         alpha_sigma: alpha and sigma values randomly selected as a list. 
-     Returns: 
-         distored_image: the image after the transformation with the same size
-                         as it had originally.
+    Returns:
+        distored_image: the image after the transformation with the same size
+                        as it had originally.
 
     """
     alpha = alpha_sigma[0]
@@ -59,10 +59,10 @@ def distort(img):
     This function randomly selects a list with the shape [a,g] where 
     a=alpha and g=gamma and passes them along with the input image
     to the elastic_transform function that will do the image distorsion.
-    
+
     Args:
         img: the image to modify in array format.
-    Returns: 
+    Returns:
         the output from elastic_transform function which is the image 
         after the transformation with the same size as it had originally.
 
@@ -90,8 +90,8 @@ def rotate(img, obj=None):
     Args:
         img: the image to modify in array format.
         obj: "mol" or "bkg" to modify a chemical structure image or
-            a background image.
-    Returns: 
+             a background image.
+    Returns:
         dst: the rotated image.
 
     """
@@ -115,7 +115,7 @@ def resize(img):
     Args:
         img: the image to modify in array format.
 
-    Returns: 
+    Returns:
         img: the resized image.
 
     """
@@ -123,7 +123,7 @@ def resize(img):
 
     img = cv2.resize(img, (np.random.randint(200,300), np.random.randint(200,300)), interpolation = np.random.choice(interpolations))
     img = cv2.resize(img, (256,256), interpolation = np.random.choice(interpolations))
-
+ 
     return img
 
 
@@ -135,7 +135,7 @@ def blur(img):
     Args:
         img: the image to modify in array format.
 
-    Returns: 
+    Returns:
         img: the blurred image.
 
     """
@@ -153,7 +153,7 @@ def erode(img):
     Args:
        img: the image to modify in array format.
 
-    Returns: 
+    Returns:
         img: the bold image.
 
     """
@@ -170,7 +170,7 @@ def dilate(img):
     Args:
        img: the image to modify in array format.
 
-    Returns: 
+    Returns:
         img: the dilated image.
 
     """
@@ -190,7 +190,7 @@ def aspect_ratio(img, obj=None):
         obj: "mol" or "bkg" to modify a chemical structure image or
              a background image.
 
-    Returns: 
+    Returns:
         image: the resized image.
 
     """
@@ -220,7 +220,7 @@ def affine(img, obj=None):
         obj: "mol" or "bkg" to modify a chemical structure image or
              a background image.
 
-    Returns: 
+    Returns:
         skewed: the transformed image.
 
     """
@@ -249,7 +249,7 @@ def augment_mol(img):
     Args:
         img: the image to modify in array format.
 
-    Returns: 
+    Returns:
         img: the augmented image.
 
     """
@@ -287,7 +287,7 @@ def augment_bkg(img):
     Args:
         img: the image to modify in array format.
 
-    Returns: 
+    Returns:
         img: the augmented image.
 
     """
