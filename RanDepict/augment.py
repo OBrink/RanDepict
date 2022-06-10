@@ -17,7 +17,7 @@ and augment background pipelines.
 '''
 
 
-def elastic_transform(image,alpha_sigma, random_state=None):
+def elastic_transform(image, alpha_sigma, random_state=None):
     """
     Elastic deformation of images as described in [Simard2003]_.
     .. [Simard2003] Simard, Steinkraus and Platt, "Best Practices for
@@ -50,13 +50,13 @@ def elastic_transform(image,alpha_sigma, random_state=None):
     x, y, z = np.meshgrid(np.arange(shape[0]), np.arange(shape[1]), np.arange(shape[2]))
     indices = np.reshape(y+dy, (-1, 1)), np.reshape(x+dx, (-1, 1)), np.reshape(z, (-1, 1))
 
-    distored_image = map_coordinates(image, indices, order=np.random.randint(1,5), mode='reflect')
+    distored_image = map_coordinates(image, indices, order=np.random.randint(1, 5), mode='reflect')
     return distored_image.reshape(image.shape)
 
 
 def distort(img):
     """
-    This function randomly selects a list with the shape [a,g] where 
+    This function randomly selects a list with the shape [a, g] where 
     a=alpha and g=gamma and passes them along with the input image
     to the elastic_transform function that will do the image distorsion.
 
@@ -67,10 +67,10 @@ def distort(img):
         after the transformation with the same size as it had originally.
 
     """
-    sigma_alpha = [(np.random.randint(9,11), np.random.randint(2,4)),
-                   (np.random.randint(80,100), np.random.randint(4,5)),
+    sigma_alpha = [(np.random.randint(9, 11), np.random.randint(2, 4)),
+                   (np.random.randint(80, 100), np.random.randint(4, 5)),
                    (np.random.randint(150, 300), np.random.randint(5, 6)),
-                   (np.random.randint(800, 1200), np.random.randint(8,10)),
+                   (np.random.randint(800, 1200), np.random.randint(8, 10)),
                    (np.random.randint(1500, 2000), np.random.randint(10, 15)),
                    (np.random.randint(5000, 8000), np.random.randint(15, 25)),
                    (np.random.randint(10000, 15000), np.random.randint(20, 25)),
@@ -97,12 +97,12 @@ def rotate(img, obj=None):
     """
     rows,cols,_ = img.shape
     angle = np.random.randint(0,360)
-    col=(float(img[0][0][0]),float(img[0][0][1]),float(img[0][0][2]))
-    M = cv2.getRotationMatrix2D((cols/2,rows/2),angle,1)
-    if obj=="mol": 
-        dst = cv2.warpAffine(img,M,(cols,rows),borderValue=[255,255,255])
-    if obj=="bkg": 
-        dst = cv2.warpAffine(img,M,(cols,rows),borderMode=cv2.BORDER_REFLECT)
+    col=(float(img[0][0][0]), float(img[0][0][1]), float(img[0][0][2]))
+    M = cv2.getRotationMatrix2D((cols/2, rows/2), angle, 1)
+    if obj == "mol": 
+        dst = cv2.warpAffine(img, M, (cols, rows), borderValue=[255, 255, 255])
+    if obj == "bkg": 
+        dst = cv2.warpAffine(img, M, (cols, rows), borderMode=cv2.BORDER_REFLECT)
     return dst
 
 
@@ -121,7 +121,7 @@ def resize(img):
     """
     interpolations = [cv2.INTER_NEAREST, cv2.INTER_AREA, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_LANCZOS4]
 
-    img = cv2.resize(img, (np.random.randint(200,300), np.random.randint(200,300)), interpolation = np.random.choice(interpolations))
+    img = cv2.resize(img, (np.random.randint(200, 300), np.random.randint(200, 300)), interpolation = np.random.choice(interpolations))
     img = cv2.resize(img, (256,256), interpolation = np.random.choice(interpolations))
  
     return img
