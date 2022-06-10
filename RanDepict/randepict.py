@@ -798,6 +798,8 @@ class RandomDepictor:
         Args:
             smiles (str): SMILES representation of molecule
             shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+	    path_bkg: Path where the background images to create the hand-drawn 
+	              like images are located
 
         Returns:
             np.array: Chemical structure depiction
@@ -1675,6 +1677,8 @@ class RandomDepictor:
             fingerprints (List[np.array]): List of one or two fingerprints
             schemes (List[Dict]): List of one or two fingerprint schemes
             shape (Tuple[int,int]): Desired output image shape
+	    path_bkg: Path where the background images to create the hand-drawn 
+	              like images are located
 
         Returns:
             np.array: Chemical structure depiction
