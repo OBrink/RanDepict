@@ -18,12 +18,24 @@ and augment background pipelines.
 
 
 def elastic_transform(image,alpha_sigma, random_state=None):
-    """Elastic deformation of images as described in [Simard2003]_.
+    """
+    Elastic deformation of images as described in [Simard2003]_.
     .. [Simard2003] Simard, Steinkraus and Platt, "Best Practices for
-       Convolutional Neural Networks applied to Visual Document Analysis", in
-       Proc. of the International Conference on Document Analysis and
-       Recognition, 2003. 
-       https://gist.github.com/erniejunior/601cdf56d2b424757de5
+    Convolutional Neural Networks applied to Visual Document Analysis", in
+    Proc. of the International Conference on Document Analysis and
+    Recognition, 2003. 
+    https://gist.github.com/erniejunior/601cdf56d2b424757de5
+
+    This function distords an image randomly changing the alpha and gamma
+    values.
+
+     Args:
+        image: the image to modify in array format.
+        alpha_sigma: alpha and sigma values randomly selected as a list. 
+     Returns: 
+         distored_image: the image after the transformation with the same size
+                         as it had originally.
+
     """
     alpha = alpha_sigma[0]
     sigma = alpha_sigma[1]
@@ -43,9 +55,18 @@ def elastic_transform(image,alpha_sigma, random_state=None):
 
 
 def distort(img):
-    '''
-    Distort image randomly.
-    '''
+    """
+    This function randomly selects a list with the shape [a,g] where 
+    a=alpha and g=gamma and passes them along with the input image
+    to the elastic_transform function that will do the image distorsion.
+    
+    Args:
+        img: the image to modify in array format.
+    Returns: 
+        the output from elastic_transform function which is the image 
+        after the transformation with the same size as it had originally.
+
+    """
     sigma_alpha = [(np.random.randint(9,11), np.random.randint(2,4)),
                    (np.random.randint(80,100), np.random.randint(4,5)),
                    (np.random.randint(150, 300), np.random.randint(5, 6)),
@@ -62,9 +83,18 @@ def distort(img):
 
 
 def rotate(img, obj=None):
-    '''
-    Rotate image between 0-360 degrees randomly.
-    '''
+    """
+    This function randomly rotates between 0-360 degrees the input 
+    image. 
+
+    Args:
+        img: the image to modify in array format.
+        obj: "mol" or "bkg" to modify a chemical structure image or
+            a background image.
+    Returns: 
+        dst: the rotated image.
+
+    """
     rows,cols,_ = img.shape
     angle = np.random.randint(0,360)
     col=(float(img[0][0][0]),float(img[0][0][1]),float(img[0][0][2]))
@@ -78,10 +108,17 @@ def rotate(img, obj=None):
 
 
 def resize(img):
-    '''
-    Resize image random from between (200-300, 200-300) with a random choice of interpolation
-    and then resize back to 256x256.
-    '''
+    """
+    This function resizes the image randomly from between (200-300, 200-300) 
+    and then resizes it back to 256x256.
+
+    Args:
+        img: the image to modify in array format.
+
+    Returns: 
+        img: the resized image.
+
+    """
     interpolations = [cv2.INTER_NEAREST, cv2.INTER_AREA, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_LANCZOS4]
 
     img = cv2.resize(img, (np.random.randint(200,300), np.random.randint(200,300)), interpolation = np.random.choice(interpolations))
@@ -92,9 +129,16 @@ def resize(img):
 
 
 def blur(img):
-    '''
-    Blur image randomly 1-3.
-    '''
+    """
+    This function blurs the image randomly between 1-3.
+
+    Args:
+        img: the image to modify in array format.
+
+    Returns: 
+        img: the blurred image.
+
+    """
     n = np.random.randint(1,4)
     kernel = np.ones((n,n),np.float32)/n**2
     img = cv2.filter2D(img,-1,kernel)
@@ -103,9 +147,16 @@ def blur(img):
 
 
 def erode(img):
-    '''
-    Bold
-    '''
+    """
+    This function bolds the image randomly between 1-2.
+
+    Args:
+       img: the image to modify in array format.
+
+    Returns: 
+        img: the bold image.
+
+    """
     n=np.random.randint(1,3)
     kernel = np.ones((n,n),np.float32)/n**2
     img = cv2.erode(img, kernel, iterations=1)
@@ -113,9 +164,16 @@ def erode(img):
 
 
 def dilate(img):
-    '''
-    Dilate
-    '''
+    """
+    This function dilates the image with a factor of 2.
+
+    Args:
+       img: the image to modify in array format.
+
+    Returns: 
+        img: the dilated image.
+
+    """
     n=2
     kernel = np.ones((n,n),np.float32)/n**2
     img = cv2.dilate(img, kernel, iterations=1)
@@ -123,23 +181,49 @@ def dilate(img):
 
 
 def aspect_ratio(img, obj=None):
-    '''
-    Change irregularly the size of the image and converts it back to (256,256)
-    '''
+    """
+    This function irregularly changes the size of the image 
+    and converts it back to (256,256).
+
+    Args:
+        img: the image to modify in array format.
+        obj: "mol" or "bkg" to modify a chemical structure image or
+             a background image.
+
+    Returns: 
+        image: the resized image.
+
+    """
     col=(float(img[0][0][0]),float(img[0][0][1]),float(img[0][0][2]))
     n1 = np.random.randint(0,50)
     n2 = np.random.randint(0,50)
     n3 = np.random.randint(0,50)
     n4 = np.random.randint(0,50)
     if obj == "mol":
-        image = cv2.copyMakeBorder(img, n1, n2, n3, n4, cv2.BORDER_CONSTANT,value=[255,255,255])
+        image = cv2.copyMakeBorder(img, n1, n2, n3, n4, 
+                                   cv2.BORDER_CONSTANT,value=[255,255,255])
     elif obj == "bkg":
-        image = cv2.copyMakeBorder(img, n1, n2, n3, n4, cv2.BORDER_REFLECT)
+        image = cv2.copyMakeBorder(img, n1, n2, n3, n4, 
+                                   cv2.BORDER_REFLECT)
 
     image = cv2.resize(image, (256,256))
     return image
 
 def affine(img, obj=None):
+    """
+    This function randomly applies affine transformation which consists
+    of matrix rotations, translations and scale operations and converts 
+    it back to (256,256).
+
+    Args:
+        img: the image to modify in array format.
+        obj: "mol" or "bkg" to modify a chemical structure image or
+             a background image.
+
+    Returns: 
+        skewed: the transformed image.
+
+    """
     rows, cols,_ = img.shape
     n = 20
     pts1 = np.float32([[5, 50], [200, 50], [50, 200]])
@@ -158,6 +242,17 @@ def affine(img, obj=None):
     return skewed
 
 def augment_mol(img):
+    """
+    This function randomly applies different image augmentations with 
+    different probabilities to the input image.
+
+    Args:
+        img: the image to modify in array format.
+
+    Returns: 
+        img: the augmented image.
+
+    """
     # resize    
     if np.random.uniform(0,1) < 0.5:
         img = resize(img)
@@ -185,6 +280,17 @@ def augment_mol(img):
 
 
 def augment_bkg(img):
+    """
+    This function randomly applies different image augmentations with 
+    different probabilities to the input image.
+
+    Args:
+        img: the image to modify in array format.
+
+    Returns: 
+        img: the augmented image.
+
+    """
     # rotate
     img = rotate(img, "bkg")
     # resize    
