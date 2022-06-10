@@ -12,6 +12,14 @@ from PIL import Image, ImageEnhance
 from sklearn.cluster import MiniBatchKMeans
 
 def contrast(img):
+    """
+    This function randomly changes the input image contrast.
+    
+    Args:
+        img: the image to modify in array format.
+    Returns: 
+        img: the image with the contrast changes.
+    """
     if np.random.uniform(0,1)<0.8: # increase contrast
         f = np.random.uniform(1,2)
     else: # decrease contrast
@@ -24,6 +32,14 @@ def contrast(img):
 
 
 def brightness(img):
+    """
+    This function randomly changes the input image brightness.
+    
+    Args:
+        img: the image to modify in array format.
+    Returns: 
+        img: the image with the brightness changes.
+    """
     f = np.random.uniform(0.4,1.1)
     im_pil = Image.fromarray(img)
     enhancer = ImageEnhance.Brightness(im_pil)
@@ -33,7 +49,14 @@ def brightness(img):
 
 
 def sharpness(img):
+    """
+    This function randomly changes the input image sharpness.
     
+    Args:
+        img: the image to modify in array format.
+    Returns: 
+        img: the image with the sharpness changes.
+    """
     if np.random.uniform(0,1)<0.5: # increase sharpness
         f = np.random.uniform(0.1,1)
     else: # decrease sharpness
@@ -46,6 +69,14 @@ def sharpness(img):
 
 
 def s_and_p(img):
+    """
+    This function randomly adds salt and pepper to the input image.
+    
+    Args:
+        img: the image to modify in array format.
+    Returns: 
+        out: the image with the s&p changes.
+    """
     amount = np.random.uniform(0.001, 0.01)
     # add some s&p
     row,col = img.shape[:2]
@@ -66,6 +97,14 @@ def s_and_p(img):
     return out
 
 def scale(img):
+    """
+    This function randomly scales the input image.
+    
+    Args:
+        img: the image to modify in array format.
+    Returns: 
+        res: the scaled image.
+    """
     f = np.random.uniform(0.5,1.5)
     shape_OG = img.shape
     res = cv2.resize(img,None,fx=f, fy=f, interpolation = cv2.INTER_CUBIC)
@@ -73,34 +112,17 @@ def scale(img):
     return res
 
 
-def quantize(img):
-    img = cv2.cvtColor(img,cv2.COLOR_GRAY2RGB)
-    
-    (h, w) = img.shape[:2]
-
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-    img = img.reshape((img.shape[0] * img.shape[1], 3))
-
-    clt = MiniBatchKMeans(n_clusters = 2)
-    labels = clt.fit_predict(img)
-    quant = clt.cluster_centers_.astype("uint8")[labels]
-
-    quant = quant.reshape((h, w, 3))
-    img = img.reshape((h, w, 3))
-
-    quant = cv2.cvtColor(quant, cv2.COLOR_LAB2BGR)
-    img = cv2.cvtColor(img, cv2.COLOR_LAB2BGR)
-    
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    return img
-
-def darken(img):
-    img =  cv2.subtract(img, np.random.uniform(0,50))
-    return img
-
 
 def degrade_img(img):
+    """
+    This function randomly degrades the input image by applying different 
+    degradation steps with different robabilities.
     
+    Args:
+        img: the image to modify in array format.
+    Returns: 
+        img: the degraded image.
+    """
     # s+p    
     if np.random.uniform(0,1) < 0.1:
         img = s_and_p(img)
