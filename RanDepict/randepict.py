@@ -508,7 +508,7 @@ class RandomDepictor:
         if self.random_choice(
             [True, False, False, False], log_attribute="cdk_add_atom_indices"
         ):
-            if not re.search("\[.+\]", smiles):
+            if not re.search("\[.*[RXYZ].*\]", smiles):
                 labels = True
                 for atom in molecule.atoms():
                     label = JClass("java.lang.Integer")(
