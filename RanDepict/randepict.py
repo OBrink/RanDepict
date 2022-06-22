@@ -217,12 +217,6 @@ class RandomDepictor:
                     0.1),
                 log_attribute="indigo_relative_thickness"))
         indigo.setOption("render-relative-thickness", relative_thickness)
-        # Set random bond length
-        # Changing the bond length does not change the bond length relative to
-        # other elements. Instead, the whole molecule is scaled down!
-        # bond_length = self.random_choice(range(int(shape[0]/19),
-        #                                        int(shape[0]/6)))
-        # indigo.setOption("render-bond-length", bond_length)
         # Output_format: PNG
         indigo.setOption("render-output-format", "png")
         # Set random atom label rendering model
@@ -238,13 +232,6 @@ class RandomDepictor:
             indigo.setOption(
                 "render-label-mode", "hetero"
             )  # only hetero atoms, no terminal groups
-        # Set random depiction colour / not necessary for us as we binarise
-        # everything anyway
-        # if self.random_choice([True, False, False, False, False]):
-        #    R = str(self.random_choice(np.arange(0.1, 1.0, 0.1)))
-        #    G = str(self.random_choice(np.arange(0.1, 1.0, 0.1)))
-        #    B = str(self.random_choice(np.arange(0.1, 1.0, 0.1)))
-        #    indigo.setOption("render-base-color", ", ".join([R,G,B]))
         # Render bold bond for Haworth projection
         if self.random_choice([True, False],
                               log_attribute="indigo_render_bold_bond"):
