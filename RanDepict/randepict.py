@@ -11,6 +11,7 @@ import imgaug.augmenters as iaa
 import random
 from copy import deepcopy
 from typing import Tuple, List, Dict, Any
+import re
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -401,7 +402,10 @@ class RandomDepictor:
         else:
             print("RDKit was unable to read SMILES: {}".format(smiles))
 
-    def get_random_cdk_rendering_settings(self, rendererModel, molecule):
+    def get_random_cdk_rendering_settings(self,
+                                          rendererModel,
+                                          molecule,
+                                          smiles: str):
         """
         This function defines random rendering options for the structure
         depictions created using CDK.
@@ -414,6 +418,7 @@ class RandomDepictor:
         Args:
             rendererModel (cdk.renderer.AtomContainerRenderer.2DModel)
             molecule (cdk.AtomContainer): Atom container
+            smiles (str): smiles representation of molecule
 
         Returns:
             rendererModel, molecule: Objects that hold depiction parameters
@@ -503,11 +508,12 @@ class RandomDepictor:
         if self.random_choice(
             [True, False, False, False], log_attribute="cdk_add_atom_indices"
         ):
-            labels = True
-            for atom in molecule.atoms():
-                label = JClass("java.lang.Integer")(
-                    1 + molecule.getAtomNumber(atom))
-                atom.setProperty(StandardGenerator.ANNOTATION_LABEL, label)
+            if not re.search("\[.+\]", smiles):
+                labels = True
+                for atom in molecule.atoms():
+                    label = JClass("java.lang.Integer")(
+                        1 + molecule.getAtomNumber(atom))
+                    atom.setProperty(StandardGenerator.ANNOTATION_LABEL, label)
         if labels:
             # We only need black
             rendererModel.set(
@@ -668,7 +674,7 @@ class RandomDepictor:
 
         # Get random rendering settings
         model, molecule = self.get_random_cdk_rendering_settings(
-            model, molecule)
+            model, molecule, smiles)
 
         double = JClass("java.lang.Double")
         model.set(
