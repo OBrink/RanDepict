@@ -32,7 +32,7 @@ $ conda activate RanDepict
 $ conda install -c rdkit rdkit
 $ conda install pip
 $ python -m pip install -U pip #Upgrade pip
-$ pip install numpy scikit-image epam.indigo jpype1 ipyplot imagecorruptions imgaug
+$ pip install .
 ```
 ### Alternative
 ```shell
