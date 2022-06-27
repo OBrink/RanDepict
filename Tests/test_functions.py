@@ -292,6 +292,21 @@ class TestRandomDepictor:
             if "CDK" not in ref_line:
                 assert ref_line == test_line
 
+    def test_random_depiction(self):
+        # Test random_depiction function and by doing this,
+        # get_depiction_functions()
+        smiles_list = [
+            "[R]C1=C([R])C([R])=C([R])C([R])=C1[R]",
+            "[*]C1=C([Y])C([R])=C([R])C([R])=C1[R]",
+            "[R0]C1=C([R12])C([R1])=C([R3])C([R12])=C1[R]",
+            "[X]C1=C([Y])C([Z])=C([R3])C([R12])=C1[R]",
+            "[Otto]C1=C([Z])C([R1])=C([Y])C([X1])=C1[R]"
+            ]
+        for smiles in smiles_list:
+                im = self.depictor.random_depiction(smiles)
+                assert type(im) == np.ndarray
+
+
     def test_has_r_group(self):
         # Test samples SMILES
         assert self.depictor.has_r_group("[R]CC[Br]COC")

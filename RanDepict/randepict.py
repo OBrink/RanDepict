@@ -10,7 +10,7 @@ from multiprocessing import set_start_method, get_context
 import imgaug.augmenters as iaa
 import random
 from copy import deepcopy
-from typing import Tuple, List, Dict, Any
+from typing import Tuple, List, Dict, Any, Callable
 import re
 
 from rdkit import Chem
@@ -268,7 +268,7 @@ class RandomDepictor:
         # Instantiate Indigo with random settings and IndigoRenderer
         indigo, renderer = self.get_random_indigo_rendering_settings()
         # Load molecule
-        if not re.search("\[.*[RXYZ].*\]", smiles):
+        if not self.has_r_group(smiles):
             molecule = indigo.loadMolecule(smiles)
         else:
             mol_str = self.smiles_to_mol_str(smiles)
@@ -320,7 +320,7 @@ class RandomDepictor:
         if self.random_choice(
             [True, False, False, False], log_attribute="rdkit_add_atom_indices"
         ):
-            if not re.search("\[.*[RXYZ].*\]", smiles):
+            if not self.has_r_group(smiles):
                 depiction_settings.drawOptions().addAtomIndices = True
         # Bond line width
         bond_line_width = self.random_choice(
@@ -379,7 +379,7 @@ class RandomDepictor:
             np.array: Chemical structure depiction
         """
         # Load molecule
-        if not re.search("\[.*[RXYZ].*\]", smiles):
+        if not self.has_r_group(smiles):
             mol = Chem.MolFromSmiles(smiles)
         else:
             mol_str = self.smiles_to_mol_str(smiles)
@@ -410,6 +410,19 @@ class RandomDepictor:
             return np.asarray(depiction)
         else:
             print("RDKit was unable to read input SMILES: {}".format(smiles))
+
+    def has_r_group(self, smiles: str) -> bool:
+        """
+        Determines whether or not a given SMILES str contains an R group
+
+        Args:
+            smiles (str): SMILES representation of molecule
+
+        Returns:
+            bool
+        """
+        if re.search("\[.*[RXYZ].*\]", smiles):
+            return True
 
     def get_random_cdk_rendering_settings(self,
                                           rendererModel,
@@ -517,7 +530,7 @@ class RandomDepictor:
         if self.random_choice(
             [True, False, False, False], log_attribute="cdk_add_atom_indices"
         ):
-            if not re.search("\[.*[RXYZ].*\]", smiles):
+            if not self.has_r_group(smiles):
                 labels = True
                 for atom in molecule.atoms():
                     label = JClass("java.lang.Integer")(
@@ -661,8 +674,8 @@ class RandomDepictor:
         # Make image twice as big, reduce Zoom factor, then remove white
         # areas at borders and resize to originally desired shape
         # TODO: Find out why the structures are cut off in the first place
-        y = y * 3
-        x = x * 3
+        y = y * 2
+        x = x * 2
 
         drawArea = JClass("java.awt.Rectangle")(x, y)
         BufferedImage = JClass("java.awt.image.BufferedImage")
@@ -841,21 +854,48 @@ class RandomDepictor:
         Returns:
             np.array: Chemical structure depiction
         """
+        depiction_functions = self.get_depiction_functions(smiles)
+        # If nothing is returned, try different function
+        for _ in range(3):
+            if len(depiction_functions) != 0:
+                # Pick random depiction function and call it
+                depiction_function = self.random_choice(depiction_functions)
+                depiction = depiction_function(smiles, shape)
+                if depiction is False or depiction is None:
+                    depiction_functions.remove(depiction_function)
+                else:
+                    break
+            else:
+                break
+        return depiction
+
+    def get_depiction_functions(self, smiles: str) -> List[Callable]:
+        """
+        RDKit and Indigo can run into problems if certain R group variables
+        are present in the input molecule. Hence, the depiction functions
+        that use their functionalities need to be removed based on the input
+        smiles str.
+
+        Args:
+            smiles (str): SMILES representation of a molecule
+
+        Returns:
+            List[Callable]: List of depiction functions
+        """
         depiction_functions = [
             self.depict_and_resize_rdkit,
             self.depict_and_resize_indigo,
             self.depict_and_resize_cdk,
         ]
-        depiction_function = self.random_choice(depiction_functions)
-        depiction = depiction_function(smiles, shape)
-        # RDKit sometimes has troubles reading SMILES. If that happens,
-        # use Indigo or CDK
-        if depiction is False or depiction is None:
-            depiction_function = self.random_choice(
-                [self.depict_and_resize_indigo, self.depict_and_resize_cdk]
-            )
-            depiction = depiction_function(smiles, shape)
-        return depiction
+        if self.has_r_group(smiles):
+            # "R", "X", "Z" are not depicted by RDKit
+            # The same is valid for X,Y,Z and a number
+            if re.search('\[[RXZ]\]|\[[XYZ]\d+', smiles):
+                depiction_functions.remove(self.depict_and_resize_rdkit)
+            # "X", "R0" are not depicted by Indigo
+            if re.search('\[R0\]|\[X\]', smiles):
+                depiction_functions.remove(self.depict_and_resize_indigo)
+        return depiction_functions
 
     def resize(self, image: np.array, shape: Tuple[int]) -> np.array:
         """
