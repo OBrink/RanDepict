@@ -292,3 +292,11 @@ class TestRandomDepictor:
             if "CDK" not in ref_line:
                 assert ref_line == test_line
 
+    def test_has_r_group(self):
+        # Test samples SMILES
+        assert self.depictor.has_r_group("[R]CC[Br]COC")
+        assert self.depictor.has_r_group("c1ccccc1([X])")
+        assert self.depictor.has_r_group("c1ccccc1([Y])")
+        assert self.depictor.has_r_group("c1ccccc1([Z])")
+        assert not self.depictor.has_r_group("[Cl]CC[Br]COC")
+
