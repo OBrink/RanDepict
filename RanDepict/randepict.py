@@ -289,7 +289,7 @@ class RandomDepictor:
         return depiction
 
     def get_random_rdkit_rendering_settings(
-        self, shape: Tuple[int, int] = (299, 299)
+        self, smiles: str, shape: Tuple[int, int] = (299, 299)
     ) -> rdMolDraw2D.MolDraw2DCairo:
         """
         This function defines random rendering options for the structure
@@ -297,6 +297,7 @@ class RandomDepictor:
         with the settings.
 
         Args:
+            smiles (str): SMILES representation of molecule
             shape (Tuple[int, int], optional): im_shape. Defaults to (299, 299)
 
         Returns:
@@ -319,7 +320,8 @@ class RandomDepictor:
         if self.random_choice(
             [True, False, False, False], log_attribute="rdkit_add_atom_indices"
         ):
-            depiction_settings.drawOptions().addAtomIndices = True
+            if not re.search("\[.*[RXYZ].*\]", smiles):
+                depiction_settings.drawOptions().addAtomIndices = True
         # Bond line width
         bond_line_width = self.random_choice(
             range(1, 5), log_attribute="rdkit_bond_line_width"
@@ -391,7 +393,7 @@ class RandomDepictor:
                 abbrevs = GetDefaultAbbreviations()
                 mol = CondenseMolAbbreviations(mol, abbrevs)
             # Get random depiction settings
-            depiction_settings = self.get_random_rdkit_rendering_settings()
+            depiction_settings = self.get_random_rdkit_rendering_settings(smiles=smiles)
             # Create depiction
             # TODO: Figure out how to depict without kekulization here
             # The following line does not prevent the molecule from being
@@ -407,7 +409,7 @@ class RandomDepictor:
             depiction = img_as_ubyte(depiction)
             return np.asarray(depiction)
         else:
-            print("RDKit was unable to read SMILES: {}".format(smiles))
+            print("RDKit was unable to read input SMILES: {}".format(smiles))
 
     def get_random_cdk_rendering_settings(self,
                                           rendererModel,
