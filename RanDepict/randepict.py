@@ -268,7 +268,11 @@ class RandomDepictor:
         # Instantiate Indigo with random settings and IndigoRenderer
         indigo, renderer = self.get_random_indigo_rendering_settings()
         # Load molecule
-        molecule = indigo.loadMolecule(smiles)
+        if not re.search("\[.*[RXYZ].*\]", smiles):
+            molecule = indigo.loadMolecule(smiles)
+        else:
+            mol_str = self.smiles_to_mol_str(smiles)
+            molecule = indigo.loadMolecule(mol_str)
         # Kekulize in 67% of cases
         if not self.random_choice(
             [True, True, False], log_attribute="indigo_kekulized"
@@ -372,9 +376,12 @@ class RandomDepictor:
         Returns:
             np.array: Chemical structure depiction
         """
-
-        # Generate mol object from smiles str
-        mol = Chem.MolFromSmiles(smiles)
+        # Load molecule
+        if not re.search("\[.*[RXYZ].*\]", smiles):
+            mol = Chem.MolFromSmiles(smiles)
+        else:
+            mol_str = self.smiles_to_mol_str(smiles)
+            mol = Chem.MolFromMolBlock(mol_str)
         if mol:
             AllChem.Compute2DCoords(mol)
             # Abbreviate superatoms
@@ -573,17 +580,8 @@ class RandomDepictor:
             np.array: Chemical structure depiction
         """
         cdk_base = "org.openscience.cdk"
-
         # Read molecule from SMILES str
-        SCOB = JClass(cdk_base + ".silent.SilentChemObjectBuilder")
-        SmilesParser = JClass(
-            cdk_base +
-            ".smiles.SmilesParser")(
-            SCOB.getInstance())
-        if self.random_choice([True, False, False],
-                              log_attribute="cdk_kekulized"):
-            SmilesParser.kekulise(False)
-        molecule = SmilesParser.parseSmiles(smiles)
+        molecule = self.cdk_smiles_to_IAtomContainer(smiles)
 
         # Add hydrogens for coordinate generation (to make it look nicer/
         # avoid overlaps)
@@ -710,6 +708,66 @@ class RandomDepictor:
         depiction = self.resize(depiction, shape)
         depiction = img_as_ubyte(depiction)
         return depiction
+
+    def cdk_smiles_to_IAtomContainer(self, smiles: str):
+        """
+        This function takes a SMILES representation of a molecule and
+        returns the corresponding IAtomContainer object.
+
+        Args:
+            smiles (str): SMILES representation of the molecule
+
+        Returns:
+            IAtomContainer: CDK IAtomContainer object that represents the molecule
+        """
+        cdk_base = "org.openscience.cdk"
+        SCOB = JClass(cdk_base + ".silent.SilentChemObjectBuilder")
+        SmilesParser = JClass(
+            cdk_base +
+            ".smiles.SmilesParser")(
+            SCOB.getInstance())
+        if self.random_choice([True, False, False],
+                              log_attribute="cdk_kekulized"):
+            SmilesParser.kekulise(False)
+        molecule = SmilesParser.parseSmiles(smiles)
+        return molecule
+
+    def smiles_to_mol_str(self, smiles: str) -> str:
+        """
+        This function takes a SMILES representation of a molecule and returns
+        the content of the corresponding SD file using the CDK.
+        ___
+        The SMILES parser of the CDK is much more tolerant than the parsers of
+        RDKit and Indigo.
+        ___
+
+        Args:
+            smiles (str): SMILES representation of a molecule
+
+        Returns:
+            str: content of SD file of input molecule
+        """
+        i_atom_container = self.cdk_smiles_to_IAtomContainer(smiles)
+        mol_str = self.cdk_IAtomContainer_to_mol_str(i_atom_container)
+        return mol_str
+
+    def cdk_IAtomContainer_to_mol_str(self, i_atom_container) -> str:
+        """
+        This function takes an IAtomContainer object and returns the content
+        of the corresponding MDL MOL file as a string.
+
+        Args:
+            i_atom_container (CDK IAtomContainer)
+
+        Returns:
+            str: string content of MDL MOL file
+        """
+        string_writer = JClass("java.io.StringWriter")()
+        mol_writer = JClass("org.openscience.cdk.io.MDLV2000Writer")(string_writer)
+        mol_writer.write(i_atom_container)
+        mol_writer.close()
+        mol_str = string_writer.toString()
+        return str(mol_str)
 
     def normalise_padding(self, im: np.array) -> np.array:
         """This function takes an RGB image (np.array) and deletes white space at
