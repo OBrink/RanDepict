@@ -1,6 +1,7 @@
-from RanDepict import DepictionFeatureRanges
+from RanDepict import RandomDepictor, DepictionFeatureRanges
 from rdkit import DataStructs
 import numpy as np
+import os
 
 
 class TestDepictionFeatureRanges:
@@ -245,3 +246,72 @@ class TestDepictionFeatureRanges:
             elements_to_be_distributed, fixed_elements_1, fixed_elements_2
         )
         assert actual_output == expected_output
+
+
+class TestRandomDepictor:
+    depictor = RandomDepictor()
+
+    def test_depict_and_resize_indigo(self):
+        # Assert that an image is returned with different types
+        # of input SMILES str
+        test_smiles = ['c1ccccc1',
+                       '[Otto]C1=C([XYZ123])C([R1])=C([Y])C([X1])=C1[R]',
+                       'c1ccccc1[R1]']
+        for smiles in test_smiles:
+            im = self.depictor.depict_and_resize_indigo(smiles)
+            assert type(im) == np.ndarray
+
+    def test_depict_and_resize_rdkit(self):
+        # Assert that an image is returned with different types
+        # of input SMILES str
+        test_smiles = ['c1ccccc1',
+                       '[Otto]C1=C([XYZ123])C([R1])=C([Y])C([X])=C1[R]']
+        for smiles in test_smiles:
+            im = self.depictor.depict_and_resize_rdkit(smiles)
+            assert type(im) == np.ndarray
+
+    def test_depict_and_resize_cdk(self):
+        # Assert that an image is returned with different types
+        # of input SMILES str
+        test_smiles = ['c1ccccc1',
+                       '[Otto]C1=C([XYZ123])C([R1])=C([Y])C([X])=C1[R]']
+        for smiles in test_smiles:
+            im = self.depictor.depict_and_resize_cdk(smiles)
+            assert type(im) == np.ndarray
+
+    def test_smiles_to_mol_str(self):
+        # Compare generated mol file str with reference string
+        mol_str = self.depictor.smiles_to_mol_str("CC")
+        mol_str_lines = mol_str.split('\n')
+        with open('Tests/test.mol', 'r') as ref_mol_file:
+            ref_lines = ref_mol_file.readlines()
+        for line_index in range(len(ref_lines)):
+            ref_line = ref_lines[line_index][:-1]
+            test_line = mol_str_lines[line_index]
+            # Ignore the line that contains the timestamp
+            if "CDK" not in ref_line:
+                assert ref_line == test_line
+
+    def test_random_depiction(self):
+        # Test random_depiction function and by doing this,
+        # get_depiction_functions()
+        smiles_list = [
+            "[R]C1=C([R])C([R])=C([R])C([R])=C1[R]",
+            "[*]C1=C([Y])C([R])=C([R])C([R])=C1[R]",
+            "[R0]C1=C([R12])C([R1])=C([R3])C([R12])=C1[R]",
+            "[X]C1=C([Y])C([Z])=C([R3])C([R12])=C1[R]",
+            "[Otto]C1=C([Z])C([R1])=C([Y])C([X1])=C1[R]"
+            ]
+        for smiles in smiles_list:
+                im = self.depictor.random_depiction(smiles)
+                assert type(im) == np.ndarray
+
+
+    def test_has_r_group(self):
+        # Test samples SMILES
+        assert self.depictor.has_r_group("[R]CC[Br]COC")
+        assert self.depictor.has_r_group("c1ccccc1([X])")
+        assert self.depictor.has_r_group("c1ccccc1([Y])")
+        assert self.depictor.has_r_group("c1ccccc1([Z])")
+        assert not self.depictor.has_r_group("[Cl]CC[Br]COC")
+

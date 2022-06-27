@@ -10,7 +10,8 @@ from multiprocessing import set_start_method, get_context
 import imgaug.augmenters as iaa
 import random
 from copy import deepcopy
-from typing import Tuple, List, Dict, Any
+from typing import Tuple, List, Dict, Any, Callable
+import re
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -267,7 +268,11 @@ class RandomDepictor:
         # Instantiate Indigo with random settings and IndigoRenderer
         indigo, renderer = self.get_random_indigo_rendering_settings()
         # Load molecule
-        molecule = indigo.loadMolecule(smiles)
+        if not self.has_r_group(smiles):
+            molecule = indigo.loadMolecule(smiles)
+        else:
+            mol_str = self.smiles_to_mol_str(smiles)
+            molecule = indigo.loadMolecule(mol_str)
         # Kekulize in 67% of cases
         if not self.random_choice(
             [True, True, False], log_attribute="indigo_kekulized"
@@ -284,7 +289,7 @@ class RandomDepictor:
         return depiction
 
     def get_random_rdkit_rendering_settings(
-        self, shape: Tuple[int, int] = (299, 299)
+        self, smiles: str, shape: Tuple[int, int] = (299, 299)
     ) -> rdMolDraw2D.MolDraw2DCairo:
         """
         This function defines random rendering options for the structure
@@ -292,6 +297,7 @@ class RandomDepictor:
         with the settings.
 
         Args:
+            smiles (str): SMILES representation of molecule
             shape (Tuple[int, int], optional): im_shape. Defaults to (299, 299)
 
         Returns:
@@ -314,7 +320,8 @@ class RandomDepictor:
         if self.random_choice(
             [True, False, False, False], log_attribute="rdkit_add_atom_indices"
         ):
-            depiction_settings.drawOptions().addAtomIndices = True
+            if not self.has_r_group(smiles):
+                depiction_settings.drawOptions().addAtomIndices = True
         # Bond line width
         bond_line_width = self.random_choice(
             range(1, 5), log_attribute="rdkit_bond_line_width"
@@ -371,9 +378,12 @@ class RandomDepictor:
         Returns:
             np.array: Chemical structure depiction
         """
-
-        # Generate mol object from smiles str
-        mol = Chem.MolFromSmiles(smiles)
+        # Load molecule
+        if not self.has_r_group(smiles):
+            mol = Chem.MolFromSmiles(smiles)
+        else:
+            mol_str = self.smiles_to_mol_str(smiles)
+            mol = Chem.MolFromMolBlock(mol_str)
         if mol:
             AllChem.Compute2DCoords(mol)
             # Abbreviate superatoms
@@ -383,7 +393,7 @@ class RandomDepictor:
                 abbrevs = GetDefaultAbbreviations()
                 mol = CondenseMolAbbreviations(mol, abbrevs)
             # Get random depiction settings
-            depiction_settings = self.get_random_rdkit_rendering_settings()
+            depiction_settings = self.get_random_rdkit_rendering_settings(smiles=smiles)
             # Create depiction
             # TODO: Figure out how to depict without kekulization here
             # The following line does not prevent the molecule from being
@@ -399,9 +409,25 @@ class RandomDepictor:
             depiction = img_as_ubyte(depiction)
             return np.asarray(depiction)
         else:
-            print("RDKit was unable to read SMILES: {}".format(smiles))
+            print("RDKit was unable to read input SMILES: {}".format(smiles))
 
-    def get_random_cdk_rendering_settings(self, rendererModel, molecule):
+    def has_r_group(self, smiles: str) -> bool:
+        """
+        Determines whether or not a given SMILES str contains an R group
+
+        Args:
+            smiles (str): SMILES representation of molecule
+
+        Returns:
+            bool
+        """
+        if re.search("\[.*[RXYZ].*\]", smiles):
+            return True
+
+    def get_random_cdk_rendering_settings(self,
+                                          rendererModel,
+                                          molecule,
+                                          smiles: str):
         """
         This function defines random rendering options for the structure
         depictions created using CDK.
@@ -414,6 +440,7 @@ class RandomDepictor:
         Args:
             rendererModel (cdk.renderer.AtomContainerRenderer.2DModel)
             molecule (cdk.AtomContainer): Atom container
+            smiles (str): smiles representation of molecule
 
         Returns:
             rendererModel, molecule: Objects that hold depiction parameters
@@ -503,11 +530,12 @@ class RandomDepictor:
         if self.random_choice(
             [True, False, False, False], log_attribute="cdk_add_atom_indices"
         ):
-            labels = True
-            for atom in molecule.atoms():
-                label = JClass("java.lang.Integer")(
-                    1 + molecule.getAtomNumber(atom))
-                atom.setProperty(StandardGenerator.ANNOTATION_LABEL, label)
+            if not self.has_r_group(smiles):
+                labels = True
+                for atom in molecule.atoms():
+                    label = JClass("java.lang.Integer")(
+                        1 + molecule.getAtomNumber(atom))
+                    atom.setProperty(StandardGenerator.ANNOTATION_LABEL, label)
         if labels:
             # We only need black
             rendererModel.set(
@@ -567,17 +595,8 @@ class RandomDepictor:
             np.array: Chemical structure depiction
         """
         cdk_base = "org.openscience.cdk"
-
         # Read molecule from SMILES str
-        SCOB = JClass(cdk_base + ".silent.SilentChemObjectBuilder")
-        SmilesParser = JClass(
-            cdk_base +
-            ".smiles.SmilesParser")(
-            SCOB.getInstance())
-        if self.random_choice([True, False, False],
-                              log_attribute="cdk_kekulized"):
-            SmilesParser.kekulise(False)
-        molecule = SmilesParser.parseSmiles(smiles)
+        molecule = self.cdk_smiles_to_IAtomContainer(smiles)
 
         # Add hydrogens for coordinate generation (to make it look nicer/
         # avoid overlaps)
@@ -655,8 +674,8 @@ class RandomDepictor:
         # Make image twice as big, reduce Zoom factor, then remove white
         # areas at borders and resize to originally desired shape
         # TODO: Find out why the structures are cut off in the first place
-        y = y * 3
-        x = x * 3
+        y = y * 2
+        x = x * 2
 
         drawArea = JClass("java.awt.Rectangle")(x, y)
         BufferedImage = JClass("java.awt.image.BufferedImage")
@@ -668,7 +687,7 @@ class RandomDepictor:
 
         # Get random rendering settings
         model, molecule = self.get_random_cdk_rendering_settings(
-            model, molecule)
+            model, molecule, smiles)
 
         double = JClass("java.lang.Double")
         model.set(
@@ -704,6 +723,66 @@ class RandomDepictor:
         depiction = self.resize(depiction, shape)
         depiction = img_as_ubyte(depiction)
         return depiction
+
+    def cdk_smiles_to_IAtomContainer(self, smiles: str):
+        """
+        This function takes a SMILES representation of a molecule and
+        returns the corresponding IAtomContainer object.
+
+        Args:
+            smiles (str): SMILES representation of the molecule
+
+        Returns:
+            IAtomContainer: CDK IAtomContainer object that represents the molecule
+        """
+        cdk_base = "org.openscience.cdk"
+        SCOB = JClass(cdk_base + ".silent.SilentChemObjectBuilder")
+        SmilesParser = JClass(
+            cdk_base +
+            ".smiles.SmilesParser")(
+            SCOB.getInstance())
+        if self.random_choice([True, False, False],
+                              log_attribute="cdk_kekulized"):
+            SmilesParser.kekulise(False)
+        molecule = SmilesParser.parseSmiles(smiles)
+        return molecule
+
+    def smiles_to_mol_str(self, smiles: str) -> str:
+        """
+        This function takes a SMILES representation of a molecule and returns
+        the content of the corresponding SD file using the CDK.
+        ___
+        The SMILES parser of the CDK is much more tolerant than the parsers of
+        RDKit and Indigo.
+        ___
+
+        Args:
+            smiles (str): SMILES representation of a molecule
+
+        Returns:
+            str: content of SD file of input molecule
+        """
+        i_atom_container = self.cdk_smiles_to_IAtomContainer(smiles)
+        mol_str = self.cdk_IAtomContainer_to_mol_str(i_atom_container)
+        return mol_str
+
+    def cdk_IAtomContainer_to_mol_str(self, i_atom_container) -> str:
+        """
+        This function takes an IAtomContainer object and returns the content
+        of the corresponding MDL MOL file as a string.
+
+        Args:
+            i_atom_container (CDK IAtomContainer)
+
+        Returns:
+            str: string content of MDL MOL file
+        """
+        string_writer = JClass("java.io.StringWriter")()
+        mol_writer = JClass("org.openscience.cdk.io.MDLV2000Writer")(string_writer)
+        mol_writer.write(i_atom_container)
+        mol_writer.close()
+        mol_str = string_writer.toString()
+        return str(mol_str)
 
     def normalise_padding(self, im: np.array) -> np.array:
         """This function takes an RGB image (np.array) and deletes white space at
@@ -775,21 +854,48 @@ class RandomDepictor:
         Returns:
             np.array: Chemical structure depiction
         """
+        depiction_functions = self.get_depiction_functions(smiles)
+        # If nothing is returned, try different function
+        for _ in range(3):
+            if len(depiction_functions) != 0:
+                # Pick random depiction function and call it
+                depiction_function = self.random_choice(depiction_functions)
+                depiction = depiction_function(smiles, shape)
+                if depiction is False or depiction is None:
+                    depiction_functions.remove(depiction_function)
+                else:
+                    break
+            else:
+                break
+        return depiction
+
+    def get_depiction_functions(self, smiles: str) -> List[Callable]:
+        """
+        RDKit and Indigo can run into problems if certain R group variables
+        are present in the input molecule. Hence, the depiction functions
+        that use their functionalities need to be removed based on the input
+        smiles str.
+
+        Args:
+            smiles (str): SMILES representation of a molecule
+
+        Returns:
+            List[Callable]: List of depiction functions
+        """
         depiction_functions = [
             self.depict_and_resize_rdkit,
             self.depict_and_resize_indigo,
             self.depict_and_resize_cdk,
         ]
-        depiction_function = self.random_choice(depiction_functions)
-        depiction = depiction_function(smiles, shape)
-        # RDKit sometimes has troubles reading SMILES. If that happens,
-        # use Indigo or CDK
-        if depiction is False or depiction is None:
-            depiction_function = self.random_choice(
-                [self.depict_and_resize_indigo, self.depict_and_resize_cdk]
-            )
-            depiction = depiction_function(smiles, shape)
-        return depiction
+        if self.has_r_group(smiles):
+            # "R", "X", "Z" are not depicted by RDKit
+            # The same is valid for X,Y,Z and a number
+            if re.search('\[[RXZ]\]|\[[XYZ]\d+', smiles):
+                depiction_functions.remove(self.depict_and_resize_rdkit)
+            # "X", "R0" are not depicted by Indigo
+            if re.search('\[R0\]|\[X\]', smiles):
+                depiction_functions.remove(self.depict_and_resize_indigo)
+        return depiction_functions
 
     def resize(self, image: np.array, shape: Tuple[int]) -> np.array:
         """
