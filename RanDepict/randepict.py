@@ -26,6 +26,8 @@ from indigo import Indigo
 from indigo.renderer import IndigoRenderer
 from jpype import startJVM, getDefaultJVMPath
 from jpype import JClass, JVMNotFoundException, isJVMStarted
+from pikachu.drawing import drawing
+from pikachu.smiles.smiles import read_smiles
 import base64
 
 
@@ -178,6 +180,36 @@ class RandomDepictor:
         y = int(shape[0] * self.random_choice(np.arange(0.9, 1.1, 0.02)))
         x = int(shape[1] * self.random_choice(np.arange(0.9, 1.1, 0.02)))
         return y, x
+
+    def get_random_pikachu_rendering_settings(
+        self, shape: Tuple[int, int] = (299, 299)
+    ) -> drawing.Options:
+        options = drawing.Options()
+        options.height, options.width = shape
+        options.bond_thickness = self.random_choice(np.arange(0.5, 2.5, 0.1))
+        options.bond_length = self.random_choice(np.arange(10, 25, 1))
+        options.chiral_bond_width = options.bond_length * self.random_choice(np.arange(0.05, 0.2, 0.01))
+        options.short_bond_length = self.random_choice(np.arange(0.2, 0.6, 0.05))
+        options.double_bond_length = self.random_choice(np.arange(0.6, 0.8, 0.05))
+        options.bond_spacing = options.bond_length * self.random_choice(np.arange(0.1, 0.28, 0.01))
+        options.padding = self.random_choice(np.arange(10, 50, 5))
+        # options.font_size_large = 5
+        # options.font_size_small = 3
+        return options
+
+    def depict_and_resize_pikachu(
+        self, smiles: str, shape: Tuple[int, int] = (299, 299)
+    ) -> np.array:
+        structure = read_smiles(smiles)
+        depiction_settings = self.get_random_pikachu_rendering_settings()
+        if '.' in smiles:
+            drawer = drawing.draw_multiple(structure, options=depiction_settings)
+        else:
+            drawer = drawing.Drawer(structure, options=depiction_settings)
+        depiction = drawer.get_image_as_array()
+
+        depiction = self.resize(depiction, (shape[0], shape[1]))
+        return depiction
 
     def get_random_indigo_rendering_settings(
         self, shape: Tuple[int, int] = (299, 299)
@@ -872,9 +904,9 @@ class RandomDepictor:
     def get_depiction_functions(self, smiles: str) -> List[Callable]:
         """
         RDKit and Indigo can run into problems if certain R group variables
-        are present in the input molecule. Hence, the depiction functions
-        that use their functionalities need to be removed based on the input
-        smiles str.
+        are present in the input molecule, and PIKAChU cannot handle isotopes.
+        Hence, the depiction functions that use their functionalities need to
+        be removed based on the input smiles str.
 
         Args:
             smiles (str): SMILES representation of a molecule
@@ -886,7 +918,11 @@ class RandomDepictor:
             self.depict_and_resize_rdkit,
             self.depict_and_resize_indigo,
             self.depict_and_resize_cdk,
+            self.depict_and_resize_pikachu
         ]
+        # Remove PIKAChU if there is an isotope
+        if re.search('(\[\d\d\d?[A-Z])|(\[2H\])|(\[3H\])|(D)|(T)', smiles):
+            depiction_functions.remove(self.depict_and_resize_pikachu)
         if self.has_r_group(smiles):
             # "R", "X", "Z" are not depicted by RDKit
             # The same is valid for X,Y,Z and a number
