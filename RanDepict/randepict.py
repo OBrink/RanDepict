@@ -903,7 +903,7 @@ class RandomDepictor:
 
     def get_depiction_functions(self, smiles: str) -> List[Callable]:
         """
-        RDKit and Indigo can run into problems if certain R group variables
+        PIKAChU, RDKit and Indigo can run into problems if certain R group variables
         are present in the input molecule, and PIKAChU cannot handle isotopes.
         Hence, the depiction functions that use their functionalities need to
         be removed based on the input smiles str.
@@ -924,6 +924,9 @@ class RandomDepictor:
         if re.search('(\[\d\d\d?[A-Z])|(\[2H\])|(\[3H\])|(D)|(T)', smiles):
             depiction_functions.remove(self.depict_and_resize_pikachu)
         if self.has_r_group(smiles):
+            # PIKAChU only accepts \[[RXZ]\d*\]
+            if not re.search('\[[RXZ]\d*\]', smiles):
+                depiction_functions.remove(self.depict_and_resize_pikachu)
             # "R", "X", "Z" are not depicted by RDKit
             # The same is valid for X,Y,Z and a number
             if re.search('\[[RXZ]\]|\[[XYZ]\d+', smiles):
