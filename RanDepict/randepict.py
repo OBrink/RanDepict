@@ -2515,11 +2515,3 @@ class DepictionFeatureRanges(RandomDepictor):
         return output
 
 
-class DepictionFeatures:
-    """
-    A DepictionFeatures objects simply holds all depiction parameters
-    of a chemical structure depiction generated with RanDepict
-    """
-
-    def __init__(self):
-        pass
