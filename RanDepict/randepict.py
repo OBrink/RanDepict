@@ -906,7 +906,7 @@ class RandomDepictor:
         PIKAChU, RDKit and Indigo can run into problems if certain R group variables
         are present in the input molecule, and PIKAChU cannot handle isotopes.
         Hence, the depiction functions that use their functionalities need to
-        be removed based on the input smiles str.
+        be removed based on the input smiles str (if necessary).
 
         Args:
             smiles (str): SMILES representation of a molecule
