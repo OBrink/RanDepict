@@ -279,6 +279,55 @@ class TestRandomDepictor:
             im = self.depictor.depict_and_resize_cdk(smiles)
             assert type(im) == np.ndarray
 
+    def test_depict_and_resize_pikachu(self):
+        # Assert that an image is returned with different types
+        # of input SMILES str
+        test_smiles = ['c1ccccc1',
+                       '[R1]C1=C([X23])C([R])=C([Z])C([X])=C1[R]']
+        for smiles in test_smiles:
+            im = self.depictor.depict_and_resize_pikachu(smiles)
+            assert type(im) == np.ndarray
+
+    def test_get_depiction_functions_normal(self):
+        # For a molecule without isotopes or R groups, all toolkits can be used 
+        observed = self.depictor.get_depiction_functions('c1ccccc1C(O)=O')
+        expected =  [
+            self.depictor.depict_and_resize_rdkit,
+            self.depictor.depict_and_resize_indigo,
+            self.depictor.depict_and_resize_cdk,
+            self.depictor.depict_and_resize_pikachu,
+        ]
+        assert observed == expected
+    def test_get_depiction_functions_isotopes(self):
+        # PIKAChU can't handle isotopes
+        observed = self.depictor.get_depiction_functions("[13CH3]N1C=NC2=C1C(=O)N(C(=O)N2C)C")
+        expected =  [
+            self.depictor.depict_and_resize_rdkit,
+            self.depictor.depict_and_resize_indigo,
+            self.depictor.depict_and_resize_cdk,
+        ]
+        assert observed == expected
+    def test_get_depiction_functions_R(self):
+        # RDKit depicts "R" without indices as '*' (which is not desired)
+        observed = self.depictor.get_depiction_functions("[R]N1C=NC2=C1C(=O)N(C(=O)N2C)C")
+        expected =  [
+            self.depictor.depict_and_resize_indigo,
+            self.depictor.depict_and_resize_cdk,
+            self.depictor.depict_and_resize_pikachu,
+            ]
+        assert observed == expected
+
+    def test_get_depiction_functions_X(self):
+        # RDKit and Indigo don't depict "X"
+        observed = self.depictor.get_depiction_functions("[X]N1C=NC2=C1C(=O)N(C(=O)N2C)C")
+        expected =  [
+            self.depictor.depict_and_resize_cdk,
+            self.depictor.depict_and_resize_pikachu,
+            ]
+        assert observed == expected
+
+        
+
     def test_smiles_to_mol_str(self):
         # Compare generated mol file str with reference string
         mol_str = self.depictor.smiles_to_mol_str("CC")
