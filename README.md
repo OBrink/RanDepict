@@ -11,7 +11,7 @@
 
 ![GitHub Logo](https://github.com/OBrink/RanDepict/blob/main/RanDepict/logo_bg_white-1.png?raw=true)
 
-This repository contains RanDepict, an easy-to-use utility to generate a big variety of chemical structure depictions (random depiction styles and image augmentations) based on RDKit, CDK and Indigo.
+This repository contains RanDepict, an easy-to-use utility to generate a big variety of chemical structure depictions (random depiction styles and image augmentations) based on RDKit, CDK, Indigo and PIKAChU.
 
 ## Usage
 -  To use RanDepict, clone the repository to your local disk and make sure you install all the necessary requirements.
