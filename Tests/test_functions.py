@@ -1,4 +1,4 @@
-from RanDepict import RandomDepictor, DepictionFeatureRanges
+from RanDepict import RandomDepictor, DepictionFeatureRanges, RandomMarkushStructureCreator
 from rdkit import DataStructs
 import numpy as np
 import os
@@ -171,44 +171,44 @@ class TestDepictionFeatureRanges:
         # Assert that a diverse subset is picked when less than the
         # available amount of fingerprints is picked
         example_pool = np.array(
-                        [[1, 0, 0],
-                        [1, 0, 0],
-                        [1, 0, 0],
-                        [0, 1, 0],
-                        [0, 0, 1]])
+            [[1, 0, 0],
+             [1, 0, 0],
+             [1, 0, 0],
+             [0, 1, 0],
+             [0, 0, 1]])
         number = 3
         expected_subset = np.array(
-                          [[1, 0, 0],
-                           [0, 1, 0],
-                           [0, 0, 1]])
+            [[1, 0, 0],
+             [0, 1, 0],
+             [0, 0, 1]])
         actual_subset = self.DFR.pick_fingerprints(example_pool, number)
-        
+
         assert np.array_equal(actual_subset, expected_subset)
 
     def test_pick_fingerprints_big_number(self):
         # Assert that a diverse subset is picked when more than the
         # available amount of fingerprints is picked
         example_pool = np.array(
-                        [[1, 0, 0],
-                        [1, 0, 0],
-                        [1, 0, 0],
-                        [0, 1, 0],
-                        [0, 0, 1]])
+            [[1, 0, 0],
+             [1, 0, 0],
+             [1, 0, 0],
+             [0, 1, 0],
+             [0, 0, 1]])
         number = 8
         expected_subset = np.array(
-                          [[1, 0, 0],
-                           [1, 0, 0],
-                           [1, 0, 0],
-                           [0, 1, 0],
-                           [0, 0, 1],
-                           [1, 0, 0],
-                           [0, 1, 0],
-                           [0, 0, 1]])
+            [[1, 0, 0],
+             [1, 0, 0],
+             [1, 0, 0],
+             [0, 1, 0],
+             [0, 0, 1],
+             [1, 0, 0],
+             [0, 1, 0],
+             [0, 0, 1]])
         actual_subset = self.DFR.pick_fingerprints(example_pool, number)
         assert np.array_equal(actual_subset, expected_subset)
-        
+
     def test_pick_fingerprints_big_number_indigo(self):
-        # Assert that picking given amount of fingerprints from an actual 
+        # Assert that picking given amount of fingerprints from an actual
         # fingerprint pool works when it is bigger than the pool itself
         example_pool = self.DFR.Indigo_fingerprints
         number = 1000
@@ -289,44 +289,44 @@ class TestRandomDepictor:
             assert type(im) == np.ndarray
 
     def test_get_depiction_functions_normal(self):
-        # For a molecule without isotopes or R groups, all toolkits can be used 
+        # For a molecule without isotopes or R groups, all toolkits can be used
         observed = self.depictor.get_depiction_functions('c1ccccc1C(O)=O')
-        expected =  [
+        expected = [
             self.depictor.depict_and_resize_rdkit,
             self.depictor.depict_and_resize_indigo,
             self.depictor.depict_and_resize_cdk,
             self.depictor.depict_and_resize_pikachu,
         ]
         assert observed == expected
+
     def test_get_depiction_functions_isotopes(self):
         # PIKAChU can't handle isotopes
         observed = self.depictor.get_depiction_functions("[13CH3]N1C=NC2=C1C(=O)N(C(=O)N2C)C")
-        expected =  [
+        expected = [
             self.depictor.depict_and_resize_rdkit,
             self.depictor.depict_and_resize_indigo,
             self.depictor.depict_and_resize_cdk,
         ]
         assert observed == expected
+
     def test_get_depiction_functions_R(self):
         # RDKit depicts "R" without indices as '*' (which is not desired)
         observed = self.depictor.get_depiction_functions("[R]N1C=NC2=C1C(=O)N(C(=O)N2C)C")
-        expected =  [
+        expected = [
             self.depictor.depict_and_resize_indigo,
             self.depictor.depict_and_resize_cdk,
             self.depictor.depict_and_resize_pikachu,
-            ]
+        ]
         assert observed == expected
 
     def test_get_depiction_functions_X(self):
         # RDKit and Indigo don't depict "X"
         observed = self.depictor.get_depiction_functions("[X]N1C=NC2=C1C(=O)N(C(=O)N2C)C")
-        expected =  [
+        expected = [
             self.depictor.depict_and_resize_cdk,
             self.depictor.depict_and_resize_pikachu,
-            ]
+        ]
         assert observed == expected
-
-        
 
     def test_smiles_to_mol_str(self):
         # Compare generated mol file str with reference string
@@ -350,11 +350,10 @@ class TestRandomDepictor:
             "[R0]C1=C([R12])C([R1])=C([R3])C([R12])=C1[R]",
             "[X]C1=C([Y])C([Z])=C([R3])C([R12])=C1[R]",
             "[Otto]C1=C([Z])C([R1])=C([Y])C([X1])=C1[R]"
-            ]
+        ]
         for smiles in smiles_list:
-                im = self.depictor.random_depiction(smiles)
-                assert type(im) == np.ndarray
-
+            im = self.depictor.random_depiction(smiles)
+            assert type(im) == np.ndarray
 
     def test_has_r_group(self):
         # Test samples SMILES
@@ -364,3 +363,68 @@ class TestRandomDepictor:
         assert self.depictor.has_r_group("c1ccccc1([Z])")
         assert not self.depictor.has_r_group("[Cl]CC[Br]COC")
 
+
+class TestRandomMarkushStructureCreator:
+    """
+    Unit tests for methods of RandomMarkushStructureCreator
+    """
+    depictor = RandomDepictor()
+    markush_creator = RandomMarkushStructureCreator()
+
+    def test_generate_markush_structure_dataset(test):
+        pass
+
+    # TODO: adapt this name match function to test if an adapted SMILES 
+    # contains everything is contained before
+    def journal_name_match(self, str_1: str, str_2: str)-> bool:
+        """
+        This function takes two strings and determines whether all letters from the
+        shorter string appear in the longer string in the same order. If the condition
+        is fulfilled, it returns True.
+        """
+        # Normalise input strings while only considering alphabetic characters
+        str_1 = ''.join(re.findall('[A-Za-z]+', str_1)).lower()
+        str_2 = ''.join(re.findall('[A-Za-z]+', str_2)).lower()
+        longer_str = max([str_1, str_2], key=len)
+        shorter_str = min([str_1, str_2], key=len)
+
+        index = 0
+        reconstr_shorter_str = ''
+        # Check if chars from shorter str can be matched with longer str in right order
+        for short_char in shorter_str:
+            for long_char_index in range(index, len(longer_str)):
+                if short_char == longer_str[long_char_index]:
+                    index = long_char_index + 1
+                    reconstr_shorter_str += short_char
+                    break
+        if reconstr_shorter_str == shorter_str:
+            return True
+
+    def test_insert_R_group_var(self):
+        input_smiles = "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
+        output_smiles = self.markush_creator.insert_R_group_var(input_smiles, 3)
+        # TODO: Replace with function above
+        assert input_smiles == output_smiles
+        # Assert that something has been inserted
+        assert len(output_smiles) > len(input_smiles)
+        # Assert that an R group has been inserted
+        assert self.depictor.has_r_group(output_smiles)
+        # Assert that the output SMILES str leads is depicted by RanDepict
+        for _ in range(10):
+            depiction = self.depictor.random_depiction(output_smiles)
+            assert type(depiction) == np.ndarray
+
+    def test_get_valid_insert_positions_simple_chain(self):
+        observed = self.markush_creator.get_valid_insert_positions("CCCCCC")
+        expected = list(range(6 + 1))
+        assert observed == expected
+
+    def test_get_valid_insert_positions_ring(self):
+        observed = self.markush_creator.get_valid_insert_positions("C1CCCCC1")
+        expected = [0, 2, 3, 4, 5, 6, 8]
+        assert observed == expected
+
+    def test_get_valid_insert_positions_caffeine(self):
+        observed = self.markush_creator.get_valid_insert_positions("CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
+        expected = [0, 1, 3, 4, 5, 6, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28]
+        assert observed == expected

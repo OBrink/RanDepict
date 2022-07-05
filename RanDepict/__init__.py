@@ -28,4 +28,4 @@ __all__ = [
 ]
 
 
-from .randepict import RandomDepictor, DepictionFeatures, DepictionFeatureRanges
+from .randepict import RandomDepictor, DepictionFeatureRanges, RandomMarkushStructureCreator

@@ -20,7 +20,7 @@ from rdkit.Chem.rdAbbreviations import GetDefaultAbbreviations
 from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit import DataStructs
 from rdkit.SimDivFilters.rdSimDivPickers import MaxMinPicker
-from itertools import product
+from itertools import cycle, product
 
 from indigo import Indigo
 from indigo.renderer import IndigoRenderer
@@ -2515,3 +2515,120 @@ class DepictionFeatureRanges(RandomDepictor):
         return output
 
 
+class RandomMarkushStructureCreator:
+
+    def __init__(self, *args):
+        """
+        RandomMarkushStructureCreator objects are instantiated with the desired
+        inserted R group variables. Otherwise, "R", "X" and "Z" are used.
+        """
+        # Instantiate RandomDepictor for reproducible random decisions
+        self.depictor = RandomDepictor()
+        # Define R group variables
+        if not args:
+            self.r_group_variables = ['R', 'X', 'Z']
+        else:
+            self.r_group_variables = list(args)
+
+        self.potential_indices = range(100)
+
+    def generate_markush_structure_dataset(self, smiles: List[str]):
+        pass
+
+    def insert_R_group_var(self, smiles: str, num: int) -> str:
+        """
+        This function takes a smiles string and a number of R group variables. It then
+        inserts the given number of R groups in the SMILES and returns it.
+
+        Args:
+            smiles (str): SMILES representation of a molecule
+            num (int): number of R group variables to be inserted
+
+        Returns:
+            smiles (str): input SMILES with $num inserted R group variables
+        """
+        potential_insert_positions = self.get_valid_insert_positions(smiles)
+        # Get lists of insertion positions and R group strings
+        positions = []
+        r_group_smiles = []
+        for _ in range(num):
+            # ___________________________________________
+            # TODO: Cover case of very short input smiles
+            # ___________________________________________
+            position = self.depictor.random_choice(potential_insert_positions)
+            positions.append(position)
+            potential_insert_positions.remove(position)
+            r_group_smiles.append(self.get_r_group_smiles())
+        positions = sorted(positions)
+
+        reassembled_smiles = ""
+        last_position = 0
+        for index in range(len(positions)):
+            # Insertion in last position
+            # This automatically means it is the last element
+            if positions[index] == len(smiles):
+                if len(positions) == 1:
+                    return smiles + r_group_smiles[index]
+                else:
+                    return reassembled_smiles + r_group_smiles[index]
+            # Last insertion
+            elif index == len(positions) - 1:
+                # Last and only insertion
+                if len(positions) == 1:
+                    reassembled_smiles = smiles[:positions[index]]
+                    reassembled_smiles += r_group_smiles[index]
+                    reassembled_smiles += smiles[positions[index]:]
+                # Last insertion after other insertions
+                else:
+                    reassembled_smiles += r_group_smiles[index] + smiles[positions[index]:]
+            else:
+                reassembled_smiles += smiles[last_position:positions[index]] + r_group_smiles[index]
+            last_position = positions[index]
+        return reassembled_smiles
+
+    def get_r_group_smiles(self) -> str:
+        """
+        This function returns a random R group substring that can be inserted
+        into an existing SMILES str.
+
+        Returns:
+            str: SMILES compatible of R group str
+        """
+        is_branched = self.depictor.random_choice([True, False])
+        has_indices = self.depictor.random_choice([True, False])
+        r_group_var = self.depictor.random_choice(self.r_group_variables)
+        if has_indices:
+            index = self.depictor.random_choice(self.potential_indices)
+            if is_branched:
+                return f'([{r_group_var}{index}])'
+            else:
+                return f'[{r_group_var}{index}]'
+        else:
+            if is_branched:
+                return f'([{r_group_var}])'
+            else:
+                return f'[{r_group_var}]'
+
+    def get_valid_insert_positions(self, smiles: str) -> List[int]:
+        """
+        Returns positions in a SMILES str where R groups can be inserted without
+        endangering its validity
+
+        Args:
+            smiles (str): SMILES representation of a molecule
+
+        Returns:
+            insert_positions (List[int]): valid insertion positions for R group variables
+        """
+        # Add space char to represent insertion position at the end of smiles str
+        smiles = f'{smiles} '
+        insert_positions = []
+        for index in range(len(smiles)):
+            # Be aware of digits --> don't destroy ring syntax
+            if not smiles[index].isdigit():
+                insert_positions.append(index)
+
+        return insert_positions
+
+    def generate_dataset_from_file():
+        pass
