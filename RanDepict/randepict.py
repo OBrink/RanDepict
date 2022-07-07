@@ -2594,7 +2594,7 @@ class RandomMarkushStructureCreator:
         Returns:
             str: SMILES compatible of R group str
         """
-        has_indices = self.depictor.random_choice([True, False])
+        has_indices = self.depictor.random_choice([True, True, True, True, False])
         r_group_var = self.depictor.random_choice(self.r_group_variables)
         if has_indices:
             index = self.depictor.random_choice(self.potential_indices)

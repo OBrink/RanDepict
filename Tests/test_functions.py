@@ -1,7 +1,6 @@
 from RanDepict import RandomDepictor, DepictionFeatureRanges, RandomMarkushStructureCreator
 from rdkit import DataStructs
 import numpy as np
-import re
 
 
 class TestDepictionFeatureRanges:
