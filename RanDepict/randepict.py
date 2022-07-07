@@ -768,11 +768,11 @@ class RandomDepictor:
             IAtomContainer: CDK IAtomContainer object that represents the molecule
         """
         cdk_base = "org.openscience.cdk"
-        SCOB = JClass(cdk_base + ".silent.SilentChemObjectBuilder")
+        DCOB = JClass(cdk_base + ".DefaultChemObjectBuilder")
         SmilesParser = JClass(
             cdk_base +
             ".smiles.SmilesParser")(
-            SCOB.getInstance())
+            DCOB.getInstance())
         if self.random_choice([True, False, False],
                               log_attribute="cdk_kekulized"):
             SmilesParser.kekulise(False)
@@ -925,14 +925,17 @@ class RandomDepictor:
             depiction_functions.remove(self.depict_and_resize_pikachu)
         if self.has_r_group(smiles):
             # PIKAChU only accepts \[[RXZ]\d*\]
-            if not re.search('\[[RXZ]\d*\]', smiles):
-                depiction_functions.remove(self.depict_and_resize_pikachu)
+            squared_bracket_content = re.findall('\[.+?\]', smiles)
+            for r_group in squared_bracket_content:
+                if not re.search('\[[RXZ]\d*\]', r_group):
+                    if self.depict_and_resize_pikachu in depiction_functions:
+                        depiction_functions.remove(self.depict_and_resize_pikachu)
             # "R", "X", "Z" are not depicted by RDKit
             # The same is valid for X,Y,Z and a number
             if re.search('\[[RXZ]\]|\[[XYZ]\d+', smiles):
                 depiction_functions.remove(self.depict_and_resize_rdkit)
-            # "X", "R0" are not depicted by Indigo
-            if re.search('\[R0\]|\[X\]', smiles):
+            # "X", "R0" and indices above 32 are not depicted by Indigo
+            if re.search('\[R0\]|\[X\]|[4-9][0-9]+|3[3-9]', smiles):
                 depiction_functions.remove(self.depict_and_resize_indigo)
         return depiction_functions
 
@@ -2515,11 +2518,158 @@ class DepictionFeatureRanges(RandomDepictor):
         return output
 
 
-class DepictionFeatures:
-    """
-    A DepictionFeatures objects simply holds all depiction parameters
-    of a chemical structure depiction generated with RanDepict
-    """
+class RandomMarkushStructureCreator:
 
-    def __init__(self):
-        pass
+    def __init__(self, *args):
+        """
+        RandomMarkushStructureCreator objects are instantiated with the desired
+        inserted R group variables. Otherwise, "R", "X" and "Z" are used.
+        """
+        # Instantiate RandomDepictor for reproducible random decisions
+        self.depictor = RandomDepictor()
+        # Define R group variables
+        if not args:
+            self.r_group_variables = ['R', 'X', 'Z']
+        else:
+            self.r_group_variables = list(args)
+
+        self.potential_indices = range(99)
+
+    def generate_markush_structure_dataset(self, smiles_list: List[str]) -> List[str]:
+        """
+        This function takes a list of SMILES, replaces 1-4 carbon or hydrogen atoms per
+        molecule with R groups and returns the resulting list of SMILES.
+
+        Args:
+            smiles_list (List[str]): SMILES representations of molecules
+
+        Returns:
+            List[str]: SMILES reprentations of markush structures
+        """
+        numbers = [self.depictor.random_choice(range(1, 5)) for _ in smiles_list]
+        r_group_smiles = [self.insert_R_group_var(smiles_list[index], numbers[index])
+                          for index in range(len(smiles_list))]
+        return r_group_smiles
+
+    def insert_R_group_var(self, smiles: str, num: int) -> str:
+        """
+        This function takes a smiles string and a number of R group variables. It then
+        replaces the given number of H or C atoms with R groups and returns the SMILES str.
+
+        Args:
+            smiles (str): SMILES (absolute) representation of a molecule
+            num (int): number of R group variables to be inserted
+
+        Returns:
+            smiles (str): input SMILES with $num inserted R group variables
+        """
+        smiles = self.add_explicite_hydrogen_to_smiles(smiles)
+        potential_replacement_positions = self.get_valid_replacement_positions(smiles)
+        r_groups = []
+        # Replace C or H in SMILES with *
+        # If we would directly insert the R group variables, CDK would replace them with '*'
+        # later when removing the explicite hydrogen atoms
+        smiles = list(smiles)
+        for _ in range(num):
+            if len(potential_replacement_positions) > 0:
+                position = self.depictor.random_choice(potential_replacement_positions)
+                smiles[position] = '*'
+                potential_replacement_positions.remove(position)
+                r_groups.append(self.get_r_group_smiles())
+            else:
+                break
+        # Remove explicite hydrogen again and get absolute SMILES
+        smiles = ''.join(smiles)
+        smiles = self.remove_explicite_hydrogen_from_smiles(smiles)
+        # Replace * with R groups
+        for r_group in r_groups:
+            smiles = smiles.replace('*', r_group, 1)
+        return smiles
+
+    def get_r_group_smiles(self) -> str:
+        """
+        This function returns a random R group substring that can be inserted
+        into an existing SMILES str.
+
+        Returns:
+            str: SMILES compatible of R group str
+        """
+        has_indices = self.depictor.random_choice([True, True, True, True, False])
+        r_group_var = self.depictor.random_choice(self.r_group_variables)
+        if has_indices:
+            index = self.depictor.random_choice(self.potential_indices)
+            return f'[{r_group_var}{index}]'
+        else:
+            return f'[{r_group_var}]'
+
+    def get_valid_replacement_positions(self, smiles: str) -> List[int]:
+        """
+        Returns positions in a SMILES str where elements in the str can be replaced with
+        R groups without endangering its validity
+
+        Args:
+            smiles (str): SMILES representation of a molecule
+
+        Returns:
+            replacement_positions (List[int]): valid replacement positions for R group variables
+        """
+        # Add space char to represent insertion position at the end of smiles str
+        smiles = f'{smiles} '
+        replacement_positions = []
+        for index in range(len(smiles)):
+            # Be aware of digits --> don't destroy ring syntax
+            if not smiles[index].isdigit():
+                if smiles[index - 1] == "H":
+                    if smiles[index] == ']':
+                        replacement_positions.append(index - 1)
+                # Only replace "C" and "H"
+                elif smiles[index - 1] == "C":
+                    replacement_positions.append(index - 1)
+        return replacement_positions
+
+    def add_explicite_hydrogen_to_smiles(self, smiles: str) -> str:
+        """
+        This function takes a SMILES str and uses CDK to add explicite hydrogen atoms.
+        It returns an adapted version of the SMILES str.
+
+        Args:
+            smiles (str): SMILES representation of a molecule
+
+        Returns:
+            smiles (str): SMILES representation of a molecule with explicite H
+        """
+        i_atom_container = self.depictor.cdk_smiles_to_IAtomContainer(smiles)
+
+        # Add explicite hydrogen atoms
+        cdk_base = "org.openscience.cdk."
+        manipulator = JClass(cdk_base + "tools.manipulator.AtomContainerManipulator")
+        manipulator.convertImplicitToExplicitHydrogens(i_atom_container)
+
+        # Create absolute SMILES
+        smi_flavor = JClass("org.openscience.cdk.smiles.SmiFlavor").Absolute
+        smiles_generator = JClass("org.openscience.cdk.smiles.SmilesGenerator")(smi_flavor)
+        smiles = smiles_generator.create(i_atom_container)
+        return str(smiles)
+
+    def remove_explicite_hydrogen_from_smiles(self, smiles: str) -> str:
+        """
+        This function takes a SMILES str and uses CDK to remove explicite hydrogen atoms.
+        It returns an adapted version of the SMILES str.
+
+        Args:
+            smiles (str): SMILES representation of a molecule
+
+        Returns:
+            smiles (str): SMILES representation of a molecule with explicite H
+        """
+        i_atom_container = self.depictor.cdk_smiles_to_IAtomContainer(smiles)
+        # Remove explicite hydrogen atoms
+        cdk_base = "org.openscience.cdk."
+        manipulator = JClass(cdk_base + "tools.manipulator.AtomContainerManipulator")
+        i_atom_container = manipulator.copyAndSuppressedHydrogens(i_atom_container)
+        # Create absolute SMILES
+        smi_flavor = JClass("org.openscience.cdk.smiles.SmiFlavor").Absolute
+        smiles_generator = JClass("org.openscience.cdk.smiles.SmilesGenerator")(smi_flavor)
+        smiles = smiles_generator.create(i_atom_container)
+        return str(smiles)
+
