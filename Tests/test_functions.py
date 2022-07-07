@@ -1,7 +1,7 @@
 from RanDepict import RandomDepictor, DepictionFeatureRanges, RandomMarkushStructureCreator
 from rdkit import DataStructs
 import numpy as np
-import os
+import re
 
 
 class TestDepictionFeatureRanges:
@@ -350,10 +350,12 @@ class TestRandomDepictor:
             "[R0]C1=C([R12])C([R1])=C([R3])C([R12])=C1[R]",
             "[X]C1=C([Y])C([Z])=C([R3])C([R12])=C1[R]",
             "[Otto]C1=C([Z])C([R1])=C([Y])C([X1])=C1[R]"
+            "CC(=[O+]C)CC"
         ]
         for smiles in smiles_list:
-            im = self.depictor.random_depiction(smiles)
-            assert type(im) == np.ndarray
+            for _ in range(5):
+                im = self.depictor.random_depiction(smiles)
+                assert type(im) == np.ndarray
 
     def test_has_r_group(self):
         # Test samples SMILES
@@ -371,60 +373,68 @@ class TestRandomMarkushStructureCreator:
     depictor = RandomDepictor()
     markush_creator = RandomMarkushStructureCreator()
 
-    def test_generate_markush_structure_dataset(test):
-        pass
+    def test_generate_markush_structure_dataset(self,):
+        smiles_list = ["CN1C=NC2=C1C(=O)N(C(=O)N2C)C",
+                       "C1CCCCC1N[C@](C)(F)C(=O)O",
+                       "C1CCCCC1"]
+        r_group_smiles_list = self.markush_creator.generate_markush_structure_dataset(smiles_list)
+        for smiles in r_group_smiles_list:
+            # Assert that every generated markush structure actually contains an R group
+            assert self.depictor.has_r_group(smiles)
+            # Assert that every generated markush structure can be depicted with RanDepict
+            for _ in range(5):
+                depiction = self.depictor.random_depiction(smiles)
+                assert type(depiction) == np.ndarray
 
-    # TODO: adapt this name match function to test if an adapted SMILES 
-    # contains everything is contained before
-    def journal_name_match(self, str_1: str, str_2: str)-> bool:
-        """
-        This function takes two strings and determines whether all letters from the
-        shorter string appear in the longer string in the same order. If the condition
-        is fulfilled, it returns True.
-        """
-        # Normalise input strings while only considering alphabetic characters
-        str_1 = ''.join(re.findall('[A-Za-z]+', str_1)).lower()
-        str_2 = ''.join(re.findall('[A-Za-z]+', str_2)).lower()
-        longer_str = max([str_1, str_2], key=len)
-        shorter_str = min([str_1, str_2], key=len)
-
-        index = 0
-        reconstr_shorter_str = ''
-        # Check if chars from shorter str can be matched with longer str in right order
-        for short_char in shorter_str:
-            for long_char_index in range(index, len(longer_str)):
-                if short_char == longer_str[long_char_index]:
-                    index = long_char_index + 1
-                    reconstr_shorter_str += short_char
-                    break
-        if reconstr_shorter_str == shorter_str:
-            return True
-
-    def test_insert_R_group_var(self):
+    def test_insert_R_group_var_contains_R(self):
+        # Assert that an R group has been inserted
         input_smiles = "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
         output_smiles = self.markush_creator.insert_R_group_var(input_smiles, 3)
-        # TODO: Replace with function above
-        assert input_smiles == output_smiles
-        # Assert that something has been inserted
-        assert len(output_smiles) > len(input_smiles)
-        # Assert that an R group has been inserted
         assert self.depictor.has_r_group(output_smiles)
+        
+    def test_insert_R_group_var_can_be_depicted(self):
+        # Assert that an R group has been inserted
+        input_smiles = "CN1C=NC2=C1C(=[O])N(C(=O)N2C)C"
+        output_smiles = self.markush_creator.insert_R_group_var(input_smiles, 3)
         # Assert that the output SMILES str leads is depicted by RanDepict
         for _ in range(10):
             depiction = self.depictor.random_depiction(output_smiles)
             assert type(depiction) == np.ndarray
 
-    def test_get_valid_insert_positions_simple_chain(self):
-        observed = self.markush_creator.get_valid_insert_positions("CCCCCC")
-        expected = list(range(6 + 1))
+    def test_add_explicite_hydrogen_to_smiles(self):
+        # Assert that hydrogen atoms are added
+        input_smiles = "CCC"
+        expected_output = "C([H])([H])([H])C([H])([H])C([H])([H])[H]"
+        observed_output = self.markush_creator.add_explicite_hydrogen_to_smiles(input_smiles)
+        assert expected_output == observed_output
+        
+    def test_remove_explicite_hydrogen_to_smiles(self):
+        # Assert that hydrogen atoms are removed
+        input_smiles = "C([H])([H])([H])C([H])([H])C([H])([H])[H]"
+        expected_output = "CCC"
+        observed_output = self.markush_creator.remove_explicite_hydrogen_from_smiles(input_smiles)
+        assert expected_output == observed_output
+    
+    def test_get_valid_replacement_positions_simple_chain(self):
+        # Simple example case
+        observed = self.markush_creator.get_valid_replacement_positions("CCCCCC")
+        expected = list(range(6))
+        assert observed == expected
+        
+    def test_get_valid_replacement_positions_with_hydrogen(self):
+        # Simple example case
+        observed = self.markush_creator.get_valid_replacement_positions("(H)(H)(H)CO(H)")
+        expected = [1, 4, 7, 9, 12]
         assert observed == expected
 
-    def test_get_valid_insert_positions_ring(self):
-        observed = self.markush_creator.get_valid_insert_positions("C1CCCCC1")
-        expected = [0, 2, 3, 4, 5, 6, 8]
+    def test_get_valid_replacement_positions_ring(self):
+        # Assert that ring syntax in SMILES remains intact
+        observed = self.markush_creator.get_valid_replacement_positions("C1CCCCC1")
+        expected = [2, 3, 4, 5]
         assert observed == expected
 
-    def test_get_valid_insert_positions_caffeine(self):
-        observed = self.markush_creator.get_valid_insert_positions("CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
-        expected = [0, 1, 3, 4, 5, 6, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28]
+    def test_get_valid_replacement_positions_caffeine(self):
+        # More complex example
+        observed = self.markush_creator.get_valid_replacement_positions("CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
+        expected = [0, 3, 11, 18, 25, 27]
         assert observed == expected
