@@ -423,8 +423,8 @@ class TestRandomMarkushStructureCreator:
         
     def test_get_valid_replacement_positions_with_hydrogen(self):
         # Simple example case
-        observed = self.markush_creator.get_valid_replacement_positions("(H)(H)(H)CO(H)")
-        expected = [1, 4, 7, 9, 12]
+        observed = self.markush_creator.get_valid_replacement_positions("([H])([H])([H])CO([H])")
+        expected = [2, 7, 12, 15, 19]
         assert observed == expected
 
     def test_get_valid_replacement_positions_ring(self):

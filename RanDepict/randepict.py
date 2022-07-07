@@ -2619,11 +2619,12 @@ class RandomMarkushStructureCreator:
         for index in range(len(smiles)):
             # Be aware of digits --> don't destroy ring syntax
             if not smiles[index].isdigit():
-                if smiles[index] == ']':
-                    # Only replace "C" and "H"
-                    if smiles[index - 1] in ["C", "H"]:
+                if smiles[index - 1] == "H":
+                    if smiles[index] == ']':
                         replacement_positions.append(index - 1)
-
+                # Only replace "C" and "H"
+                elif smiles[index - 1] == "C":
+                    replacement_positions.append(index - 1)
         return replacement_positions
 
     def add_explicite_hydrogen_to_smiles(self, smiles: str) -> str:
