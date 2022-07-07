@@ -2672,4 +2672,3 @@ class RandomMarkushStructureCreator:
         smiles_generator = JClass("org.openscience.cdk.smiles.SmilesGenerator")(smi_flavor)
         smiles = smiles_generator.create(i_atom_container)
         return str(smiles)
-
