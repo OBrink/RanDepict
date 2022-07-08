@@ -2533,7 +2533,7 @@ class RandomMarkushStructureCreator:
         else:
             self.r_group_variables = list(args)
 
-        self.potential_indices = range(99)
+        self.potential_indices = range(21)
 
     def generate_markush_structure_dataset(self, smiles_list: List[str]) -> List[str]:
         """
