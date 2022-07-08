@@ -2624,7 +2624,10 @@ class RandomMarkushStructureCreator:
                         replacement_positions.append(index - 1)
                 # Only replace "C" and "H"
                 elif smiles[index - 1] == "C":
-                    replacement_positions.append(index - 1)
+                    # Don't replace "C" in "Cl", "Ca", Cu", etc...
+                    if smiles[index] not in ['s', 'a', 'e', 'o', 'u',
+                                             'r', 'l', 'f', 'd', 'n']:
+                        replacement_positions.append(index - 1)
         return replacement_positions
 
     def add_explicite_hydrogen_to_smiles(self, smiles: str) -> str:
