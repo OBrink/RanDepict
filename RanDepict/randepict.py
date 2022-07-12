@@ -991,7 +991,7 @@ class RandomDepictor:
             image = image = image.resize(
                 shape, resample=self.random_choice(self.PIL_HQ_resize_methods)
             )
-        
+
         return np.asarray(image)
 
     def imgaug_augment(
