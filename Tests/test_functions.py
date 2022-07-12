@@ -392,7 +392,6 @@ class TestRandomMarkushStructureCreator:
         assert self.depictor.has_r_group(output_smiles)
         
     def test_insert_R_group_var_can_be_depicted(self):
-        # Assert that an R group has been inserted
         input_smiles = "ClCN1C=NC2=C1C(=[O])N(C(=O)N2C)CCl"
         output_smiles = self.markush_creator.insert_R_group_var(input_smiles, 3)
         # Assert that the output SMILES str leads is depicted by RanDepict
