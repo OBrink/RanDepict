@@ -231,7 +231,7 @@ class RandomDepictor:
         else:
             drawer = drawing.Drawer(structure, options=depiction_settings)
         depiction = drawer.get_image_as_array()
-
+        depiction = self.central_square_image(depiction)
         depiction = self.resize(depiction, (shape[0], shape[1]))
         return depiction
 
