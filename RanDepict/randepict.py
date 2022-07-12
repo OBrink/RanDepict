@@ -197,12 +197,12 @@ class RandomDepictor:
         """
         options = drawing.Options()
         options.height, options.width = shape
-        options.bond_thickness = self.random_choice(np.arange(0.5, 2.5, 0.1))
+        options.bond_thickness = self.random_choice(np.arange(0.5, 2.2, 0.1))
         options.bond_length = self.random_choice(np.arange(10, 25, 1))
         options.chiral_bond_width = options.bond_length * self.random_choice(np.arange(0.05, 0.2, 0.01))
         options.short_bond_length = self.random_choice(np.arange(0.2, 0.6, 0.05))
         options.double_bond_length = self.random_choice(np.arange(0.6, 0.8, 0.05))
-        options.bond_spacing = options.bond_length * self.random_choice(np.arange(0.1, 0.28, 0.01))
+        options.bond_spacing = options.bond_length * self.random_choice(np.arange(0.15, 0.28, 0.01))
         options.padding = self.random_choice(np.arange(10, 50, 5))
         # options.font_size_large = 5
         # options.font_size_small = 3
