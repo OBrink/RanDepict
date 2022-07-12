@@ -82,6 +82,8 @@ class RandomDepictor:
             Image.LANCZOS,
         ]
 
+        self.PIL_HQ_resize_methods = self.PIL_resize_methods[4:]
+
         self.from_fingerprint = False
         self.depiction_features = False
 
@@ -730,8 +732,8 @@ class RandomDepictor:
         # Make image twice as big, reduce Zoom factor, then remove white
         # areas at borders and resize to originally desired shape
         # TODO: Find out why the structures are cut off in the first place
-        y = y * 2
-        x = x * 2
+        y = y * 4
+        x = x * 4
 
         drawArea = JClass("java.awt.Rectangle")(x, y)
         BufferedImage = JClass("java.awt.image.BufferedImage")
@@ -750,7 +752,7 @@ class RandomDepictor:
             JClass(
                 cdk_base +
                 ".renderer.generators.BasicSceneGenerator.ZoomFactor"),
-            double(0.75),
+            double(1.0),
         )
         g2 = image.getGraphics()
         g2.setColor(JClass("java.awt.Color").WHITE)
@@ -776,7 +778,7 @@ class RandomDepictor:
         # Normalise padding and get non-distorted image of right size
         depiction = self.normalise_padding(depiction)
         depiction = self.central_square_image(depiction)
-        depiction = self.resize(depiction, shape)
+        depiction = self.resize(depiction, shape, HQ=True)
         depiction = img_as_ubyte(depiction)
         return depiction
 
@@ -963,7 +965,7 @@ class RandomDepictor:
                 depiction_functions.remove(self.depict_and_resize_indigo)
         return depiction_functions
 
-    def resize(self, image: np.array, shape: Tuple[int]) -> np.array:
+    def resize(self, image: np.array, shape: Tuple[int], HQ: bool = False) -> np.array:
         """
         This function takes an image (np.array) and a shape and returns
         the resized image (np.array). It uses Pillow to do this, as it
@@ -973,6 +975,7 @@ class RandomDepictor:
         Args:
             image (np.array): the input image
             shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+            HQ (bool): if true, only choose from Image.BICUBIC, Image.LANCZOS
         ___
         Returns:
             np.array: the resized image
@@ -980,9 +983,15 @@ class RandomDepictor:
         """
         image = Image.fromarray(image)
         shape = (shape[0], shape[1])
-        image = image.resize(
-            shape, resample=self.random_choice(self.PIL_resize_methods)
-        )
+        if not HQ:
+            image = image.resize(
+                shape, resample=self.random_choice(self.PIL_resize_methods)
+            )
+        else:
+            image = image = image.resize(
+                shape, resample=self.random_choice(self.PIL_HQ_resize_methods)
+            )
+        
         return np.asarray(image)
 
     def imgaug_augment(
