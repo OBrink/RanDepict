@@ -184,6 +184,17 @@ class RandomDepictor:
     def get_random_pikachu_rendering_settings(
         self, shape: Tuple[int, int] = (299, 299)
     ) -> drawing.Options:
+        """
+        This function defines random rendering options for the structure
+        depictions created using PIKAChU.
+        It returns an pikachu.drawing.drawing.Options object with the settings.
+
+        Args:
+            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+
+        Returns:
+            options: Options object that contains depictions settings
+        """
         options = drawing.Options()
         options.height, options.width = shape
         options.bond_thickness = self.random_choice(np.arange(0.5, 2.5, 0.1))
@@ -200,6 +211,19 @@ class RandomDepictor:
     def depict_and_resize_pikachu(
         self, smiles: str, shape: Tuple[int, int] = (299, 299)
     ) -> np.array:
+        """
+        This function takes a smiles str and an image shape.
+        It renders the chemical structures using PIKAChU with random
+        rendering/depiction settings and returns an RGB image (np.array)
+        with the given image shape.
+
+        Args:
+            smiles (str): SMILES representation of molecule
+            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+
+        Returns:
+            np.array: Chemical structure depiction
+        """
         structure = read_smiles(smiles)
         depiction_settings = self.get_random_pikachu_rendering_settings()
         if '.' in smiles:
