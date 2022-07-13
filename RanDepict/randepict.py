@@ -30,6 +30,11 @@ from pikachu.drawing import drawing
 from pikachu.smiles.smiles import read_smiles
 import base64
 
+import cv2
+from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage.interpolation import map_coordinates
+from PIL import Image, ImageEnhance
+
 
 class RandomDepictor:
     """
@@ -39,7 +44,7 @@ class RandomDepictor:
     the RGB image with the given chemical structure.
     """
 
-    def __init__(self, seed: int = 42):
+    def __init__(self, seed: int = 42, hand_drawn: bool = False):
         """
         Load the JVM only once, load superatom list (OSRA),
         set context for multiprocessing
@@ -65,6 +70,7 @@ class RandomDepictor:
                      "-Djava.class.path=" + str(self.jar_path))
 
         self.seed = seed
+        self.hand_drawn = hand_drawn
         random.seed(self.seed)
 
         # Load list of superatoms for label generation
@@ -98,11 +104,16 @@ class RandomDepictor:
         smiles: str,
         shape: Tuple[int, int, int] = (299, 299),
         grayscale: bool = False,
+        hand_drawn: bool = False,
     ):
         # Depict structure with random parameters
-        depiction = self.random_depiction(smiles, shape)
-        # Add augmentations
-        depiction = self.add_augmentations(depiction)
+        hand_drawn = self.hand_drawn
+        if hand_drawn:
+            depiction = self.random_depiction(smiles, shape)
+        else:
+            depiction = self.random_depiction(smiles, shape)
+            # Add augmentations
+            depiction = self.add_augmentations(depiction)
 
         if grayscale:
             return self.to_grayscale_float_img(depiction)
@@ -209,6 +220,438 @@ class RandomDepictor:
         # options.font_size_large = 5
         # options.font_size_small = 3
         return options
+
+    def hand_drawn_augment(
+        self, img
+    ) -> np.array:
+        """
+        This function randomly applies different image augmentations with
+        different probabilities to the input image.
+
+        It has been modified from the original augment.py present on
+        https://github.com/mtzgroup/ChemPixCH
+
+        From the publication:
+        https://pubs.rsc.org/en/content/articlelanding/2021/SC/D1SC02957F
+
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the augmented image.
+        """
+        # resize
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.5:
+            img = self.resize_hd(img)
+        # blur
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.4:
+            img = self.blur(img)
+        # erode
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.4:
+            img = self.erode(img)
+        # dilate
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.4:
+            img = self.dilate(img)
+        # aspect_ratio
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.7:
+            img = self.aspect_ratio(img, "mol")
+        # affine
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.7:
+            img = self.affine(img, "mol")
+        # distort
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.8:
+            img = self.distort(img)
+        if img.shape != (255, 255, 3):
+            img = cv2.resize(img, (256, 256))
+        return img
+
+    def augment_bkg(
+        self, img
+    ) -> np.array:
+        """
+        This function randomly applies different image augmentations with
+        different probabilities to the input image.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the augmented image.
+        """
+        # rotate
+        img = rotate(img, "bkg")
+        # resize
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.5:
+            img = self.resize_hd(img)
+        # blur
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.4:
+            img = self.blur(img)
+        # erode
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.2:
+            img = self.erode(img)
+        # dilate
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.2:
+            img = self.dilate(img)
+        # aspect_ratio
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.3:
+            img = self.aspect_ratio(img, "bkg")
+        # affine
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.3:
+            img = self.affine(img, "bkg")
+        # distort
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.8:
+            img = self.distort(img)
+        if img.shape != (255, 255, 3):
+            img = cv2.resize(img, (256, 256))
+        return img
+
+    def resize_hd(
+        self, img
+    ) -> np.array:
+        """
+        This function resizes the image randomly from between (200-300, 200-300)
+        and then resizes it back to 256x256.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the resized image.
+        """
+        interpolations = [
+            cv2.INTER_NEAREST,
+            cv2.INTER_AREA,
+            cv2.INTER_LINEAR,
+            cv2.INTER_CUBIC,
+            cv2.INTER_LANCZOS4,
+        ]
+
+        img = cv2.resize(
+            img,
+            (self.random_choice(np.arange(200, 300)), self.random_choice(np.arange(200, 300))),
+            interpolation=self.random_choice(interpolations),
+        )
+        img = cv2.resize(img, (256, 256), interpolation=self.random_choice(interpolations))
+
+        return img
+
+    def blur(
+        self, img
+    ) -> np.array:
+        """
+        This function blurs the image randomly between 1-3.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the blurred image.
+        """
+        n = self.random_choice(np.arange(1, 4))
+        kernel = np.ones((n, n), np.float32) / n**2
+        img = cv2.filter2D(img, -1, kernel)
+        return img
+
+    def erode(
+        self, img
+    ) -> np.array:
+        """
+        This function bolds the image randomly between 1-2.
+        Args:
+           img: the image to modify in array format.
+        Returns:
+            img: the bold image.
+        """
+        n = self.random_choice(np.arange(1, 3))
+        kernel = np.ones((n, n), np.float32) / n**2
+        img = cv2.erode(img, kernel, iterations=1)
+        return img
+
+    def dilate(
+        self, img
+    ) -> np.array:
+        """
+        This function dilates the image with a factor of 2.
+        Args:
+           img: the image to modify in array format.
+        Returns:
+            img: the dilated image.
+        """
+        n = 2
+        kernel = np.ones((n, n), np.float32) / n**2
+        img = cv2.dilate(img, kernel, iterations=1)
+        return img
+
+    def aspect_ratio(
+        self, img, obj=None
+    ) -> np.array:
+        """
+        This function irregularly changes the size of the image
+        and converts it back to (256,256).
+        Args:
+            img: the image to modify in array format.
+            obj: "mol" or "bkg" to modify a chemical structure image or
+                 a background image.
+        Returns:
+            image: the resized image.
+        """
+        n1 = self.random_choice(np.arange(0, 50))
+        n2 = self.random_choice(np.arange(0, 50))
+        n3 = self.random_choice(np.arange(0, 50))
+        n4 = self.random_choice(np.arange(0, 50))
+        if obj == "mol":
+            image = cv2.copyMakeBorder(
+                img, n1, n2, n3, n4, cv2.BORDER_CONSTANT, value=[255, 255, 255]
+            )
+        elif obj == "bkg":
+            image = cv2.copyMakeBorder(img, n1, n2, n3, n4, cv2.BORDER_REFLECT)
+
+        image = cv2.resize(image, (256, 256))
+        return image
+
+    def affine(
+        self, img, obj=None
+    ) -> np.array:
+        """
+        This function randomly applies affine transformation which consists
+        of matrix rotations, translations and scale operations and converts
+        it back to (256,256).
+        Args:
+            img: the image to modify in array format.
+            obj: "mol" or "bkg" to modify a chemical structure image or
+                 a background image.
+        Returns:
+            skewed: the transformed image.
+        """
+        rows, cols, _ = img.shape
+        n = 20
+        pts1 = np.float32([[5, 50], [200, 50], [50, 200]])
+        pts2 = np.float32(
+            [
+                [5 + self.random_choice(np.arange(-n, n)), 50 + self.random_choice(np.arange(-n, n))],
+                [200 + self.random_choice(np.arange(-n, n)), 50 + self.random_choice(np.arange(-n, n))],
+                [50 + self.random_choice(np.arange(-n, n)), 200 + self.random_choice(np.arange(-n, n))],
+            ]
+        )
+
+        M = cv2.getAffineTransform(pts1, pts2)
+
+        if obj == "mol":
+            skewed = cv2.warpAffine(img, M, (cols, rows), borderValue=[255, 255, 255])
+        elif obj == "bkg":
+            skewed = cv2.warpAffine(img, M, (cols, rows), borderMode=cv2.BORDER_REFLECT)
+
+        skewed = cv2.resize(skewed, (256, 256))
+        return skewed
+
+    def elastic_transform(
+        self, image, alpha_sigma
+    ) -> np.array:
+        """
+        Elastic deformation of images as described in [Simard2003]_.
+        .. [Simard2003] Simard, Steinkraus and Platt, "Best Practices for
+        Convolutional Neural Networks applied to Visual Document Analysis", in
+        Proc. of the International Conference on Document Analysis and
+        Recognition, 2003.
+        https://gist.github.com/erniejunior/601cdf56d2b424757de5
+        This function distords an image randomly changing the alpha and gamma
+        values.
+        Args:
+            image: the image to modify in array format.
+            alpha_sigma: alpha and sigma values randomly selected as a list.
+        Returns:
+            distored_image: the image after the transformation with the same size
+                            as it had originally.
+        """
+        alpha = alpha_sigma[0]
+        sigma = alpha_sigma[1]
+        random_state = np.random.RandomState(self.random_choice(np.arange(1, 1000)))
+
+        shape = image.shape
+        dx = (
+            gaussian_filter(
+                (random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0
+            )* alpha
+        )
+        random_state = np.random.RandomState(self.random_choice(np.arange(1, 1000)))
+        dy = (
+            gaussian_filter(
+                (random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0
+            )* alpha
+        )
+
+        x, y, z = np.meshgrid(np.arange(shape[0]), np.arange(shape[1]), np.arange(shape[2]))
+        indices = (
+            np.reshape(y + dy, (-1, 1)),
+            np.reshape(x + dx, (-1, 1)),
+            np.reshape(z, (-1, 1)),
+        )
+
+        distored_image = map_coordinates(
+            image, indices, order=self.random_choice(np.arange(1, 5)), mode="reflect"
+        )
+        return distored_image.reshape(image.shape)
+
+    def distort(
+        self, img
+    ) -> np.array:
+        """
+        This function randomly selects a list with the shape [a, g] where
+        a=alpha and g=gamma and passes them along with the input image
+        to the elastic_transform function that will do the image distorsion.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            the output from elastic_transform function which is the image
+            after the transformation with the same size as it had originally.
+        """
+        sigma_alpha = [
+            (self.random_choice(np.arange(9, 11)), self.random_choice(np.arange(2, 4))),
+            (self.random_choice(np.arange(80, 100)), 4),
+            (self.random_choice(np.arange(150, 300)), 5),
+            (self.random_choice(np.arange(800, 1200)), self.random_choice(np.arange(8, 10))),
+            (self.random_choice(np.arange(1500, 2000)), self.random_choice(np.arange(10, 15))),
+            (self.random_choice(np.arange(5000, 8000)), self.random_choice(np.arange(15, 25))),
+            (self.random_choice(np.arange(10000, 15000)), self.random_choice(np.arange(20, 25))),
+            (self.random_choice(np.arange(45000, 55000)), self.random_choice(np.arange(30, 35))),
+        ]
+        choice = self.random_choice(range(len(sigma_alpha)))
+        sigma_alpha_chosen = sigma_alpha[choice]
+        return self.elastic_transform(img, sigma_alpha_chosen)
+
+    def degrade_img(
+        self, img
+    ) -> np.array:
+        """
+        This function randomly degrades the input image by applying different
+        degradation steps with different robabilities.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the degraded image.
+        """
+        # s+p
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.1:
+            img = self.s_and_p(img)
+
+        # scale
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.5:
+            img = self.scale(img)
+
+        # brightness
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.7:
+            img = self.brightness(img)
+
+        # contrast
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.7:
+            img = self.contrast(img)
+
+        # sharpness
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.5:
+            img = self.sharpness(img)
+
+        # Modify the next line if you want a particular image size as output
+        # img = cv2.resize(img, (256, 256))
+        return img
+
+    def contrast(
+        self, img
+    ) -> np.array:
+        """
+        This function randomly changes the input image contrast.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the image with the contrast changes.
+        """
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.8:  # increase contrast
+            f = self.random_choice(np.arange(1, 2, 0.01))
+        else:  # decrease contrast
+            f = self.random_choice(np.arange(0.5, 1, 0.01))
+        im_pil = Image.fromarray(img)
+        enhancer = ImageEnhance.Contrast(im_pil)
+        im = enhancer.enhance(f)
+        img = np.asarray(im)
+        return np.asarray(im)
+
+    def brightness(
+        self, img
+    ) -> np.array:
+        """
+        This function randomly changes the input image brightness.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the image with the brightness changes.
+        """
+        f = self.random_choice(np.arange(0.4, 1.1, 0.01))
+        im_pil = Image.fromarray(img)
+        enhancer = ImageEnhance.Brightness(im_pil)
+        im = enhancer.enhance(f)
+        img = np.asarray(im)
+        return np.asarray(im)
+
+    def sharpness(
+        self, img
+    ) -> np.array:
+        """
+        This function randomly changes the input image sharpness.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the image with the sharpness changes.
+        """
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.5:  # increase sharpness
+            f = self.random_choice(np.arange(0.1, 1, 0.01))
+        else:  # decrease sharpness
+            f = self.random_choice(np.arange(1, 10))
+        im_pil = Image.fromarray(img)
+        enhancer = ImageEnhance.Sharpness(im_pil)
+        im = enhancer.enhance(f)
+        img = np.asarray(im)
+        return np.asarray(im)
+
+    def s_and_p(
+        self, img
+    ) -> np.array:
+        """
+        This function randomly adds salt and pepper to the input image.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            out: the image with the s&p changes.
+        """
+        amount = self.random_choice(np.arange(0.001, 0.01))
+        # add some s&p
+        s_vs_p = 0.5
+        out = np.copy(img)
+        # Salt mode
+        num_salt = np.ceil(amount * img.size * s_vs_p)
+        coords = []
+        for i in img.shape:
+            l = []
+            for n in range(50):
+                l.append(self.random_choice(np.arange(0,i-1)))
+            coords.append(np.array(l))
+        out[tuple(coords)] = 1
+        # pepper
+        num_pepper = np.ceil(amount * img.size * (1.0 - s_vs_p))
+        coords = []
+        for i in img.shape:
+            l = []
+            for n in range(50):
+                l.append(self.random_choice(np.arange(0,i-1)))
+            coords.append(np.array(l))
+        out[tuple(coords)] = 0
+        return out
+
+    def scale(
+        self, img
+    ) -> np.array:
+        """
+        This function randomly scales the input image.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            res: the scaled image.
+        """
+        f = self.random_choice(np.arange(0.5, 1.5, 0.01))
+        res = cv2.resize(img, None, fx=f, fy=f, interpolation=cv2.INTER_CUBIC)
+        res = cv2.resize(res, None, fx=1.0 / f, fy=1.0 / f, interpolation=cv2.INTER_CUBIC)
+        return res
 
     def depict_and_resize_pikachu(
         self, smiles: str, shape: Tuple[int, int] = (299, 299)
@@ -897,7 +1340,7 @@ class RandomDepictor:
         return new_im
 
     def random_depiction(
-        self, smiles: str, shape: Tuple[int, int] = (299, 299)
+        self, smiles: str, shape: Tuple[int, int] = (299, 299),path_bkg="./backgrounds/"
     ) -> np.array:
         """
         This function takes a SMILES and depicts it using Rdkit, Indigo or CDK.
@@ -925,6 +1368,33 @@ class RandomDepictor:
                     break
             else:
                 break
+
+        if self.hand_drawn:
+            # Augment molecule image
+            mol_aug = self.hand_drawn_augment(depiction)
+
+            # Randomly select background image and use is as it is
+            backgroud_selected = self.random_choice(os.listdir(path_bkg))
+            bkg = cv2.imread(path_bkg + backgroud_selected)
+            bkg = cv2.resize(bkg, (256, 256))
+            # Combine augmented molecule and augmented background
+            p = 0.7
+            mol_bkg = cv2.addWeighted(mol_aug, p, bkg, 1 - p, gamma=0)
+
+            """
+            If you want to randomly augment the background as well,
+            simply comment the previous section and uncomment the next one.
+            """
+
+            """# Randomly select background image and augment it
+            bkg_aug = self.augment_bkg(bkg)
+            bkg_aug = cv2.resize(bkg_aug,(256,256))
+            # Combine augmented molecule and augmented background
+            p=0.7
+            mol_bkg = cv2.addWeighted(mol_aug, p, bkg_aug, 1-p, gamma=0)"""
+
+            # Degrade total image
+            depiction = self.degrade_img(mol_bkg)
         return depiction
 
     def get_depiction_functions(self, smiles: str) -> List[Callable]:
@@ -1780,6 +2250,7 @@ class RandomDepictor:
         schemes: List[Dict],
         shape: Tuple[int, int] = (299, 299),
         seed: int = 42,
+        path_bkg="./backgrounds/",
     ) -> np.array:
         """
         This function takes a SMILES representation of a molecule,
@@ -1828,6 +2299,32 @@ class RandomDepictor:
             False,
             False,
         )
+        if self.hand_drawn:
+            # Augment molecule image
+            mol_aug = self.hand_drawn_augment(depiction)
+
+            # Randomly select background image and use is as it is
+            backgroud_selected = self.random_choice(os.listdir(path_bkg))
+            bkg = cv2.imread(path_bkg + backgroud_selected)
+            bkg = cv2.resize(bkg, (256, 256))
+            # Combine augmented molecule and augmented background
+            p = 0.7
+            mol_bkg = cv2.addWeighted(mol_aug, p, bkg, 1 - p, gamma=0)
+
+            """
+            If you want to randomly augment the background as well,
+            simply comment the previous section and uncomment the next one.
+            """
+
+            """# Randomly select background image and augment it
+            bkg_aug = self.augment_bkg(bkg)
+            bkg_aug = cv2.resize(bkg_aug,(256,256))
+            # Combine augmented molecule and augmented background
+            p=0.7
+            mol_bkg = cv2.addWeighted(mol_aug, p, bkg_aug, 1-p, gamma=0)"""
+
+            # Degrade total image
+            depiction = self.degrade_img(mol_bkg)
         return depiction
 
     def depict_save_from_fingerprint(
