@@ -5,7 +5,7 @@ import io
 from skimage import io as sk_io
 from skimage.color import rgba2rgb, rgb2gray
 from skimage.util import img_as_ubyte, img_as_float
-from PIL import Image, ImageFont, ImageDraw, ImageStat
+from PIL import Image, ImageFont, ImageDraw, ImageStat, ImageEnhance
 from multiprocessing import set_start_method, get_context
 import imgaug.augmenters as iaa
 import random
@@ -30,6 +30,10 @@ from pikachu.drawing import drawing
 from pikachu.smiles.smiles import read_smiles
 import base64
 
+import cv2
+from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage.interpolation import map_coordinates
+
 
 class RandomDepictor:
     """
@@ -39,7 +43,7 @@ class RandomDepictor:
     the RGB image with the given chemical structure.
     """
 
-    def __init__(self, seed: int = 42):
+    def __init__(self, seed: int = 42, hand_drawn: bool = False):
         """
         Load the JVM only once, load superatom list (OSRA),
         set context for multiprocessing
@@ -61,10 +65,10 @@ class RandomDepictor:
             self.jvmPath = "Define/path/or/set/JAVA_HOME/variable/properly"
         if not isJVMStarted():
             self.jar_path = self.HERE.joinpath("jar_files/cdk_2_5.jar")
-            startJVM(self.jvmPath, "-ea",
-                     "-Djava.class.path=" + str(self.jar_path))
+            startJVM(self.jvmPath, "-ea", "-Djava.class.path=" + str(self.jar_path))
 
         self.seed = seed
+        self.hand_drawn = hand_drawn
         random.seed(self.seed)
 
         # Load list of superatoms for label generation
@@ -98,11 +102,16 @@ class RandomDepictor:
         smiles: str,
         shape: Tuple[int, int, int] = (299, 299),
         grayscale: bool = False,
+        hand_drawn: bool = False,
     ):
         # Depict structure with random parameters
-        depiction = self.random_depiction(smiles, shape)
-        # Add augmentations
-        depiction = self.add_augmentations(depiction)
+        hand_drawn = self.hand_drawn
+        if hand_drawn:
+            depiction = self.random_depiction(smiles, shape)
+        else:
+            depiction = self.random_depiction(smiles, shape)
+            # Add augmentations
+            depiction = self.add_augmentations(depiction)
 
         if grayscale:
             return self.to_grayscale_float_img(depiction)
@@ -201,14 +210,456 @@ class RandomDepictor:
         options.height, options.width = shape
         options.bond_thickness = self.random_choice(np.arange(0.5, 2.2, 0.1))
         options.bond_length = self.random_choice(np.arange(10, 25, 1))
-        options.chiral_bond_width = options.bond_length * self.random_choice(np.arange(0.05, 0.2, 0.01))
+        options.chiral_bond_width = options.bond_length * self.random_choice(
+            np.arange(0.05, 0.2, 0.01)
+        )
         options.short_bond_length = self.random_choice(np.arange(0.2, 0.6, 0.05))
         options.double_bond_length = self.random_choice(np.arange(0.6, 0.8, 0.05))
-        options.bond_spacing = options.bond_length * self.random_choice(np.arange(0.15, 0.28, 0.01))
+        options.bond_spacing = options.bond_length * self.random_choice(
+            np.arange(0.15, 0.28, 0.01)
+        )
         options.padding = self.random_choice(np.arange(10, 50, 5))
         # options.font_size_large = 5
         # options.font_size_small = 3
         return options
+
+    def hand_drawn_augment(self, img) -> np.array:
+        """
+        This function randomly applies different image augmentations with
+        different probabilities to the input image.
+
+        It has been modified from the original augment.py present on
+        https://github.com/mtzgroup/ChemPixCH
+
+        From the publication:
+        https://pubs.rsc.org/en/content/articlelanding/2021/SC/D1SC02957F
+
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the augmented image.
+        """
+        # resize
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.5:
+            img = self.resize_hd(img)
+        # blur
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.4:
+            img = self.blur(img)
+        # erode
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.4:
+            img = self.erode(img)
+        # dilate
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.4:
+            img = self.dilate(img)
+        # aspect_ratio
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.7:
+            img = self.aspect_ratio(img, "mol")
+        # affine
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.7:
+            img = self.affine(img, "mol")
+        # distort
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.8:
+            img = self.distort(img)
+        if img.shape != (255, 255, 3):
+            img = cv2.resize(img, (256, 256))
+        return img
+
+    def augment_bkg(self, img) -> np.array:
+        """
+        This function randomly applies different image augmentations with
+        different probabilities to the input image.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the augmented image.
+        """
+        # rotate
+        rows, cols, _ = img.shape
+        angle = self.random_choice(np.arange(0, 360))
+        M = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
+        img = cv2.warpAffine(img, M, (cols, rows), borderMode=cv2.BORDER_REFLECT)
+        # resize
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.5:
+            img = self.resize_hd(img)
+        # blur
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.4:
+            img = self.blur(img)
+        # erode
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.2:
+            img = self.erode(img)
+        # dilate
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.2:
+            img = self.dilate(img)
+        # aspect_ratio
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.3:
+            img = self.aspect_ratio(img, "bkg")
+        # affine
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.3:
+            img = self.affine(img, "bkg")
+        # distort
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.8:
+            img = self.distort(img)
+        if img.shape != (255, 255, 3):
+            img = cv2.resize(img, (256, 256))
+        return img
+
+    def resize_hd(self, img) -> np.array:
+        """
+        This function resizes the image randomly from between (200-300, 200-300)
+        and then resizes it back to 256x256.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the resized image.
+        """
+        interpolations = [
+            cv2.INTER_NEAREST,
+            cv2.INTER_AREA,
+            cv2.INTER_LINEAR,
+            cv2.INTER_CUBIC,
+            cv2.INTER_LANCZOS4,
+        ]
+
+        img = cv2.resize(
+            img,
+            (
+                self.random_choice(np.arange(200, 300)),
+                self.random_choice(np.arange(200, 300)),
+            ),
+            interpolation=self.random_choice(interpolations),
+        )
+        img = cv2.resize(
+            img, (256, 256), interpolation=self.random_choice(interpolations)
+        )
+
+        return img
+
+    def blur(self, img) -> np.array:
+        """
+        This function blurs the image randomly between 1-3.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the blurred image.
+        """
+        n = self.random_choice(np.arange(1, 4))
+        kernel = np.ones((n, n), np.float32) / n**2
+        img = cv2.filter2D(img, -1, kernel)
+        return img
+
+    def erode(self, img) -> np.array:
+        """
+        This function bolds the image randomly between 1-2.
+        Args:
+           img: the image to modify in array format.
+        Returns:
+            img: the bold image.
+        """
+        n = self.random_choice(np.arange(1, 3))
+        kernel = np.ones((n, n), np.float32) / n**2
+        img = cv2.erode(img, kernel, iterations=1)
+        return img
+
+    def dilate(self, img) -> np.array:
+        """
+        This function dilates the image with a factor of 2.
+        Args:
+           img: the image to modify in array format.
+        Returns:
+            img: the dilated image.
+        """
+        n = 2
+        kernel = np.ones((n, n), np.float32) / n**2
+        img = cv2.dilate(img, kernel, iterations=1)
+        return img
+
+    def aspect_ratio(self, img, obj=None) -> np.array:
+        """
+        This function irregularly changes the size of the image
+        and converts it back to (256,256).
+        Args:
+            img: the image to modify in array format.
+            obj: "mol" or "bkg" to modify a chemical structure image or
+                 a background image.
+        Returns:
+            image: the resized image.
+        """
+        n1 = self.random_choice(np.arange(0, 50))
+        n2 = self.random_choice(np.arange(0, 50))
+        n3 = self.random_choice(np.arange(0, 50))
+        n4 = self.random_choice(np.arange(0, 50))
+        if obj == "mol":
+            image = cv2.copyMakeBorder(
+                img, n1, n2, n3, n4, cv2.BORDER_CONSTANT, value=[255, 255, 255]
+            )
+        elif obj == "bkg":
+            image = cv2.copyMakeBorder(img, n1, n2, n3, n4, cv2.BORDER_REFLECT)
+
+        image = cv2.resize(image, (256, 256))
+        return image
+
+    def affine(self, img, obj=None) -> np.array:
+        """
+        This function randomly applies affine transformation which consists
+        of matrix rotations, translations and scale operations and converts
+        it back to (256,256).
+        Args:
+            img: the image to modify in array format.
+            obj: "mol" or "bkg" to modify a chemical structure image or
+                 a background image.
+        Returns:
+            skewed: the transformed image.
+        """
+        rows, cols, _ = img.shape
+        n = 20
+        pts1 = np.float32([[5, 50], [200, 50], [50, 200]])
+        pts2 = np.float32(
+            [
+                [
+                    5 + self.random_choice(np.arange(-n, n)),
+                    50 + self.random_choice(np.arange(-n, n)),
+                ],
+                [
+                    200 + self.random_choice(np.arange(-n, n)),
+                    50 + self.random_choice(np.arange(-n, n)),
+                ],
+                [
+                    50 + self.random_choice(np.arange(-n, n)),
+                    200 + self.random_choice(np.arange(-n, n)),
+                ],
+            ]
+        )
+
+        M = cv2.getAffineTransform(pts1, pts2)
+
+        if obj == "mol":
+            skewed = cv2.warpAffine(img, M, (cols, rows), borderValue=[255, 255, 255])
+        elif obj == "bkg":
+            skewed = cv2.warpAffine(img, M, (cols, rows), borderMode=cv2.BORDER_REFLECT)
+
+        skewed = cv2.resize(skewed, (256, 256))
+        return skewed
+
+    def elastic_transform(self, image, alpha_sigma) -> np.array:
+        """
+        Elastic deformation of images as described in [Simard2003]_.
+        .. [Simard2003] Simard, Steinkraus and Platt, "Best Practices for
+        Convolutional Neural Networks applied to Visual Document Analysis", in
+        Proc. of the International Conference on Document Analysis and
+        Recognition, 2003.
+        https://gist.github.com/erniejunior/601cdf56d2b424757de5
+        This function distords an image randomly changing the alpha and gamma
+        values.
+        Args:
+            image: the image to modify in array format.
+            alpha_sigma: alpha and sigma values randomly selected as a list.
+        Returns:
+            distored_image: the image after the transformation with the same size
+                            as it had originally.
+        """
+        alpha = alpha_sigma[0]
+        sigma = alpha_sigma[1]
+        random_state = np.random.RandomState(self.random_choice(np.arange(1, 1000)))
+
+        shape = image.shape
+        dx = (
+            gaussian_filter(
+                (random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0
+            )
+            * alpha
+        )
+        random_state = np.random.RandomState(self.random_choice(np.arange(1, 1000)))
+        dy = (
+            gaussian_filter(
+                (random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0
+            )
+            * alpha
+        )
+
+        x, y, z = np.meshgrid(
+            np.arange(shape[0]), np.arange(shape[1]), np.arange(shape[2])
+        )
+        indices = (
+            np.reshape(y + dy, (-1, 1)),
+            np.reshape(x + dx, (-1, 1)),
+            np.reshape(z, (-1, 1)),
+        )
+
+        distored_image = map_coordinates(
+            image, indices, order=self.random_choice(np.arange(1, 5)), mode="reflect"
+        )
+        return distored_image.reshape(image.shape)
+
+    def distort(self, img) -> np.array:
+        """
+        This function randomly selects a list with the shape [a, g] where
+        a=alpha and g=gamma and passes them along with the input image
+        to the elastic_transform function that will do the image distorsion.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            the output from elastic_transform function which is the image
+            after the transformation with the same size as it had originally.
+        """
+        sigma_alpha = [
+            (self.random_choice(np.arange(9, 11)), self.random_choice(np.arange(2, 4))),
+            (self.random_choice(np.arange(80, 100)), 4),
+            (self.random_choice(np.arange(150, 300)), 5),
+            (
+                self.random_choice(np.arange(800, 1200)),
+                self.random_choice(np.arange(8, 10)),
+            ),
+            (
+                self.random_choice(np.arange(1500, 2000)),
+                self.random_choice(np.arange(10, 15)),
+            ),
+            (
+                self.random_choice(np.arange(5000, 8000)),
+                self.random_choice(np.arange(15, 25)),
+            ),
+            (
+                self.random_choice(np.arange(10000, 15000)),
+                self.random_choice(np.arange(20, 25)),
+            ),
+            (
+                self.random_choice(np.arange(45000, 55000)),
+                self.random_choice(np.arange(30, 35)),
+            ),
+        ]
+        choice = self.random_choice(range(len(sigma_alpha)))
+        sigma_alpha_chosen = sigma_alpha[choice]
+        return self.elastic_transform(img, sigma_alpha_chosen)
+
+    def degrade_img(self, img) -> np.array:
+        """
+        This function randomly degrades the input image by applying different
+        degradation steps with different robabilities.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the degraded image.
+        """
+        # s+p
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.1:
+            img = self.s_and_p(img)
+
+        # scale
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.5:
+            img = self.scale(img)
+
+        # brightness
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.7:
+            img = self.brightness(img)
+
+        # contrast
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.7:
+            img = self.contrast(img)
+
+        # sharpness
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.5:
+            img = self.sharpness(img)
+
+        # Modify the next line if you want a particular image size as output
+        # img = cv2.resize(img, (256, 256))
+        return img
+
+    def contrast(self, img) -> np.array:
+        """
+        This function randomly changes the input image contrast.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the image with the contrast changes.
+        """
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.8:  # increase contrast
+            f = self.random_choice(np.arange(1, 2, 0.01))
+        else:  # decrease contrast
+            f = self.random_choice(np.arange(0.5, 1, 0.01))
+        im_pil = Image.fromarray(img)
+        enhancer = ImageEnhance.Contrast(im_pil)
+        im = enhancer.enhance(f)
+        img = np.asarray(im)
+        return np.asarray(im)
+
+    def brightness(self, img) -> np.array:
+        """
+        This function randomly changes the input image brightness.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the image with the brightness changes.
+        """
+        f = self.random_choice(np.arange(0.4, 1.1, 0.01))
+        im_pil = Image.fromarray(img)
+        enhancer = ImageEnhance.Brightness(im_pil)
+        im = enhancer.enhance(f)
+        img = np.asarray(im)
+        return np.asarray(im)
+
+    def sharpness(self, img) -> np.array:
+        """
+        This function randomly changes the input image sharpness.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            img: the image with the sharpness changes.
+        """
+        if self.random_choice(np.arange(0, 1, 0.01)) < 0.5:  # increase sharpness
+            f = self.random_choice(np.arange(0.1, 1, 0.01))
+        else:  # decrease sharpness
+            f = self.random_choice(np.arange(1, 10))
+        im_pil = Image.fromarray(img)
+        enhancer = ImageEnhance.Sharpness(im_pil)
+        im = enhancer.enhance(f)
+        img = np.asarray(im)
+        return np.asarray(im)
+
+    def s_and_p(self, img) -> np.array:
+        """
+        This function randomly adds salt and pepper to the input image.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            out: the image with the s&p changes.
+        """
+        amount = self.random_choice(np.arange(0.001, 0.01))
+        # add some s&p
+        s_vs_p = 0.5
+        out = np.copy(img)
+        # Salt mode
+        num_salt = np.ceil(amount * img.size * s_vs_p)
+        coords = []
+        for i in img.shape:
+            coordinates = []
+            for n in range(num_salt):
+                coordinates.append(self.random_choice(np.arange(0, i - 1)))
+            coords.append(np.array(coordinates))
+        out[tuple(coords)] = 1
+        # pepper
+        num_pepper = np.ceil(amount * img.size * (1.0 - s_vs_p))
+        coords = []
+        for i in img.shape:
+            coordinates = []
+            for n in range(num_pepper):
+                coordinates.append(self.random_choice(np.arange(0, i - 1)))
+            coords.append(np.array(coordinates))
+        out[tuple(coords)] = 0
+        return out
+
+    def scale(self, img) -> np.array:
+        """
+        This function randomly scales the input image.
+        Args:
+            img: the image to modify in array format.
+        Returns:
+            res: the scaled image.
+        """
+        f = self.random_choice(np.arange(0.5, 1.5, 0.01))
+        res = cv2.resize(img, None, fx=f, fy=f, interpolation=cv2.INTER_CUBIC)
+        res = cv2.resize(
+            res, None, fx=1.0 / f, fy=1.0 / f, interpolation=cv2.INTER_CUBIC
+        )
+        return res
 
     def depict_and_resize_pikachu(
         self, smiles: str, shape: Tuple[int, int] = (299, 299)
@@ -228,7 +679,7 @@ class RandomDepictor:
         """
         structure = read_smiles(smiles)
         depiction_settings = self.get_random_pikachu_rendering_settings()
-        if '.' in smiles:
+        if "." in smiles:
             drawer = drawing.draw_multiple(structure, options=depiction_settings)
         else:
             drawer = drawing.Drawer(structure, options=depiction_settings)
@@ -261,28 +712,22 @@ class RandomDepictor:
         # Set random bond line width
         bond_line_width = float(
             self.random_choice(
-                np.arange(
-                    0.5,
-                    2.5,
-                    0.1),
-                log_attribute="indigo_bond_line_width"))
+                np.arange(0.5, 2.5, 0.1), log_attribute="indigo_bond_line_width"
+            )
+        )
         indigo.setOption("render-bond-line-width", bond_line_width)
         # Set random relative thickness
         relative_thickness = float(
             self.random_choice(
-                np.arange(
-                    0.5,
-                    1.5,
-                    0.1),
-                log_attribute="indigo_relative_thickness"))
+                np.arange(0.5, 1.5, 0.1), log_attribute="indigo_relative_thickness"
+            )
+        )
         indigo.setOption("render-relative-thickness", relative_thickness)
         # Output_format: PNG
         indigo.setOption("render-output-format", "png")
         # Set random atom label rendering model
         # (standard is rendering terminal groups)
-        if self.random_choice(
-            [True] + [False] * 19,
-                log_attribute="indigo_labels_all"):
+        if self.random_choice([True] + [False] * 19, log_attribute="indigo_labels_all"):
             # show all atom labels
             indigo.setOption("render-label-mode", "all")
         elif self.random_choice(
@@ -292,8 +737,7 @@ class RandomDepictor:
                 "render-label-mode", "hetero"
             )  # only hetero atoms, no terminal groups
         # Render bold bond for Haworth projection
-        if self.random_choice([True, False],
-                              log_attribute="indigo_render_bold_bond"):
+        if self.random_choice([True, False], log_attribute="indigo_render_bold_bond"):
             indigo.setOption("render-bold-bond-detection", "True")
         # Render labels for stereobonds
         stereo_style = self.random_choice(
@@ -482,10 +926,7 @@ class RandomDepictor:
         if re.search("\[.*[RXYZ].*\]", smiles):
             return True
 
-    def get_random_cdk_rendering_settings(self,
-                                          rendererModel,
-                                          molecule,
-                                          smiles: str):
+    def get_random_cdk_rendering_settings(self, rendererModel, molecule, smiles: str):
         """
         This function defines random rendering options for the structure
         depictions created using CDK.
@@ -514,8 +955,7 @@ class RandomDepictor:
             ["iupac_recommendation", "no_terminal_methyl", "show_all_atom_labels"],
             log_attribute="cdk_symbol_visibility",
         )
-        SymbolVisibility = JClass(
-            "org.openscience.cdk.renderer.SymbolVisibility")
+        SymbolVisibility = JClass("org.openscience.cdk.renderer.SymbolVisibility")
         if symbol_visibility == "iupac_recommendation":
             rendererModel.set(
                 StandardGenerator.Visibility.class_,
@@ -549,20 +989,16 @@ class RandomDepictor:
         double_bond_dist = self.random_choice(
             np.arange(0.11, 0.25, 0.01), log_attribute="cdk_double_bond_dist"
         )
-        rendererModel.set(
-            StandardGenerator.BondSeparation.class_,
-            double_bond_dist)
+        rendererModel.set(StandardGenerator.BondSeparation.class_, double_bond_dist)
         wedge_ratio = self.random_choice(
             np.arange(4.5, 7.5, 0.1), log_attribute="cdk_wedge_ratio"
         )
         rendererModel.set(
-            StandardGenerator.WedgeRatio.class_,
-            JClass("java.lang.Double")(wedge_ratio))
-        if self.random_choice([True, False],
-                              log_attribute="cdk_fancy_bold_wedges"):
+            StandardGenerator.WedgeRatio.class_, JClass("java.lang.Double")(wedge_ratio)
+        )
+        if self.random_choice([True, False], log_attribute="cdk_fancy_bold_wedges"):
             rendererModel.set(StandardGenerator.FancyBoldWedges.class_, True)
-        if self.random_choice([True, False],
-                              log_attribute="cdk_fancy_hashed_wedges"):
+        if self.random_choice([True, False], log_attribute="cdk_fancy_hashed_wedges"):
             rendererModel.set(StandardGenerator.FancyHashedWedges.class_, True)
         hash_spacing = self.random_choice(
             np.arange(4.0, 6.0, 0.2), log_attribute="cdk_hash_spacing"
@@ -570,8 +1006,7 @@ class RandomDepictor:
         rendererModel.set(StandardGenerator.HashSpacing.class_, hash_spacing)
         # Add CIP labels
         labels = False
-        if self.random_choice([True, False],
-                              log_attribute="cdk_add_CIP_labels"):
+        if self.random_choice([True, False], log_attribute="cdk_add_CIP_labels"):
             labels = True
             JClass("org.openscience.cdk.geometry.cip.CIPTool").label(molecule)
             for atom in molecule.atoms():
@@ -592,7 +1027,8 @@ class RandomDepictor:
                 labels = True
                 for atom in molecule.atoms():
                     label = JClass("java.lang.Integer")(
-                        1 + molecule.getAtomNumber(atom))
+                        1 + molecule.getAtomNumber(atom)
+                    )
                     atom.setProperty(StandardGenerator.ANNOTATION_LABEL, label)
         if labels:
             # We only need black
@@ -604,24 +1040,21 @@ class RandomDepictor:
             font_scale = self.random_choice(
                 np.arange(0.5, 0.8, 0.1), log_attribute="cdk_label_font_scale"
             )
-            rendererModel.set(
-                StandardGenerator.AnnotationFontScale.class_,
-                font_scale)
+            rendererModel.set(StandardGenerator.AnnotationFontScale.class_, font_scale)
             # Distance between atom numbering and depiction
-            annotation_distance = self.random_choice(np.arange(
-                0.15, 0.30, 0.05), log_attribute="cdk_annotation_distance")
+            annotation_distance = self.random_choice(
+                np.arange(0.15, 0.30, 0.05), log_attribute="cdk_annotation_distance"
+            )
             rendererModel.set(
-                StandardGenerator.AnnotationDistance.class_,
-                annotation_distance)
+                StandardGenerator.AnnotationDistance.class_, annotation_distance
+            )
         # Abbreviate superatom labels in half of the cases
         # TODO: Find a way to define Abbreviations object as a class attribute.
         # Problem: can't be pickled.
         # Right now, this is loaded every time when a structure is depicted.
         # That seems inefficient.
-        if self.random_choice([True, False],
-                              log_attribute="cdk_collapse_superatoms"):
-            cdk_superatom_abrv = JClass(
-                "org.openscience.cdk.depict.Abbreviations")()
+        if self.random_choice([True, False], log_attribute="cdk_collapse_superatoms"):
+            cdk_superatom_abrv = JClass("org.openscience.cdk.depict.Abbreviations")()
             abbreviation_path = str(self.HERE.joinpath("smiles_list.smi"))
             abbreviation_path = abbreviation_path.replace("\\", "/")
             abbreviation_path = JClass("java.lang.String")(abbreviation_path)
@@ -658,17 +1091,14 @@ class RandomDepictor:
 
         # Add hydrogens for coordinate generation (to make it look nicer/
         # avoid overlaps)
-        matcher = JClass(
-            cdk_base +
-            ".atomtype.CDKAtomTypeMatcher").getInstance(
-            molecule.getBuilder())
+        matcher = JClass(cdk_base + ".atomtype.CDKAtomTypeMatcher").getInstance(
+            molecule.getBuilder()
+        )
         for atom in molecule.atoms():
             atom_type = matcher.findMatchingAtomType(molecule, atom)
-            JClass(
-                cdk_base +
-                ".tools.manipulator.AtomTypeManipulator").configure(
-                atom,
-                atom_type)
+            JClass(cdk_base + ".tools.manipulator.AtomTypeManipulator").configure(
+                atom, atom_type
+            )
         adder = JClass(cdk_base + ".tools.CDKHydrogenAdder").getInstance(
             molecule.getBuilder()
         )
@@ -688,9 +1118,7 @@ class RandomDepictor:
         AtomContainerManipulator.suppressHydrogens(molecule)
 
         # Rotate molecule randomly
-        point = JClass(
-            cdk_base +
-            ".geometry.GeometryTools").get2DCenter(molecule)
+        point = JClass(cdk_base + ".geometry.GeometryTools").get2DCenter(molecule)
         rot_degrees = self.random_choice(range(360))
         JClass(cdk_base + ".geometry.GeometryTools").rotate(
             molecule, point, rot_degrees
@@ -745,20 +1173,18 @@ class RandomDepictor:
 
         # Get random rendering settings
         model, molecule = self.get_random_cdk_rendering_settings(
-            model, molecule, smiles)
+            model, molecule, smiles
+        )
 
         double = JClass("java.lang.Double")
         model.set(
-            JClass(
-                cdk_base +
-                ".renderer.generators.BasicSceneGenerator.ZoomFactor"),
+            JClass(cdk_base + ".renderer.generators.BasicSceneGenerator.ZoomFactor"),
             double(1.0),
         )
         g2 = image.getGraphics()
         g2.setColor(JClass("java.awt.Color").WHITE)
         g2.fillRect(0, 0, x, y)
-        AWTDrawVisitor = JClass(
-            "org.openscience.cdk.renderer.visitor.AWTDrawVisitor")
+        AWTDrawVisitor = JClass("org.openscience.cdk.renderer.visitor.AWTDrawVisitor")
 
         renderer.paint(molecule, AWTDrawVisitor(g2))
 
@@ -767,9 +1193,8 @@ class RandomDepictor:
         os = JClass("java.io.ByteArrayOutputStream")()
         Base64 = JClass("java.util.Base64")
         ImageIO.write(
-            image,
-            JClass("java.lang.String")("PNG"),
-            Base64.getEncoder().wrap(os))
+            image, JClass("java.lang.String")("PNG"), Base64.getEncoder().wrap(os)
+        )
         depiction = bytes(os.toString("UTF-8"))
         depiction = base64.b64decode(depiction)
 
@@ -795,12 +1220,8 @@ class RandomDepictor:
         """
         cdk_base = "org.openscience.cdk"
         DCOB = JClass(cdk_base + ".DefaultChemObjectBuilder")
-        SmilesParser = JClass(
-            cdk_base +
-            ".smiles.SmilesParser")(
-            DCOB.getInstance())
-        if self.random_choice([True, False, False],
-                              log_attribute="cdk_kekulized"):
+        SmilesParser = JClass(cdk_base + ".smiles.SmilesParser")(DCOB.getInstance())
+        if self.random_choice([True, False, False], log_attribute="cdk_kekulized"):
             SmilesParser.kekulise(False)
         molecule = SmilesParser.parseSmiles(smiles)
         return molecule
@@ -897,7 +1318,10 @@ class RandomDepictor:
         return new_im
 
     def random_depiction(
-        self, smiles: str, shape: Tuple[int, int] = (299, 299)
+        self,
+        smiles: str,
+        shape: Tuple[int, int] = (299, 299),
+        path_bkg="./backgrounds/",
     ) -> np.array:
         """
         This function takes a SMILES and depicts it using Rdkit, Indigo or CDK.
@@ -925,6 +1349,33 @@ class RandomDepictor:
                     break
             else:
                 break
+
+        if self.hand_drawn:
+            # Augment molecule image
+            mol_aug = self.hand_drawn_augment(depiction)
+
+            # Randomly select background image and use is as it is
+            backgroud_selected = self.random_choice(os.listdir(path_bkg))
+            bkg = cv2.imread(path_bkg + backgroud_selected)
+            bkg = cv2.resize(bkg, (256, 256))
+            # Combine augmented molecule and augmented background
+            p = 0.7
+            mol_bkg = cv2.addWeighted(mol_aug, p, bkg, 1 - p, gamma=0)
+
+            """
+            If you want to randomly augment the background as well,
+            simply comment the previous section and uncomment the next one.
+            """
+
+            """# Randomly select background image and augment it
+            bkg_aug = self.augment_bkg(bkg)
+            bkg_aug = cv2.resize(bkg_aug,(256,256))
+            # Combine augmented molecule and augmented background
+            p=0.7
+            mol_bkg = cv2.addWeighted(mol_aug, p, bkg_aug, 1-p, gamma=0)"""
+
+            # Degrade total image
+            depiction = self.degrade_img(mol_bkg)
         return depiction
 
     def get_depiction_functions(self, smiles: str) -> List[Callable]:
@@ -944,24 +1395,24 @@ class RandomDepictor:
             self.depict_and_resize_rdkit,
             self.depict_and_resize_indigo,
             self.depict_and_resize_cdk,
-            self.depict_and_resize_pikachu
+            self.depict_and_resize_pikachu,
         ]
         # Remove PIKAChU if there is an isotope
-        if re.search('(\[\d\d\d?[A-Z])|(\[2H\])|(\[3H\])|(D)|(T)', smiles):
+        if re.search("(\[\d\d\d?[A-Z])|(\[2H\])|(\[3H\])|(D)|(T)", smiles):
             depiction_functions.remove(self.depict_and_resize_pikachu)
         if self.has_r_group(smiles):
             # PIKAChU only accepts \[[RXZ]\d*\]
-            squared_bracket_content = re.findall('\[.+?\]', smiles)
+            squared_bracket_content = re.findall("\[.+?\]", smiles)
             for r_group in squared_bracket_content:
-                if not re.search('\[[RXZ]\d*\]', r_group):
+                if not re.search("\[[RXZ]\d*\]", r_group):
                     if self.depict_and_resize_pikachu in depiction_functions:
                         depiction_functions.remove(self.depict_and_resize_pikachu)
             # "R", "X", "Z" are not depicted by RDKit
             # The same is valid for X,Y,Z and a number
-            if re.search('\[[RXZ]\]|\[[XYZ]\d+', smiles):
+            if re.search("\[[RXZ]\]|\[[XYZ]\d+", smiles):
                 depiction_functions.remove(self.depict_and_resize_rdkit)
             # "X", "R0" and indices above 32 are not depicted by Indigo
-            if re.search('\[R0\]|\[X\]|[4-9][0-9]+|3[3-9]', smiles):
+            if re.search("\[R0\]|\[X\]|[4-9][0-9]+|3[3-9]", smiles):
                 depiction_functions.remove(self.depict_and_resize_indigo)
         return depiction_functions
 
@@ -1018,8 +1469,9 @@ class RandomDepictor:
             return image
 
         # Add some padding to avoid weird artifacts after rotation
-        image = np.pad(image, ((1, 1), (1, 1), (0, 0)),
-                       mode="constant", constant_values=255)
+        image = np.pad(
+            image, ((1, 1), (1, 1), (0, 0)), mode="constant", constant_values=255
+        )
 
         def imgaug_rotation():
             # Rotation between -10 and 10 degrees
@@ -1037,21 +1489,17 @@ class RandomDepictor:
                 [True, True, False], log_attribute="has_imgaug_salt_pepper"
             ):
                 return False
-            coarse_dropout_p = self.random_choice(
-                np.arange(0.0002, 0.0015, 0.0001))
-            coarse_dropout_size_percent = self.random_choice(
-                np.arange(1.0, 1.1, 0.01))
-            replace_elementwise_p = self.random_choice(
-                np.arange(0.01, 0.3, 0.01))
+            coarse_dropout_p = self.random_choice(np.arange(0.0002, 0.0015, 0.0001))
+            coarse_dropout_size_percent = self.random_choice(np.arange(1.0, 1.1, 0.01))
+            replace_elementwise_p = self.random_choice(np.arange(0.01, 0.3, 0.01))
             aug = iaa.Sequential(
                 [
                     iaa.CoarseDropout(
-                        coarse_dropout_p,
-                        size_percent=coarse_dropout_size_percent),
-                    iaa.ReplaceElementwise(
-                        replace_elementwise_p,
-                        255),
-                ])
+                        coarse_dropout_p, size_percent=coarse_dropout_size_percent
+                    ),
+                    iaa.ReplaceElementwise(replace_elementwise_p, 255),
+                ]
+            )
             return aug
 
         def imgaug_shearing():
@@ -1063,15 +1511,10 @@ class RandomDepictor:
             shear_param = self.random_choice(np.arange(-5, 5, 1))
             aug = self.random_choice(
                 [
-                    iaa.geometric.ShearX(
-                        shear_param,
-                        mode="edge",
-                        fit_output=True),
-                    iaa.geometric.ShearY(
-                        shear_param,
-                        mode="edge",
-                        fit_output=True),
-                ])
+                    iaa.geometric.ShearX(shear_param, mode="edge", fit_output=True),
+                    iaa.geometric.ShearY(shear_param, mode="edge", fit_output=True),
+                ]
+            )
             return aug
 
         def imgaug_imgcorruption():
@@ -1083,9 +1526,10 @@ class RandomDepictor:
             imgcorrupt_severity = self.random_choice(np.arange(1, 2, 1))
             aug = self.random_choice(
                 [
-                    iaa.imgcorruptlike.JpegCompression(
-                        severity=imgcorrupt_severity), iaa.imgcorruptlike.Pixelate(
-                        severity=imgcorrupt_severity), ])
+                    iaa.imgcorruptlike.JpegCompression(severity=imgcorrupt_severity),
+                    iaa.imgcorruptlike.Pixelate(severity=imgcorrupt_severity),
+                ]
+            )
             return aug
 
         def imgaug_brightness_adjustment():
@@ -1163,8 +1607,7 @@ class RandomDepictor:
             depiction = self.imgaug_augment(depiction)
         return depiction
 
-    def get_random_label_position(
-            self, width: int, height: int) -> Tuple[int, int]:
+    def get_random_label_position(self, width: int, height: int) -> Tuple[int, int]:
         """
         Given the width and height of an image (int), this function
         determines a random position in the outer 15% of the image and
@@ -1229,16 +1672,16 @@ class RandomDepictor:
             )
         if option == "numtonum":
             return (
-                str(self.random_choice(label_num)) +
-                "-" +
                 str(self.random_choice(label_num))
+                + "-"
+                + str(self.random_choice(label_num))
             )
         if option == "numcombtonumcomb":
             return (
-                str(self.random_choice(label_num)) +
-                self.random_choice(label_letters) +
-                "-" +
-                self.random_choice(label_letters)
+                str(self.random_choice(label_num))
+                + self.random_choice(label_letters)
+                + "-"
+                + self.random_choice(label_letters)
             )
 
     def new_reaction_condition_elements(self) -> Tuple[str, str, str]:
@@ -1310,25 +1753,25 @@ class RandomDepictor:
                 ) = self.new_reaction_condition_elements()
                 if label_type == "A":
                     reaction_condition_label += (
-                        str(n + 1) +
-                        " " +
-                        other_reactand +
-                        ", " +
-                        solvent +
-                        ", " +
-                        reaction_time +
-                        "\n"
+                        str(n + 1)
+                        + " "
+                        + other_reactand
+                        + ", "
+                        + solvent
+                        + ", "
+                        + reaction_time
+                        + "\n"
                     )
                 elif label_type == "B":
                     reaction_condition_label += (
-                        str(n + 1) +
-                        " " +
-                        other_reactand +
-                        ", " +
-                        solvent +
-                        " (" +
-                        reaction_time +
-                        ")\n"
+                        str(n + 1)
+                        + " "
+                        + other_reactand
+                        + ", "
+                        + solvent
+                        + " ("
+                        + reaction_time
+                        + ")\n"
                     )
         elif label_type == "C":
             (
@@ -1379,64 +1822,62 @@ class RandomDepictor:
         if label_type == "A":
             for _ in range(1, self.random_choice(range(2, 6))):
                 R_group_label += (
-                    self.random_choice(rest_variables) +
-                    " = " +
-                    self.random_choice(superatoms) +
-                    "\n"
+                    self.random_choice(rest_variables)
+                    + " = "
+                    + self.random_choice(superatoms)
+                    + "\n"
                 )
         elif label_type == "B":
-            R_group_label += "      " + \
-                self.random_choice(rest_variables) + "\n"
+            R_group_label += "      " + self.random_choice(rest_variables) + "\n"
             for n in range(1, self.random_choice(range(2, 6))):
-                R_group_label += str(n) + "    " + \
-                    self.random_choice(superatoms) + "\n"
+                R_group_label += str(n) + "    " + self.random_choice(superatoms) + "\n"
         elif label_type == "C":
             R_group_label += (
-                "      " +
-                self.random_choice(rest_variables) +
-                "      " +
-                self.random_choice(rest_variables) +
-                "\n"
+                "      "
+                + self.random_choice(rest_variables)
+                + "      "
+                + self.random_choice(rest_variables)
+                + "\n"
             )
             for n in range(1, self.random_choice(range(2, 6))):
                 R_group_label += (
-                    str(n) +
-                    "  " +
-                    self.random_choice(superatoms) +
-                    "  " +
-                    self.random_choice(superatoms) +
-                    "\n"
+                    str(n)
+                    + "  "
+                    + self.random_choice(superatoms)
+                    + "  "
+                    + self.random_choice(superatoms)
+                    + "\n"
                 )
         elif label_type == "D":
             R_group_label += (
-                "      " +
-                self.random_choice(rest_variables) +
-                "      " +
-                self.random_choice(rest_variables) +
-                "      " +
-                self.random_choice(rest_variables) +
-                "\n"
+                "      "
+                + self.random_choice(rest_variables)
+                + "      "
+                + self.random_choice(rest_variables)
+                + "      "
+                + self.random_choice(rest_variables)
+                + "\n"
             )
             for n in range(1, self.random_choice(range(2, 6))):
                 R_group_label += (
-                    str(n) +
-                    "  " +
-                    self.random_choice(superatoms) +
-                    "  " +
-                    self.random_choice(superatoms) +
-                    "  " +
-                    self.random_choice(superatoms) +
-                    "\n"
+                    str(n)
+                    + "  "
+                    + self.random_choice(superatoms)
+                    + "  "
+                    + self.random_choice(superatoms)
+                    + "  "
+                    + self.random_choice(superatoms)
+                    + "\n"
                 )
         if label_type == "E":
             for n in range(1, self.random_choice(range(2, 6))):
                 R_group_label += (
-                    str(n) +
-                    "  " +
-                    self.random_choice(rest_variables) +
-                    " = " +
-                    self.random_choice(superatoms) +
-                    "\n"
+                    str(n)
+                    + "  "
+                    + self.random_choice(rest_variables)
+                    + " = "
+                    + self.random_choice(superatoms)
+                    + "\n"
                 )
         return R_group_label
 
@@ -1503,8 +1944,7 @@ class RandomDepictor:
             except ZeroDivisionError:
                 return np.asarray(im)
             if sum(mean) / len(mean) == 255:
-                draw.text((x_pos, y_pos), label_text,
-                          font=font, fill=(0, 0, 0, 255))
+                draw.text((x_pos, y_pos), label_text, font=font, fill=(0, 0, 0, 255))
                 break
         return np.asarray(im)
 
@@ -1535,16 +1975,13 @@ class RandomDepictor:
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(
                 os.path.join(
-                    str(arrow_dir),
-                    self.random_choice(
-                        os.listdir(
-                            str(arrow_dir)))))
+                    str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir)))
+                )
+            )
             new_arrow_image_shape = int(
                 (x_max - x_min) / self.random_choice(range(3, 6))
             ), int((y_max - y_min) / self.random_choice(range(3, 6)))
-            arrow_image = self.resize(
-                np.asarray(arrow_image),
-                new_arrow_image_shape)
+            arrow_image = self.resize(np.asarray(arrow_image), new_arrow_image_shape)
             arrow_image = Image.fromarray(arrow_image)
             arrow_image = arrow_image.rotate(
                 self.random_choice(range(360)),
@@ -1572,14 +2009,12 @@ class RandomDepictor:
                 )
                 mean = ImageStat.Stat(paste_region).mean
                 if sum(mean) / len(mean) < 252:
-                    image.paste(
-                        arrow_image, (x_position, y_position), arrow_image)
+                    image.paste(arrow_image, (x_position, y_position), arrow_image)
 
                     break
         return np.asarray(image)
 
-    def get_random_arrow_position(
-            self, width: int, height: int) -> Tuple[int, int]:
+    def get_random_arrow_position(self, width: int, height: int) -> Tuple[int, int]:
         """
         Given the width and height of an image (int), this function determines
         a random position to paste a reaction arrow in the outer 15% frame of
@@ -1627,10 +2062,9 @@ class RandomDepictor:
             # Load random curved arrow image, resize and rotate it randomly.
             arrow_image = Image.open(
                 os.path.join(
-                    str(arrow_dir),
-                    self.random_choice(
-                        os.listdir(
-                            str(arrow_dir)))))
+                    str(arrow_dir), self.random_choice(os.listdir(str(arrow_dir)))
+                )
+            )
             # new_arrow_image_shape = (int(width *
             # self.random_choice(np.arange(0.9, 1.5, 0.1))),
             # int(height/10 * self.random_choice(np.arange(0.7, 1.2, 0.1))))
@@ -1648,14 +2082,12 @@ class RandomDepictor:
                     expand=True,
                 )
             else:
-                arrow_image = arrow_image.rotate(
-                    self.random_choice([180, 360]))
+                arrow_image = arrow_image.rotate(self.random_choice([180, 360]))
             new_arrow_image_shape = arrow_image.size
             # Try different positions with the condition that the arrows are
             # overlapping with non-white pixels (the structure)
             for _ in range(50):
-                y_position, x_position = self.get_random_arrow_position(
-                    width, height)
+                y_position, x_position = self.get_random_arrow_position(width, height)
                 x2_position = x_position + new_arrow_image_shape[0]
                 y2_position = y_position + new_arrow_image_shape[1]
                 # Make sure we only check a region inside of the image
@@ -1669,8 +2101,7 @@ class RandomDepictor:
                 try:
                     mean = ImageStat.Stat(paste_region).mean
                     if sum(mean) / len(mean) == 255:
-                        image.paste(
-                            arrow_image, (x_position, y_position), arrow_image)
+                        image.paste(arrow_image, (x_position, y_position), arrow_image)
                         break
                 except ZeroDivisionError:
                     pass
@@ -1729,8 +2160,7 @@ class RandomDepictor:
                 image = depictor(smiles, shape)
             else:
                 image = depictor.random_depiction(smiles, shape)
-            output_file_path = os.path.join(
-                output_dir, name + "_" + str(n) + ".png")
+            output_file_path = os.path.join(output_dir, name + "_" + str(n) + ".png")
             sk_io.imsave(output_file_path, img_as_ubyte(image))
 
     def batch_depict_save(
@@ -1780,6 +2210,7 @@ class RandomDepictor:
         schemes: List[Dict],
         shape: Tuple[int, int] = (299, 299),
         seed: int = 42,
+        path_bkg="./backgrounds/",
     ) -> np.array:
         """
         This function takes a SMILES representation of a molecule,
@@ -1828,6 +2259,32 @@ class RandomDepictor:
             False,
             False,
         )
+        if self.hand_drawn:
+            # Augment molecule image
+            mol_aug = self.hand_drawn_augment(depiction)
+
+            # Randomly select background image and use is as it is
+            backgroud_selected = self.random_choice(os.listdir(path_bkg))
+            bkg = cv2.imread(path_bkg + backgroud_selected)
+            bkg = cv2.resize(bkg, (256, 256))
+            # Combine augmented molecule and augmented background
+            p = 0.7
+            mol_bkg = cv2.addWeighted(mol_aug, p, bkg, 1 - p, gamma=0)
+
+            """
+            If you want to randomly augment the background as well,
+            simply comment the previous section and uncomment the next one.
+            """
+
+            """# Randomly select background image and augment it
+            bkg_aug = self.augment_bkg(bkg)
+            bkg_aug = cv2.resize(bkg_aug,(256,256))
+            # Combine augmented molecule and augmented background
+            p=0.7
+            mol_bkg = cv2.addWeighted(mol_aug, p, bkg_aug, 1-p, gamma=0)"""
+
+            # Degrade total image
+            depiction = self.degrade_img(mol_bkg)
         return depiction
 
     def depict_save_from_fingerprint(
@@ -1868,8 +2325,7 @@ class RandomDepictor:
         """
 
         # Generate chemical structure depiction
-        image = self.depict_from_fingerprint(
-            smiles, fingerprints, schemes, shape, seed)
+        image = self.depict_from_fingerprint(smiles, fingerprints, schemes, shape, seed)
         # Save at given_path:
         output_file_path = os.path.join(output_dir, filename + ".png")
         sk_io.imsave(output_file_path, img_as_ubyte(image))
@@ -1908,8 +2364,7 @@ class RandomDepictor:
             processes (int, optional): Number of threads. Defaults to 4.
         """
         # Duplicate elements in smiles_list images_per_structure times
-        smiles_list = [
-            smi for smi in smiles_list for _ in range(images_per_structure)]
+        smiles_list = [smi for smi in smiles_list for _ in range(images_per_structure)]
         # Generate corresponding amount of fingerprints
         dataset_size = len(smiles_list)
         FR = DepictionFeatureRanges()
@@ -1936,9 +2391,7 @@ class RandomDepictor:
             for n in range(len(fingerprint_tuples))
         )
         with get_context("spawn").Pool(processes) as p:
-            p.starmap(
-                self.depict_save_from_fingerprint,
-                starmap_tuple_generator)
+            p.starmap(self.depict_save_from_fingerprint, starmap_tuple_generator)
         return None
 
     def batch_depict_with_fingerprints(
@@ -1973,8 +2426,7 @@ class RandomDepictor:
             processes (int, optional): Number of threads. Defaults to 4.
         """
         # Duplicate elements in smiles_list images_per_structure times
-        smiles_list = [
-            smi for smi in smiles_list for _ in range(images_per_structure)]
+        smiles_list = [smi for smi in smiles_list for _ in range(images_per_structure)]
         # Generate corresponding amount of fingerprints
         dataset_size = len(smiles_list)
         FR = DepictionFeatureRanges()
@@ -2067,8 +2519,7 @@ class DepictionFeatureRanges(RandomDepictor):
         result = random.choice(iterable)
         # Add result(s) to augmentation_logger
         if log_attribute and self.depiction_features:
-            found_logged_attribute = getattr(
-                self.augmentation_logger, log_attribute)
+            found_logged_attribute = getattr(self.augmentation_logger, log_attribute)
             # If the attribute is not saved in a list, simply write it,
             # otherwise append it
             if not isinstance(found_logged_attribute, list):
@@ -2105,8 +2556,7 @@ class DepictionFeatureRanges(RandomDepictor):
             toolkit_range_dict = {
                 attr[:-6]: list(set(getattr(self, attr))) for attr in toolkit_range_IDs
             }
-            fingerprint_scheme = self.generate_fingerprint_scheme(
-                toolkit_range_dict)
+            fingerprint_scheme = self.generate_fingerprint_scheme(toolkit_range_dict)
             fingerprint_schemes.append(fingerprint_scheme)
         return fingerprint_schemes
 
@@ -2140,16 +2590,14 @@ class DepictionFeatureRanges(RandomDepictor):
             # Make sure numeric ranges don't take up more than 5 positions
             # in the fingerprint
             if (
-                type(feature_range[0]) in [int, float, np.float64, np.float32] and
-                len(feature_range) > 5
+                type(feature_range[0]) in [int, float, np.float64, np.float32]
+                and len(feature_range) > 5
             ):
                 subranges = self.split_into_n_sublists(feature_range, n=3)
                 position_dicts = []
                 for subrange in subranges:
                     subrange_minmax = (min(subrange), max(subrange))
-                    position_dict = {
-                        "position": position,
-                        "one_if": subrange_minmax}
+                    position_dict = {"position": position, "one_if": subrange_minmax}
                     position_dicts.append(position_dict)
                     position += 1
                 fingerprint_scheme[feature_ID] = position_dicts
@@ -2242,8 +2690,7 @@ class DepictionFeatureRanges(RandomDepictor):
             # Add every single valid option to the building block
             for position_index in range(len(position_condition_dicts)):
                 # Add list of zeros
-                FP_building_blocks[-1].append([0] *
-                                              len(position_condition_dicts))
+                FP_building_blocks[-1].append([0] * len(position_condition_dicts))
                 # Replace one zero with a one
                 FP_building_blocks[-1][-1][position_index] = 1
             # If a feature is described by only one position in the FP,
@@ -2295,8 +2742,7 @@ class DepictionFeatureRanges(RandomDepictor):
         # Determine cartesian product of valid building blocks to get all
         # valid fingerprints
         FP_generator = product(*FP_building_blocks)
-        flattened_fingerprints = list(
-            map(self.flatten_fingerprint, FP_generator))
+        flattened_fingerprints = list(map(self.flatten_fingerprint, FP_generator))
         return flattened_fingerprints
 
     def generate_all_possible_fingerprints(self) -> None:
@@ -2310,8 +2756,7 @@ class DepictionFeatureRanges(RandomDepictor):
         exists_already = False
         FP_names = ["CDK", "RDKit", "Indigo", "augmentation"]
         for scheme_index in range(len(self.schemes)):
-            n_FP = self.get_number_of_possible_fingerprints(
-                self.schemes[scheme_index])
+            n_FP = self.get_number_of_possible_fingerprints(self.schemes[scheme_index])
             # Load fingerprint pool from file (if it exists)
             FP_filename = "{}_fingerprints.npz".format(FP_names[scheme_index])
             FP_file_path = self.HERE.joinpath(FP_filename)
@@ -2331,9 +2776,7 @@ class DepictionFeatureRanges(RandomDepictor):
                         FP_names[scheme_index], FP_file_path
                     )
                 )
-            setattr(
-                self, "{}_fingerprints".format(
-                    FP_names[scheme_index]), fps)
+            setattr(self, "{}_fingerprints".format(FP_names[scheme_index]), fps)
         return
 
     def convert_to_int_arr(
@@ -2353,8 +2796,7 @@ class DepictionFeatureRanges(RandomDepictor):
         converted_fingerprints = []
         for fp in fingerprints:
             bitstring = "".join(np.array(fp).astype(str))
-            fp_converted = DataStructs.cDataStructs.CreateFromBitString(
-                bitstring)
+            fp_converted = DataStructs.cDataStructs.CreateFromBitString(bitstring)
             converted_fingerprints.append(fp_converted)
         return converted_fingerprints
 
@@ -2419,9 +2861,9 @@ class DepictionFeatureRanges(RandomDepictor):
         if isinstance(picked_fingerprints, bool):
             picked_fingerprints = np.array([fingerprints[i] for i in pick_indices])
         else:
-            picked_fingerprints = np.concatenate((picked_fingerprints,
-                                                  np.array([fingerprints[i]
-                                                            for i in pick_indices])))
+            picked_fingerprints = np.concatenate(
+                (picked_fingerprints, np.array([fingerprints[i] for i in pick_indices]))
+            )
         return picked_fingerprints
 
     def generate_fingerprints_for_dataset(
@@ -2517,11 +2959,9 @@ class DepictionFeatureRanges(RandomDepictor):
                              to the length of the list of elements B
         """
         # Make sure that the input is valid
-        args_total_len = len(
-            [element for sublist in args for element in sublist])
+        args_total_len = len([element for sublist in args for element in sublist])
         if len(elements_to_be_distributed) > args_total_len:
-            raise ValueError(
-                "Can't take more elements to be distributed than in args.")
+            raise ValueError("Can't take more elements to be distributed than in args.")
 
         output = []
         start_index = 0
@@ -2552,7 +2992,6 @@ class DepictionFeatureRanges(RandomDepictor):
 
 
 class RandomMarkushStructureCreator:
-
     def __init__(self, *args):
         """
         RandomMarkushStructureCreator objects are instantiated with the desired
@@ -2562,7 +3001,7 @@ class RandomMarkushStructureCreator:
         self.depictor = RandomDepictor()
         # Define R group variables
         if not args:
-            self.r_group_variables = ['R', 'X', 'Z']
+            self.r_group_variables = ["R", "X", "Z"]
         else:
             self.r_group_variables = list(args)
 
@@ -2580,8 +3019,10 @@ class RandomMarkushStructureCreator:
             List[str]: SMILES reprentations of markush structures
         """
         numbers = [self.depictor.random_choice(range(1, 5)) for _ in smiles_list]
-        r_group_smiles = [self.insert_R_group_var(smiles_list[index], numbers[index])
-                          for index in range(len(smiles_list))]
+        r_group_smiles = [
+            self.insert_R_group_var(smiles_list[index], numbers[index])
+            for index in range(len(smiles_list))
+        ]
         return r_group_smiles
 
     def insert_R_group_var(self, smiles: str, num: int) -> str:
@@ -2606,17 +3047,17 @@ class RandomMarkushStructureCreator:
         for _ in range(num):
             if len(potential_replacement_positions) > 0:
                 position = self.depictor.random_choice(potential_replacement_positions)
-                smiles[position] = '*'
+                smiles[position] = "*"
                 potential_replacement_positions.remove(position)
                 r_groups.append(self.get_r_group_smiles())
             else:
                 break
         # Remove explicite hydrogen again and get absolute SMILES
-        smiles = ''.join(smiles)
+        smiles = "".join(smiles)
         smiles = self.remove_explicite_hydrogen_from_smiles(smiles)
         # Replace * with R groups
         for r_group in r_groups:
-            smiles = smiles.replace('*', r_group, 1)
+            smiles = smiles.replace("*", r_group, 1)
         return smiles
 
     def get_r_group_smiles(self) -> str:
@@ -2631,9 +3072,9 @@ class RandomMarkushStructureCreator:
         r_group_var = self.depictor.random_choice(self.r_group_variables)
         if has_indices:
             index = self.depictor.random_choice(self.potential_indices)
-            return f'[{r_group_var}{index}]'
+            return f"[{r_group_var}{index}]"
         else:
-            return f'[{r_group_var}]'
+            return f"[{r_group_var}]"
 
     def get_valid_replacement_positions(self, smiles: str) -> List[int]:
         """
@@ -2647,19 +3088,29 @@ class RandomMarkushStructureCreator:
             replacement_positions (List[int]): valid replacement positions for R group variables
         """
         # Add space char to represent insertion position at the end of smiles str
-        smiles = f'{smiles} '
+        smiles = f"{smiles} "
         replacement_positions = []
         for index in range(len(smiles)):
             # Be aware of digits --> don't destroy ring syntax
             if not smiles[index].isdigit():
                 if smiles[index - 1] == "H":
-                    if smiles[index] == ']':
+                    if smiles[index] == "]":
                         replacement_positions.append(index - 1)
                 # Only replace "C" and "H"
                 elif smiles[index - 1] == "C":
                     # Don't replace "C" in "Cl", "Ca", Cu", etc...
-                    if smiles[index] not in ['s', 'a', 'e', 'o', 'u',
-                                             'r', 'l', 'f', 'd', 'n']:
+                    if smiles[index] not in [
+                        "s",
+                        "a",
+                        "e",
+                        "o",
+                        "u",
+                        "r",
+                        "l",
+                        "f",
+                        "d",
+                        "n",
+                    ]:
                         replacement_positions.append(index - 1)
         return replacement_positions
 
@@ -2683,7 +3134,9 @@ class RandomMarkushStructureCreator:
 
         # Create absolute SMILES
         smi_flavor = JClass("org.openscience.cdk.smiles.SmiFlavor").Absolute
-        smiles_generator = JClass("org.openscience.cdk.smiles.SmilesGenerator")(smi_flavor)
+        smiles_generator = JClass("org.openscience.cdk.smiles.SmilesGenerator")(
+            smi_flavor
+        )
         smiles = smiles_generator.create(i_atom_container)
         return str(smiles)
 
@@ -2705,6 +3158,8 @@ class RandomMarkushStructureCreator:
         i_atom_container = manipulator.copyAndSuppressedHydrogens(i_atom_container)
         # Create absolute SMILES
         smi_flavor = JClass("org.openscience.cdk.smiles.SmiFlavor").Absolute
-        smiles_generator = JClass("org.openscience.cdk.smiles.SmilesGenerator")(smi_flavor)
+        smiles_generator = JClass("org.openscience.cdk.smiles.SmilesGenerator")(
+            smi_flavor
+        )
         smiles = smiles_generator.create(i_atom_container)
         return str(smiles)
