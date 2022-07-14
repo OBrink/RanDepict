@@ -5,7 +5,7 @@ import io
 from skimage import io as sk_io
 from skimage.color import rgba2rgb, rgb2gray
 from skimage.util import img_as_ubyte, img_as_float
-from PIL import Image, ImageFont, ImageDraw, ImageStat
+from PIL import Image, ImageFont, ImageDraw, ImageStat, ImageEnhance 
 from multiprocessing import set_start_method, get_context
 import imgaug.augmenters as iaa
 import random
@@ -33,7 +33,6 @@ import base64
 import cv2
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage.interpolation import map_coordinates
-from PIL import Image, ImageEnhance
 
 
 class RandomDepictor:
@@ -464,13 +463,13 @@ class RandomDepictor:
         dx = (
             gaussian_filter(
                 (random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0
-            )* alpha
+            ) * alpha
         )
         random_state = np.random.RandomState(self.random_choice(np.arange(1, 1000)))
         dy = (
             gaussian_filter(
                 (random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0
-            )* alpha
+            ) * alpha
         )
 
         x, y, z = np.meshgrid(np.arange(shape[0]), np.arange(shape[1]), np.arange(shape[2]))
@@ -622,19 +621,19 @@ class RandomDepictor:
         num_salt = np.ceil(amount * img.size * s_vs_p)
         coords = []
         for i in img.shape:
-            l = []
-            for n in range(50):
-                l.append(self.random_choice(np.arange(0,i-1)))
-            coords.append(np.array(l))
+            coordinates = []
+            for n in range(nun_salt):
+                coordinates.append(self.random_choice(np.arange(0, i-1)))
+            coords.append(np.array(coordinates)) 
         out[tuple(coords)] = 1
         # pepper
         num_pepper = np.ceil(amount * img.size * (1.0 - s_vs_p))
         coords = []
         for i in img.shape:
-            l = []
-            for n in range(50):
-                l.append(self.random_choice(np.arange(0,i-1)))
-            coords.append(np.array(l))
+            coordinates = []
+            for n in range(num_pepper):
+                coordinates.append(self.random_choice(np.arange(0, i-1)))
+            coords.append(np.array(coordinates)) 
         out[tuple(coords)] = 0
         return out
 
@@ -1340,7 +1339,7 @@ class RandomDepictor:
         return new_im
 
     def random_depiction(
-        self, smiles: str, shape: Tuple[int, int] = (299, 299),path_bkg="./backgrounds/"
+        self, smiles: str, shape: Tuple[int, int] = (299, 299), path_bkg="./backgrounds/"
     ) -> np.array:
         """
         This function takes a SMILES and depicts it using Rdkit, Indigo or CDK.
