@@ -300,7 +300,32 @@ class RandomDepictor:
         if img.shape != (255, 255, 3):
             img = cv2.resize(img, (256, 256))
         return img
+    
+        def rotate(
+        self, img, obj=None
+    ) -> np.array:
+        """
+        This function randomly rotates between 0-360 degrees the input
+        image.
 
+        Args:
+            img: the image to modify in array format.
+            angle: angle to rotate.
+            obj: "mol" or "bkg" to modify a chemical structure image or
+                 a background image.
+        Returns:
+            dst: the rotated image.
+
+        """
+        rows, cols, _ = img.shape
+        angle = self.random_choice(np.arange(0, 360))
+        M = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
+        if obj == "mol":
+            dst = cv2.warpAffine(img, M, (cols, rows), borderValue=[255, 255, 255])
+        if obj == "bkg":
+            dst = cv2.warpAffine(img, M, (cols, rows), borderMode=cv2.BORDER_REFLECT)
+        return dst
+    
     def resize_hd(
         self, img
     ) -> np.array:
