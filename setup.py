@@ -28,7 +28,7 @@ setuptools.setup(
         "rdkit-pypi",
         "imagecorruptions",
         "pillow>=8.2.0",
-        'pikachu-chem @ git+https://github.com/OBrink/pikachu@accept-markush-structures#egg=pikachu-chem'
+        "pikachu-chem @ git+https://github.com/OBrink/pikachu@accept-markush-structures#egg=pikachu-chem",
     ],
     package_data={"RanDepict": ["assets/*.*", "assets/*/*.*", "assets/*/*/*.*"]},
     classifiers=[
