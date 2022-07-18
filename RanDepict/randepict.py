@@ -2845,19 +2845,13 @@ class DepictionFeatureRanges(RandomDepictor):
                 fingerprints[fp_index_1], fingerprints[fp_index_2]
             )
 
-        n_fingerprints = len(fingerprints)
         # If we want to pick more fingerprints than there are in the pool,
         # simply distribute the complete pool as often as possible and pick
         # the amount that is not dividable by the size of the pool
-        if n > n_fingerprints:
-            oversize_factor = int(n / n_fingerprints)
-            picked_fingerprints = fingerprints * oversize_factor
-            n = n - n_fingerprints * oversize_factor
-        else:
-            picked_fingerprints = False
+        picked_fingerprints, n = self.correct_amount_of_FP_to_pick(fingerprints, n)
 
         picker = MaxMinPicker()
-        pick_indices = picker.LazyPick(dice_dist, n_fingerprints, n, seed=42)
+        pick_indices = picker.LazyPick(dice_dist, len(fingerprints), n, seed=42)
         if isinstance(picked_fingerprints, bool):
             picked_fingerprints = np.array([fingerprints[i] for i in pick_indices])
         else:
@@ -2865,6 +2859,32 @@ class DepictionFeatureRanges(RandomDepictor):
                 (picked_fingerprints, np.array([fingerprints[i] for i in pick_indices]))
             )
         return picked_fingerprints
+
+    def correct_amount_of_FP_to_pick(self, fingerprints: List, n: int) -> Tuple[List, int]:
+        """
+        When picking n elements from a list of fingerprints, if the amount of fingerprints is
+        bigger than n, there is no need to pick n fingerprints. Instead, the complete fingerprint
+        list is added to the picked fingerprints as often as possible while only the amount
+        that is not dividable by the fingerprint pool size is picked.
+        ___
+        Given a list of fingerprints and the amount of fingerprints to pick n, this function
+        returns a list of "picked" fingerprints and (in the ideal case) a corrected lower number
+        of fingerprints to be picked
+
+        Args:
+            fingerprints (List): _description_
+            n (int): _description_
+
+        Returns:
+            Tuple[List, int]: _description_
+        """
+        if n > len(fingerprints):
+            oversize_factor = int(n / len(fingerprints))
+            picked_fingerprints = fingerprints * oversize_factor
+            n = n - len(fingerprints) * oversize_factor
+        else:
+            picked_fingerprints = False
+        return picked_fingerprints, n
 
     def generate_fingerprints_for_dataset(
         self,

@@ -246,6 +246,17 @@ class TestDepictionFeatureRanges:
         )
         assert actual_output == expected_output
 
+    def test_correct_amount_of_FP_to_pick(self):
+        # Test that the amount of fingerprints is adapted when more fingerprints
+        # are supposed to be picked than there are fingerprints
+        test_n = 23
+        test_fingerprints = ["A"] * 5
+        picked_fingerprints , corrected_n = self.DFR.correct_amount_of_FP_to_pick(
+            test_fingerprints,
+            test_n
+        )
+        assert picked_fingerprints == ["A"] * 20
+        assert corrected_n == 3
 
 class TestRandomDepictor:
     depictor = RandomDepictor()
