@@ -255,7 +255,7 @@ class TestDepictionFeatureRanges:
             test_fingerprints,
             test_n
         )
-        assert picked_fingerprints == ["A"] * 20
+        assert list(picked_fingerprints) == ["A"] * 20
         assert corrected_n == 3
 
 class TestRandomDepictor:
