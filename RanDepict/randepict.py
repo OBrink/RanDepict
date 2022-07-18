@@ -2856,7 +2856,7 @@ class DepictionFeatureRanges(RandomDepictor):
             picked_fingerprints = np.array([fingerprints[i] for i in pick_indices])
         else:
             picked_fingerprints = np.concatenate(
-                (picked_fingerprints, np.array([fingerprints[i] for i in pick_indices]))
+                (np.array(picked_fingerprints), np.array(([fingerprints[i] for i in pick_indices])))
             )
         return picked_fingerprints
 
@@ -2880,7 +2880,8 @@ class DepictionFeatureRanges(RandomDepictor):
         """
         if n > len(fingerprints):
             oversize_factor = int(n / len(fingerprints))
-            picked_fingerprints = fingerprints * oversize_factor
+            picked_fingerprints = np.concatenate([fingerprints for _
+                                                  in range(oversize_factor)])
             n = n - len(fingerprints) * oversize_factor
         else:
             picked_fingerprints = False

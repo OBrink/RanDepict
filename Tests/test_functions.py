@@ -210,7 +210,7 @@ class TestDepictionFeatureRanges:
         # Assert that picking given amount of fingerprints from an actual
         # fingerprint pool works when it is bigger than the pool itself
         example_pool = self.DFR.Indigo_fingerprints
-        number = 1000
+        number = 100000
         actual_subset = self.DFR.pick_fingerprints(example_pool, number)
         assert len(actual_subset) == number
 
