@@ -80,3 +80,4 @@ Here are some examples of depictions of caffeine without augmentations (left) an
 
 [![GitHub Logo](https://github.com/Kohulan/DECIMER-Image-to-SMILES/blob/master/assets/CheminfGit.png?raw=true)](https://cheminf.uni-jena.de)
 
+![Alt](https://repobeats.axiom.co/api/embed/ed3e9be96b0f41907c027814b77621879557fb47.svg "Repobeats analytics image")
