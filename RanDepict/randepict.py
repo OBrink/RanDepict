@@ -5,6 +5,7 @@ import io
 from skimage import io as sk_io
 from skimage.color import rgba2rgb, rgb2gray
 from skimage.util import img_as_ubyte, img_as_float
+from matplotlib import pyplot as plt
 from PIL import Image, ImageFont, ImageDraw, ImageStat, ImageEnhance
 from multiprocessing import set_start_method, get_context
 import imgaug.augmenters as iaa
@@ -108,6 +109,7 @@ class RandomDepictor:
         hand_drawn = self.hand_drawn
         if hand_drawn:
             depiction = self.random_depiction(smiles, shape)
+
         else:
             depiction = self.random_depiction(smiles, shape)
             # Add augmentations
@@ -686,6 +688,7 @@ class RandomDepictor:
         depiction = drawer.get_image_as_array()
         depiction = self.central_square_image(depiction)
         depiction = self.resize(depiction, (shape[0], shape[1]))
+        plt.close('all')
         return depiction
 
     def get_random_indigo_rendering_settings(
