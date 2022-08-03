@@ -8,7 +8,7 @@ authors:
   given-names: "Kohulan"
   orcid: "https://orcid.org/0000-0003-1066-7792"
 title: "RanDepict"
-version: 1.0.7
+version: 1.0.8
 doi: 10.5281/zenodo.5205528
 date-released: 2021-08-17
 url: "https://github.com/OBrink/RanDepict"
