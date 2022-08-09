@@ -628,7 +628,7 @@ class RandomDepictor:
         s_vs_p = 0.5
         out = np.copy(img)
         # Salt mode
-        num_salt = np.ceil(amount * img.size * s_vs_p)
+        num_salt = int(np.ceil(amount * img.size * s_vs_p))
         coords = []
         for i in img.shape:
             coordinates = []
@@ -637,7 +637,7 @@ class RandomDepictor:
             coords.append(np.array(coordinates))
         out[tuple(coords)] = 1
         # pepper
-        num_pepper = np.ceil(amount * img.size * (1.0 - s_vs_p))
+        num_pepper = int(np.ceil(amount * img.size * (1.0 - s_vs_p)))
         coords = []
         for i in img.shape:
             coordinates = []
