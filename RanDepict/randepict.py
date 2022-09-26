@@ -193,37 +193,6 @@ class RandomDepictor:
         x = int(shape[1] * self.random_choice(np.arange(0.9, 1.1, 0.02)))
         return y, x
 
-    def get_random_pikachu_rendering_settings(
-        self, shape: Tuple[int, int] = (299, 299)
-    ) -> drawing.Options:
-        """
-        This function defines random rendering options for the structure
-        depictions created using PIKAChU.
-        It returns an pikachu.drawing.drawing.Options object with the settings.
-
-        Args:
-            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
-
-        Returns:
-            options: Options object that contains depictions settings
-        """
-        options = drawing.Options()
-        options.height, options.width = shape
-        options.bond_thickness = self.random_choice(np.arange(0.5, 2.2, 0.1))
-        options.bond_length = self.random_choice(np.arange(10, 25, 1))
-        options.chiral_bond_width = options.bond_length * self.random_choice(
-            np.arange(0.05, 0.2, 0.01)
-        )
-        options.short_bond_length = self.random_choice(np.arange(0.2, 0.6, 0.05))
-        options.double_bond_length = self.random_choice(np.arange(0.6, 0.8, 0.05))
-        options.bond_spacing = options.bond_length * self.random_choice(
-            np.arange(0.15, 0.28, 0.01)
-        )
-        options.padding = self.random_choice(np.arange(10, 50, 5))
-        # options.font_size_large = 5
-        # options.font_size_small = 3
-        return options
-
     def hand_drawn_augment(self, img) -> np.array:
         """
         This function randomly applies different image augmentations with
@@ -661,6 +630,44 @@ class RandomDepictor:
             res, None, fx=1.0 / f, fy=1.0 / f, interpolation=cv2.INTER_CUBIC
         )
         return res
+
+    def get_random_pikachu_rendering_settings(
+        self, shape: Tuple[int, int] = (299, 299)
+    ) -> drawing.Options:
+        """
+        This function defines random rendering options for the structure
+        depictions created using PIKAChU.
+        It returns an pikachu.drawing.drawing.Options object with the settings.
+
+        Args:
+            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+
+        Returns:
+            options: Options object that contains depictions settings
+        """
+        options = drawing.Options()
+        options.height, options.width = shape
+        options.bond_thickness = self.random_choice(np.arange(0.5, 2.2, 0.1),
+                                                    log_attribute="pikachu_bond_line_width")
+        options.bond_length = self.random_choice(np.arange(10, 25, 1),
+                                                 log_attribute="pikachu_bond_length")
+        options.chiral_bond_width = options.bond_length * self.random_choice(
+            np.arange(0.05, 0.2, 0.01)
+        )
+        options.short_bond_length = self.random_choice(np.arange(0.2, 0.6, 0.05),
+                                                       log_attribute="pikachu_short_bond_length")
+        options.double_bond_length = self.random_choice(np.arange(0.6, 0.8, 0.05),
+                                                        log_attribute="pikachu_double_bond_length")
+        options.bond_spacing = options.bond_length * self.random_choice(
+            np.arange(0.15, 0.28, 0.01),
+            log_attribute="pikachu_bond_spacing"
+
+        )
+        options.padding = self.random_choice(np.arange(10, 50, 5),
+                                             log_attribute="pikachu_padding")
+        # options.font_size_large = 5
+        # options.font_size_small = 3
+        return options
 
     def depict_and_resize_pikachu(
         self, smiles: str, shape: Tuple[int, int] = (299, 299)
@@ -1322,7 +1329,7 @@ class RandomDepictor:
         self,
         smiles: str,
         shape: Tuple[int, int] = (299, 299),
-        path_bkg="./backgrounds/",
+        # path_bkg="./backgrounds/",
     ) -> np.array:
         """
         This function takes a SMILES and depicts it using Rdkit, Indigo or CDK.
@@ -1352,12 +1359,13 @@ class RandomDepictor:
                 break
 
         if self.hand_drawn:
+            path_bkg = self.HERE.joinpath("backgrounds/")
             # Augment molecule image
             mol_aug = self.hand_drawn_augment(depiction)
 
             # Randomly select background image and use is as it is
             backgroud_selected = self.random_choice(os.listdir(path_bkg))
-            bkg = cv2.imread(path_bkg + backgroud_selected)
+            bkg = cv2.imread(os.path.join(os.path.normpath(path_bkg), backgroud_selected))
             bkg = cv2.resize(bkg, (256, 256))
             # Combine augmented molecule and augmented background
             p = 0.7
@@ -2211,7 +2219,7 @@ class RandomDepictor:
         schemes: List[Dict],
         shape: Tuple[int, int] = (299, 299),
         seed: int = 42,
-        path_bkg="./backgrounds/",
+        # path_bkg="./backgrounds/",
     ) -> np.array:
         """
         This function takes a SMILES representation of a molecule,
@@ -2246,6 +2254,8 @@ class RandomDepictor:
             depiction = depictor.depict_and_resize_indigo(smiles, shape)
         elif "rdkit" in list(schemes[0].keys())[0]:
             depiction = depictor.depict_and_resize_rdkit(smiles, shape)
+        elif "pikachu" in list(schemes[0].keys())[0]:
+            depiction = depictor.depict_and_resize_pikachu(smiles, shape)
         elif "cdk" in list(schemes[0].keys())[0]:
             depiction = depictor.depict_and_resize_cdk(smiles, shape)
 
@@ -2260,32 +2270,32 @@ class RandomDepictor:
             False,
             False,
         )
-        if self.hand_drawn:
-            # Augment molecule image
-            mol_aug = self.hand_drawn_augment(depiction)
+        # if self.hand_drawn:
+        #     # Augment molecule image
+        #     mol_aug = self.hand_drawn_augment(depiction)
 
-            # Randomly select background image and use is as it is
-            backgroud_selected = self.random_choice(os.listdir(path_bkg))
-            bkg = cv2.imread(path_bkg + backgroud_selected)
-            bkg = cv2.resize(bkg, (256, 256))
-            # Combine augmented molecule and augmented background
-            p = 0.7
-            mol_bkg = cv2.addWeighted(mol_aug, p, bkg, 1 - p, gamma=0)
+        #     # Randomly select background image and use is as it is
+        #     backgroud_selected = self.random_choice(os.listdir(path_bkg))
+        #     bkg = cv2.imread(path_bkg + backgroud_selected)
+        #     bkg = cv2.resize(bkg, (256, 256))
+        #     # Combine augmented molecule and augmented background
+        #     p = 0.7
+        #     mol_bkg = cv2.addWeighted(mol_aug, p, bkg, 1 - p, gamma=0)
 
-            """
-            If you want to randomly augment the background as well,
-            simply comment the previous section and uncomment the next one.
-            """
+        """
+        If you want to randomly augment the background as well,
+        simply comment the previous section and uncomment the next one.
+        """
 
-            """# Randomly select background image and augment it
-            bkg_aug = self.augment_bkg(bkg)
-            bkg_aug = cv2.resize(bkg_aug,(256,256))
-            # Combine augmented molecule and augmented background
-            p=0.7
-            mol_bkg = cv2.addWeighted(mol_aug, p, bkg_aug, 1-p, gamma=0)"""
+        """# Randomly select background image and augment it
+        bkg_aug = self.augment_bkg(bkg)
+        bkg_aug = cv2.resize(bkg_aug,(256,256))
+        # Combine augmented molecule and augmented background
+        p=0.7
+        mol_bkg = cv2.addWeighted(mol_aug, p, bkg_aug, 1-p, gamma=0)"""
 
-            # Degrade total image
-            depiction = self.degrade_img(mol_bkg)
+        # Degrade total image
+        # depiction = self.degrade_img(mol_bkg)
         return depiction
 
     def depict_save_from_fingerprint(
@@ -2338,8 +2348,9 @@ class RandomDepictor:
         output_dir: str,
         ID_list: List[str],
         indigo_proportion: float = 0.15,
-        rdkit_proportion: float = 0.3,
-        cdk_proportion: float = 0.55,
+        rdkit_proportion: float = 0.25,
+        pikachu_proportion: float = 0.25,
+        cdk_proportion: float = 0.35,
         aug_proportion: float = 0.5,
         shape: Tuple[int, int] = (299, 299),
         processes: int = 4,
@@ -2358,8 +2369,9 @@ class RandomDepictor:
             output_dir (str): Output directory
             ID_list (List[str]): IDs (len: smiles_list * images_per_structure)
             indigo_proportion (float): Indigo proportion. Defaults to 0.15.
-            rdkit_proportion (float): RDKit proportion. Defaults to 0.3.
-            cdk_proportion (float): CDK proportion. Defaults to 0.55.
+            rdkit_proportion (float): RDKit proportion. Defaults to 0.25.
+            pikachu_proportion (float): PIKAChU proportion. Defaults to 0.25.
+            cdk_proportion (float): CDK proportion. Defaults to 0.35.
             aug_proportion (float): Augmentation proportion. Defaults to 0.5.
             shape (Tuple[int, int]): [description]. Defaults to (299, 299).
             processes (int, optional): Number of threads. Defaults to 4.
@@ -2373,6 +2385,7 @@ class RandomDepictor:
             dataset_size,
             indigo_proportion,
             rdkit_proportion,
+            pikachu_proportion,
             cdk_proportion,
             aug_proportion,
         )
@@ -2400,8 +2413,9 @@ class RandomDepictor:
         smiles_list: List[str],
         images_per_structure: int,
         indigo_proportion: float = 0.15,
-        rdkit_proportion: float = 0.3,
-        cdk_proportion: float = 0.55,
+        rdkit_proportion: float = 0.25,
+        pikachu_proportion: float = 0.25,
+        cdk_proportion: float = 0.35,
         aug_proportion: float = 0.5,
         shape: Tuple[int, int] = (299, 299),
         processes: int = 4,
@@ -2435,6 +2449,7 @@ class RandomDepictor:
             dataset_size,
             indigo_proportion,
             rdkit_proportion,
+            pikachu_proportion,
             cdk_proportion,
             aug_proportion,
         )
@@ -2469,11 +2484,13 @@ class DepictionFeatureRanges(RandomDepictor):
         # every available decision once to get all the information about the
         # feature space that we need.
         smiles = "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
+
         # Call every depiction function
         depiction = self(smiles)
         depiction = self.depict_and_resize_cdk(smiles)
         depiction = self.depict_and_resize_rdkit(smiles)
         depiction = self.depict_and_resize_indigo(smiles)
+        depiction = self.depict_and_resize_pikachu(smiles)
         # Call augmentation function
         depiction = self.add_augmentations(depiction)
         # Generate schemes for Fingerprint creation
@@ -2482,6 +2499,7 @@ class DepictionFeatureRanges(RandomDepictor):
             self.CDK_scheme,
             self.RDKit_scheme,
             self.Indigo_scheme,
+            self.PIKAChU_scheme,
             self.augmentation_scheme,
         ) = self.schemes
         # Generate the pool of all valid fingerprint combinations
@@ -2491,6 +2509,7 @@ class DepictionFeatureRanges(RandomDepictor):
             len(self.CDK_fingerprints[0]): self.CDK_scheme,
             len(self.RDKit_fingerprints[0]): self.RDKit_scheme,
             len(self.Indigo_fingerprints[0]): self.Indigo_scheme,
+            len(self.PIKAChU_fingerprints[0]): self.PIKAChU_scheme,
             len(self.augmentation_fingerprints[0]): self.augmentation_scheme,
         }
 
@@ -2519,18 +2538,18 @@ class DepictionFeatureRanges(RandomDepictor):
         random.seed(self.seed)
         result = random.choice(iterable)
         # Add result(s) to augmentation_logger
-        if log_attribute and self.depiction_features:
-            found_logged_attribute = getattr(self.augmentation_logger, log_attribute)
-            # If the attribute is not saved in a list, simply write it,
-            # otherwise append it
-            if not isinstance(found_logged_attribute, list):
-                setattr(self.depiction_features, log_attribute, result)
-            else:
-                setattr(
-                    self.depiction_features,
-                    log_attribute,
-                    found_logged_attribute + [result],
-                )
+        # if log_attribute and self.depiction_features:
+        #    found_logged_attribute = getattr(self.augmentation_logger, log_attribute)
+        #    # If the attribute is not saved in a list, simply write it,
+        #    # otherwise append it
+        #    if not isinstance(found_logged_attribute, list):
+        #        setattr(self.depiction_features, log_attribute, result)
+        #    else:
+        #        setattr(
+        #            self.depiction_features,
+        #            log_attribute,
+        #            found_logged_attribute + [result],
+        #        )
         return result
 
     def generate_fingerprint_schemes(self) -> List[Dict]:
@@ -2546,7 +2565,7 @@ class DepictionFeatureRanges(RandomDepictor):
         fingerprint_schemes = []
         range_IDs = [att for att in dir(self) if "range" in att]
         # Generate fingerprint scheme for our cdk, indigo and rdkit depictions
-        depiction_toolkits = ["cdk", "rdkit", "indigo", ""]
+        depiction_toolkits = ["cdk", "rdkit", "indigo", "pikachu", ""]
         for toolkit in depiction_toolkits:
             toolkit_range_IDs = [att for att in range_IDs if toolkit in att]
             # Delete toolkit-specific ranges
@@ -2555,7 +2574,7 @@ class DepictionFeatureRanges(RandomDepictor):
             for ID in toolkit_range_IDs:
                 range_IDs.remove(ID)
             toolkit_range_dict = {
-                attr[:-6]: list(set(getattr(self, attr))) for attr in toolkit_range_IDs
+                attr: list(set(getattr(self, attr))) for attr in toolkit_range_IDs
             }
             fingerprint_scheme = self.generate_fingerprint_scheme(toolkit_range_dict)
             fingerprint_schemes.append(fingerprint_scheme)
@@ -2754,9 +2773,9 @@ class DepictionFeatureRanges(RandomDepictor):
         This function returns None but saves the fingerprint pools as a
         class attribute $ID_fingerprints
         """
-        exists_already = False
-        FP_names = ["CDK", "RDKit", "Indigo", "augmentation"]
+        FP_names = ["CDK", "RDKit", "Indigo", "PIKAChU", "augmentation"]
         for scheme_index in range(len(self.schemes)):
+            exists_already = False
             n_FP = self.get_number_of_possible_fingerprints(self.schemes[scheme_index])
             # Load fingerprint pool from file (if it exists)
             FP_filename = "{}_fingerprints.npz".format(FP_names[scheme_index])
@@ -2892,23 +2911,26 @@ class DepictionFeatureRanges(RandomDepictor):
         self,
         size: int,
         indigo_proportion: float = 0.15,
-        rdkit_proportion: float = 0.3,
-        cdk_proportion: float = 0.55,
+        rdkit_proportion: float = 0.25,
+        pikachu_proportion: float = 0.25,
+        cdk_proportion: float = 0.35,
         aug_proportion: float = 0.5,
     ) -> List[List[int]]:
-        """Given a dataset size (int) and (optional) proportions for the
+        """
+        Given a dataset size (int) and (optional) proportions for the
         different types of fingerprints, this function returns
 
         Args:
             size (int): Desired dataset size, number of returned  fingerprints
             indigo_proportion (float): Indigo proportion. Defaults to 0.15.
-            rdkit_proportion (float):  RDKit proportion. Defaults to 0.3.
-            cdk_proportion (float):  CDK proportion. Defaults to 0.55.
+            rdkit_proportion (float):  RDKit proportion. Defaults to 0.25.
+            pikachu_proportion (float):  PIKAChU proportion. Defaults to 0.25.
+            cdk_proportion (float):  CDK proportion. Defaults to 0.35.
             aug_proportion (float):  Augmentation proportion. Defaults to 0.5.
 
         Raises:
             ValueError:
-                - If the sum of Indigo, RDKit and CDK proportions is not 1
+                - If the sum of Indigo, RDKit, PIKAChU and CDK proportions is not 1
                 - If the augmentation proportion is > 1
 
         Returns:
@@ -2924,9 +2946,9 @@ class DepictionFeatureRanges(RandomDepictor):
 
         """
         # Make sure that the given proportion arguments make sense
-        if sum((indigo_proportion, rdkit_proportion, cdk_proportion)) != 1:
+        if sum((indigo_proportion, rdkit_proportion, pikachu_proportion, cdk_proportion)) != 1:
             raise ValueError(
-                "Sum of Indigo, CDK and RDKit proportion arguments has to be 1"
+                "Sum of Indigo, CDK, PIKAChU and RDKit proportions arguments has to be 1"
             )
         if aug_proportion > 1:
             raise ValueError(
@@ -2939,6 +2961,9 @@ class DepictionFeatureRanges(RandomDepictor):
         picked_RDKit_fingerprints = self.pick_fingerprints(
             self.RDKit_fingerprints, int(size * rdkit_proportion)
         )
+        picked_PIKAChU_fingerprints = self.pick_fingerprints(
+            self.PIKAChU_fingerprints, int(size * pikachu_proportion)
+        )
         picked_CDK_fingerprints = self.pick_fingerprints(
             self.CDK_fingerprints, int(size * cdk_proportion)
         )
@@ -2950,6 +2975,7 @@ class DepictionFeatureRanges(RandomDepictor):
             picked_augmentation_fingerprints,
             picked_Indigo_fingerprints,
             picked_RDKit_fingerprints,
+            picked_PIKAChU_fingerprints,
             picked_CDK_fingerprints,
         )
         # Shuffle fingerprint tuples randomly to avoid the same smiles
