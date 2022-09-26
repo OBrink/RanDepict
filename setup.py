@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="RanDepict",
-    version="1.0.8",
+    version="1.0.9",
     author="Otto Brinkhaus",
     author_email="otto.brinkhaus@uni-jena.de, kohulan.rajan@uni-jena.de",
     maintainer="Otto Brinkhaus, Kohulan Rajan",
@@ -28,7 +28,7 @@ setuptools.setup(
         "rdkit-pypi",
         "imagecorruptions",
         "pillow>=8.2.0",
-        "pikachu-chem @ git+https://github.com/OBrink/pikachu@accept-markush-structures#egg=pikachu-chem",
+        "pikachu-chem>=1.0.7",
     ],
     package_data={"RanDepict": ["assets/*.*", "assets/*/*.*", "assets/*/*/*.*"]},
     classifiers=[
@@ -37,6 +37,8 @@ setuptools.setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3 :: Only",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
