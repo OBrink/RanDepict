@@ -1220,8 +1220,8 @@ class RandomDepictor:
             IAtomContainer: CDK IAtomContainer object that represents the molecule
         """
         cdk_base = "org.openscience.cdk"
-        DCOB = JClass(cdk_base + ".DefaultChemObjectBuilder")
-        SmilesParser = JClass(cdk_base + ".smiles.SmilesParser")(DCOB.getInstance())
+        SCOB = JClass(cdk_base + ".silent.SilentChemObjectBuilder")
+        SmilesParser = JClass(cdk_base + ".smiles.SmilesParser")(SCOB.getInstance())
         if self.random_choice([True, False, False], log_attribute="cdk_kekulized"):
             SmilesParser.kekulise(False)
         molecule = SmilesParser.parseSmiles(smiles)
