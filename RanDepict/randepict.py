@@ -1612,8 +1612,7 @@ class RandomDepictor:
             log_attribute="has_reaction_label",
         ):
             depiction = self.add_chemical_label(depiction, "REACTION")
-        if self.random_choice([True, False, False]):
-            depiction = self.imgaug_augment(depiction)
+        depiction = self.imgaug_augment(depiction)
         return depiction
 
     def get_random_label_position(self, width: int, height: int) -> Tuple[int, int]:
@@ -2522,7 +2521,8 @@ class DepictionFeatureRanges(RandomDepictor):
         Here, this function is overwritten, so that it also sets the class
         attribute $log_attribute_range to contain the iterable.
         This way, a DepictionFeatureRanges object can easily be filled with
-        all the iterables that define the complete depiction feature space.
+        all the iterables that define the complete depiction feature space
+        (for fingerprint generation).
         ___
         Args:
             iterable (List): iterable to pick from
@@ -2532,24 +2532,13 @@ class DepictionFeatureRanges(RandomDepictor):
         Returns:
             Any: "Randomly" picked element
         """
+        # Save iterables as class attributes (for fingerprint generation)
         if log_attribute:
-            setattr(self, "{}_range".format(log_attribute), iterable)
+            setattr(self, f"{log_attribute}_range", iterable)
+        # Pseudo-randomly pick element from iterable
         self.seed += 1
         random.seed(self.seed)
         result = random.choice(iterable)
-        # Add result(s) to augmentation_logger
-        # if log_attribute and self.depiction_features:
-        #    found_logged_attribute = getattr(self.augmentation_logger, log_attribute)
-        #    # If the attribute is not saved in a list, simply write it,
-        #    # otherwise append it
-        #    if not isinstance(found_logged_attribute, list):
-        #        setattr(self.depiction_features, log_attribute, result)
-        #    else:
-        #        setattr(
-        #            self.depiction_features,
-        #            log_attribute,
-        #            found_logged_attribute + [result],
-        #        )
         return result
 
     def generate_fingerprint_schemes(self) -> List[Dict]:
@@ -2573,8 +2562,9 @@ class DepictionFeatureRanges(RandomDepictor):
             # are left)
             for ID in toolkit_range_IDs:
                 range_IDs.remove(ID)
+            # [:-6] -->  remove "_range" at the end
             toolkit_range_dict = {
-                attr: list(set(getattr(self, attr))) for attr in toolkit_range_IDs
+                attr[:-6]: list(set(getattr(self, attr))) for attr in toolkit_range_IDs
             }
             fingerprint_scheme = self.generate_fingerprint_scheme(toolkit_range_dict)
             fingerprint_schemes.append(fingerprint_scheme)
