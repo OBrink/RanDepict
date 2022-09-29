@@ -55,7 +55,7 @@ with RandomDepictor() as depictor:
     image = depictor(smiles)
 ``` 
 
-Have a look in the RanDepictNotebook.ipynb for more examples and a more detailed [documentation check here](https://randepict.readthedocs.io/en/latest/).
+Have a look at the [examples in our demo notebook](https://github.com/OBrink/RanDepict/blob/main/examples/RanDepictNotebook.ipynb). A more detailed [documentation is provided here](https://randepict.readthedocs.io/en/latest/).
 
 Here are some examples of depictions of caffeine without augmentations (left) and with augmentations (right) that were automatically created using RanDepict. 
 
