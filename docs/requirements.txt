@@ -10,3 +10,4 @@ ipyplot
 rdkit-pypi
 imagecorruptions
 pillow>=8
+pikachu-chem>=1.0.7
