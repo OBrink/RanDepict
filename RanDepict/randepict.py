@@ -3030,7 +3030,7 @@ class DepictionFeatureRanges(RandomDepictor):
 
 
 class RandomMarkushStructureCreator:
-    def __init__(self, *args):
+    def __init__(self, *, variables_list = None, max_index=21):
         """
         RandomMarkushStructureCreator objects are instantiated with the desired
         inserted R group variables. Otherwise, "R", "X" and "Z" are used.
@@ -3038,12 +3038,12 @@ class RandomMarkushStructureCreator:
         # Instantiate RandomDepictor for reproducible random decisions
         self.depictor = RandomDepictor()
         # Define R group variables
-        if not args:
+        if variables_list is None:
             self.r_group_variables = ["R", "X", "Z"]
         else:
-            self.r_group_variables = list(args)
+            self.r_group_variables = variables_list
 
-        self.potential_indices = range(21)
+        self.potential_indices = range(max_index +1)
 
     def generate_markush_structure_dataset(self, smiles_list: List[str]) -> List[str]:
         """
