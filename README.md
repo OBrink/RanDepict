@@ -39,7 +39,7 @@ $ pip install RanDepict
 ### Development
 
 > **Note**
-> We recommend to use RanDepict inside a Conda environment to facilitate the installation of the dependencies.
+> We recommend using RanDepict inside a Conda environment to facilitate the installation of the dependencies.
 - Conda can be downloaded as part of the [Anaconda](https://www.anaconda.com/) or the [Miniconda](https://conda.io/en/latest/miniconda.html) plattforms (Python 3.8). We recommend `miniconda3`. On Linux you can get it with:
 
 ```shell
@@ -47,7 +47,7 @@ $ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 $ bash Miniconda3-latest-Linux-x86_64.sh
 ```
 
-```
+```shell
 $ echo -e "channels:\n - conda-forge\n - nodefaults" > ~/.condarc
 $ conda update conda
 $ conda install conda-libmamba-solver
