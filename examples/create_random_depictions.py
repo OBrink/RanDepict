@@ -89,7 +89,6 @@ class RandomDepictor(RandomDepictor):
             if len(process_list) == 0:
                 break
 
-
     def depict_save(
         self,
         smiles: List[str],
@@ -124,7 +123,7 @@ class RandomDepictor(RandomDepictor):
             for _ in range(n_non_augmented):
                 for _ in range(5):
                     try:
-                        output_path = f"RanDepict_dataset/{ID[smiles_index]}_aug_{n}.png"
+                        output_path = f"RanDepict_dataset/{ID[smiles_index]}_non_aug_{n}.png"
                         sk_io.imsave(output_path, img_as_ubyte(depictor(smi, shape)))
                         break
                     except Exception as e:
