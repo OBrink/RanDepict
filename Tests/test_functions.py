@@ -2,6 +2,7 @@ from RanDepict import RandomDepictor, DepictionFeatureRanges, RandomMarkushStruc
 from rdkit import DataStructs
 import numpy as np
 
+import pytest
 
 class TestDepictionFeatureRanges:
     DFR = DepictionFeatureRanges()
@@ -18,8 +19,8 @@ class TestDepictionFeatureRanges:
         # This cannot really be tested so we simply assert that it generates
         # every scheme when running generate_fingerprint_schemes()
         fingerprint_schemes = self.DFR.generate_fingerprint_schemes()
-        assert len(fingerprint_schemes) == 4
-        cdk_scheme, rdkit_scheme, indigo_scheme, _ = fingerprint_schemes
+        assert len(fingerprint_schemes) == 5
+        cdk_scheme, rdkit_scheme, indigo_scheme, _, _ = fingerprint_schemes
         assert "indigo" in list(indigo_scheme.keys())[0]
         assert "rdkit" in list(rdkit_scheme.keys())[0]
         assert "cdk" in list(cdk_scheme.keys())[0]
@@ -214,6 +215,18 @@ class TestDepictionFeatureRanges:
         actual_subset = self.DFR.pick_fingerprints(example_pool, number)
         assert len(actual_subset) == number
 
+    @pytest.mark.xfail(raises=ValueError)
+    def test_generate_fingerprints_for_dataset_valueerror(self):
+        """ValueError is the sum of Indigo, RDKit, PIKAChU and CDK proportions is not 1"""
+        self.DFR.generate_fingerprints_for_dataset(
+            size=100,
+            indigo_proportion=0.15,
+            rdkit_proportion=0.3,
+            pikachu_proportion=0.25,
+            cdk_proportion=0.55,
+            aug_proportion=0.5,
+        )
+
     def test_generate_fingerprints_for_dataset(self):
         # Difficult to test this
         # --> Assert that the total number of fingerprints fits
@@ -222,7 +235,8 @@ class TestDepictionFeatureRanges:
             size=100,
             indigo_proportion=0.15,
             rdkit_proportion=0.3,
-            cdk_proportion=0.55,
+            # pikachu_proportion=0.25, # default value
+            cdk_proportion=0.3,
             aug_proportion=0.5,
         )
 

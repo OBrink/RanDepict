@@ -25,11 +25,14 @@ setuptools.setup(
         "epam.indigo",
         "jpype1",
         "ipyplot",
-        "rdkit-pypi",
+        "rdkit",
         "imagecorruptions",
         "pillow>=8.2.0",
         "pikachu-chem>=1.0.7",
     ],
+    extras_require={
+        "dev": ["tox", "pytest"],
+    },
     package_data={"RanDepict": ["assets/*.*", "assets/*/*.*", "assets/*/*/*.*"]},
     classifiers=[
         "Programming Language :: Python :: 3",
