@@ -891,7 +891,7 @@ class RandomDepictor:
         # Load molecule
         if not self.has_r_group(smiles):
             mol = Chem.MolFromSmiles(smiles)
-        else:
+        if self.has_r_group(smiles) or not mol:
             mol_str = self.smiles_to_mol_str(smiles)
             mol = Chem.MolFromMolBlock(mol_str)
         if mol:
