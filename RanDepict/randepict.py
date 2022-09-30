@@ -31,8 +31,8 @@ from pikachu.smiles.smiles import read_smiles
 import base64
 
 import cv2
-from scipy.ndimage.filters import gaussian_filter
-from scipy.ndimage.interpolation import map_coordinates
+from scipy.ndimage import gaussian_filter
+from scipy.ndimage import map_coordinates
 
 
 class RandomDepictor:
@@ -64,7 +64,7 @@ class RandomDepictor:
             )
             self.jvmPath = "Define/path/or/set/JAVA_HOME/variable/properly"
         if not isJVMStarted():
-            self.jar_path = self.HERE.joinpath("jar_files/cdk_2_5.jar")
+            self.jar_path = self.HERE.joinpath("jar_files/cdk-2.8.jar")
             startJVM(self.jvmPath, "-ea", "-Djava.class.path=" + str(self.jar_path))
 
         self.seed = seed
@@ -78,12 +78,12 @@ class RandomDepictor:
 
         # Define PIL resizing methods to choose from:
         self.PIL_resize_methods = [
-            Image.NEAREST,
-            Image.BOX,
-            Image.BILINEAR,
-            Image.HAMMING,
-            Image.BICUBIC,
-            Image.LANCZOS,
+            Image.Resampling.NEAREST,
+            Image.Resampling.BOX,
+            Image.Resampling.BILINEAR,
+            Image.Resampling.HAMMING,
+            Image.Resampling.BICUBIC,
+            Image.Resampling.LANCZOS,
         ]
 
         self.PIL_HQ_resize_methods = self.PIL_resize_methods[4:]
@@ -2085,7 +2085,7 @@ class RandomDepictor:
                 arrow_image = arrow_image.rotate(
                     self.random_choice(range(360)),
                     resample=self.random_choice(
-                        [Image.BICUBIC, Image.NEAREST, Image.BILINEAR]
+                        [Image.Resampling.BICUBIC, Image.Resampling.NEAREST, Image.Resampling.BILINEAR]
                     ),
                     expand=True,
                 )
@@ -3030,7 +3030,7 @@ class DepictionFeatureRanges(RandomDepictor):
 
 
 class RandomMarkushStructureCreator:
-    def __init__(self, *args):
+    def __init__(self, *, variables_list=None, max_index=21):
         """
         RandomMarkushStructureCreator objects are instantiated with the desired
         inserted R group variables. Otherwise, "R", "X" and "Z" are used.
@@ -3038,12 +3038,12 @@ class RandomMarkushStructureCreator:
         # Instantiate RandomDepictor for reproducible random decisions
         self.depictor = RandomDepictor()
         # Define R group variables
-        if not args:
+        if variables_list is None:
             self.r_group_variables = ["R", "X", "Z"]
         else:
-            self.r_group_variables = list(args)
+            self.r_group_variables = variables_list
 
-        self.potential_indices = range(21)
+        self.potential_indices = range(max_index + 1)
 
     def generate_markush_structure_dataset(self, smiles_list: List[str]) -> List[str]:
         """
