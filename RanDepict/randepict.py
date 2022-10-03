@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import os
-import pathlib
+from pathlib import Path
 import numpy as np
 import io
 from skimage import io as sk_io
@@ -10,7 +12,7 @@ from multiprocessing import set_start_method, get_context
 import imgaug.augmenters as iaa
 import random
 from copy import deepcopy
-from typing import Tuple, List, Dict, Any, Callable
+from typing import Optional, Tuple, List, Dict, Any, Callable
 import re
 
 from rdkit import Chem
@@ -21,6 +23,9 @@ from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit import DataStructs
 from rdkit.SimDivFilters.rdSimDivPickers import MaxMinPicker
 from itertools import product
+
+from omegaconf import OmegaConf, DictConfig  # configuration package
+from dataclasses import dataclass
 
 from indigo import Indigo
 from indigo.renderer import IndigoRenderer
@@ -34,6 +39,15 @@ import cv2
 from scipy.ndimage import gaussian_filter
 from scipy.ndimage import map_coordinates
 
+@dataclass
+class RandomDepictorConfig:
+    seed: int = 42
+    hand_drawn: bool = False
+    augment: bool = True
+
+    @classmethod
+    def from_config(cls, dict_config: Optional[DictConfig] = None) -> 'RandomDepictorConfig':
+        return OmegaConf.structured(cls(dict_config))
 
 class RandomDepictor:
     """
@@ -43,12 +57,38 @@ class RandomDepictor:
     the RGB image with the given chemical structure.
     """
 
-    def __init__(self, seed: int = 42, hand_drawn: bool = False):
+    def __init__(self, seed: int = 42, hand_drawn: bool = False, *, config: Path = None):
         """
         Load the JVM only once, load superatom list (OSRA),
         set context for multiprocessing
+
+        Parameters
+        ----------
+        seed : int
+            seed for random number generator
+        hand_drawn : bool
+            Whether to augment with hand drawn features
+        config : Path object to configuration file in yaml format.
+            RandomDepictor section is expected.
+
+        Returns
+        -------
+
         """
-        self.HERE = pathlib.Path(__file__).resolve().parent.joinpath("assets")
+        # TODO removing seed and hand_drawn args might break existing code
+        self.seed = seed
+        self.hand_drawn = hand_drawn
+
+        self._config = RandomDepictorConfig()
+        if config:
+            try:
+                # TODO Needs documentation
+                self._config: RandomDepictorConfig = RandomDepictorConfig.from_config(OmegaConf.load(config)[self.__class__.__name__])
+            except Exception as e:
+                print(f"Error loading from {config}. Make sure it has {self.__class__.__name__} section. {e}")
+                print("Using default config.")
+
+        self.HERE = Path(__file__).resolve().parent.joinpath("assets")
 
         # Start the JVM to access Java classes
         try:
@@ -67,8 +107,6 @@ class RandomDepictor:
             self.jar_path = self.HERE.joinpath("jar_files/cdk-2.8.jar")
             startJVM(self.jvmPath, "-ea", "-Djava.class.path=" + str(self.jar_path))
 
-        self.seed = seed
-        self.hand_drawn = hand_drawn
         random.seed(self.seed)
 
         # Load list of superatoms for label generation
@@ -105,14 +143,16 @@ class RandomDepictor:
         hand_drawn: bool = False,
     ):
         # Depict structure with random parameters
+        # TODO hand_drawn to this call is ignored. Decide which one to keep
         hand_drawn = self.hand_drawn
         if hand_drawn:
             depiction = self.random_depiction(smiles, shape)
-
+            # TODO is call to hand_drawn_augment missing?
         else:
             depiction = self.random_depiction(smiles, shape)
             # Add augmentations
-            depiction = self.add_augmentations(depiction)
+            if self._config.augment:
+                depiction = self.add_augmentations(depiction)
 
         if grayscale:
             return self.to_grayscale_float_img(depiction)

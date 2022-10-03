@@ -11,3 +11,4 @@ rdkit-pypi
 imagecorruptions
 pillow>=8
 pikachu-chem>=1.0.7
+omegaconf==2.2.3
