@@ -57,7 +57,7 @@ class RandomDepictor:
     the RGB image with the given chemical structure.
     """
 
-    def __init__(self, seed: int = 42, hand_drawn: bool = False, *, config: Path = None):
+    def __init__(self, seed: int = 42, hand_drawn: bool = False, *, config: RandomDepictorConfig = None):
         """
         Load the JVM only once, load superatom list (OSRA),
         set context for multiprocessing
@@ -75,18 +75,14 @@ class RandomDepictor:
         -------
 
         """
-        # TODO removing seed and hand_drawn args might break existing code
+        # TODO remove seed and hand_drawn args but watch out b/c might break existing code
         self.seed = seed
         self.hand_drawn = hand_drawn
 
-        self._config = RandomDepictorConfig()
-        if config:
-            try:
-                # TODO Needs documentation
-                self._config: RandomDepictorConfig = RandomDepictorConfig.from_config(OmegaConf.load(config)[self.__class__.__name__])
-            except Exception as e:
-                print(f"Error loading from {config}. Make sure it has {self.__class__.__name__} section. {e}")
-                print("Using default config.")
+        if config is None:
+            self._config = RandomDepictorConfig()
+        else:
+            self._config = config
 
         self.HERE = Path(__file__).resolve().parent.joinpath("assets")
 
@@ -134,6 +130,18 @@ class RandomDepictor:
             set_start_method("spawn")
         except RuntimeError:
             pass
+    
+    @classmethod
+    def from_config(cls, config_file: Path) -> 'RandomDepictor':
+        try:
+            # TODO Needs documentation
+            config: RandomDepictorConfig = RandomDepictorConfig.from_config(OmegaConf.load(config_file)[cls.__name__])
+        except Exception as e:
+            print(f"Error loading from {config}. Make sure it has {cls.__name__} section. {e}")
+            print("Using default config.")
+            config = RandomDepictorConfig()
+        return RandomDepictor(config=config)
+            
 
     def __call__(
         self,
