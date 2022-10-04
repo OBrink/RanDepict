@@ -25,7 +25,7 @@ from rdkit.SimDivFilters.rdSimDivPickers import MaxMinPicker
 from itertools import product
 
 from omegaconf import OmegaConf, DictConfig  # configuration package
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from indigo import Indigo
 from indigo.renderer import IndigoRenderer
@@ -41,13 +41,34 @@ from scipy.ndimage import map_coordinates
 
 @dataclass
 class RandomDepictorConfig:
+    """
+    Examples
+    --------
+    >>> c1 = RandomDepictorConfig(seed=24, styles=["cdk", "indigo"])
+    >>> c1
+    RandomDepictorConfig(seed=24, hand_drawn=False, augment=True, styles=['cdk', 'indigo'])
+    >>> c2 = RandomDepictorConfig(styles=["cdk", "indigo", "pikachu", "rdkit"])
+    >>> c2
+    RandomDepictorConfig(seed=42, hand_drawn=False, augment=True, styles=['cdk', 'indigo', 'pikachu', 'rdkit'])
+    """
     seed: int = 42
     hand_drawn: bool = False
     augment: bool = True
+    # unions of containers are not supported yet
+    # https://github.com/omry/omegaconf/issues/144
+    # styles: Union[str, List[str]] = field(default_factory=lambda: ["cdk", "indigo", "pikachu", "rdkit"])
+    styles: List[str] = field(default_factory=lambda: ["cdk", "indigo", "pikachu", "rdkit"])
 
     @classmethod
     def from_config(cls, dict_config: Optional[DictConfig] = None) -> 'RandomDepictorConfig':
-        return OmegaConf.structured(cls(dict_config))
+        return OmegaConf.structured(cls(**dict_config))
+
+    def __post_init__(self):
+        """Ensure styles are always List[str] even if "cdk, indigo" is passed"""
+        # TODO make sure styles are valid...
+        if isinstance(self.styles, str):
+            self.styles = [v.strip() for v in self.styles.split(",")]
+
 
 class RandomDepictor:
     """
@@ -130,18 +151,25 @@ class RandomDepictor:
             set_start_method("spawn")
         except RuntimeError:
             pass
-    
+
     @classmethod
     def from_config(cls, config_file: Path) -> 'RandomDepictor':
         try:
-            # TODO Needs documentation
+            # TODO Needs documentation of config_file yaml format...
+            """
+            # randepict.yaml
+            RandomDepictor:
+                seed: 42
+                augment: False
+                styles:
+                    - cdk
+            """
             config: RandomDepictorConfig = RandomDepictorConfig.from_config(OmegaConf.load(config_file)[cls.__name__])
         except Exception as e:
-            print(f"Error loading from {config}. Make sure it has {cls.__name__} section. {e}")
+            print(f"Error loading from {config_file}. Make sure it has {cls.__name__} section. {e}")
             print("Using default config.")
             config = RandomDepictorConfig()
         return RandomDepictor(config=config)
-            
 
     def __call__(
         self,
@@ -1394,6 +1422,7 @@ class RandomDepictor:
         """
         depiction_functions = self.get_depiction_functions(smiles)
         # If nothing is returned, try different function
+        # FIXME: depictions_functions could be an empty list
         for _ in range(3):
             if len(depiction_functions) != 0:
                 # Pick random depiction function and call it
@@ -1448,12 +1477,15 @@ class RandomDepictor:
         Returns:
             List[Callable]: List of depiction functions
         """
-        depiction_functions = [
-            self.depict_and_resize_rdkit,
-            self.depict_and_resize_indigo,
-            self.depict_and_resize_cdk,
-            self.depict_and_resize_pikachu,
-        ]
+
+        depiction_functions_registry = {
+            'rdkit': self.depict_and_resize_rdkit,
+            'indigo': self.depict_and_resize_indigo,
+            'cdk': self.depict_and_resize_cdk,
+            'pikachu': self.depict_and_resize_pikachu,
+        }
+        depiction_functions = [depiction_functions_registry[k] for k in self._config.styles]
+
         # Remove PIKAChU if there is an isotope
         if re.search("(\[\d\d\d?[A-Z])|(\[2H\])|(\[3H\])|(D)|(T)", smiles):
             depiction_functions.remove(self.depict_and_resize_pikachu)
@@ -1466,11 +1498,13 @@ class RandomDepictor:
                         depiction_functions.remove(self.depict_and_resize_pikachu)
             # "R", "X", "Z" are not depicted by RDKit
             # The same is valid for X,Y,Z and a number
-            if re.search("\[[RXZ]\]|\[[XYZ]\d+", smiles):
-                depiction_functions.remove(self.depict_and_resize_rdkit)
+            if self.depict_and_resize_rdkit in depiction_functions:
+                if re.search("\[[RXZ]\]|\[[XYZ]\d+", smiles):
+                    depiction_functions.remove(self.depict_and_resize_rdkit)
             # "X", "R0" and indices above 32 are not depicted by Indigo
-            if re.search("\[R0\]|\[X\]|[4-9][0-9]+|3[3-9]", smiles):
-                depiction_functions.remove(self.depict_and_resize_indigo)
+            if self.depict_and_resize_indigo in depiction_functions:
+                if re.search("\[R0\]|\[X\]|[4-9][0-9]+|3[3-9]", smiles):
+                    depiction_functions.remove(self.depict_and_resize_indigo)
         return depiction_functions
 
     def resize(self, image: np.array, shape: Tuple[int], HQ: bool = False) -> np.array:

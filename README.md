@@ -51,6 +51,7 @@ $ bash Miniconda3-latest-Linux-x86_64.sh
 $ echo -e "channels:\n - conda-forge\n - nodefaults" > ~/.condarc
 $ conda update conda
 $ conda install conda-libmamba-solver
+$ conda config --set experimental_solver libmamba
 $ conda create --name RanDepict python=3.8
 $ conda activate RanDepict
 # pypi has rdkit so not necessary to install it using conda

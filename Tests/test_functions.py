@@ -321,7 +321,9 @@ class TestRandomDepictor:
             self.depictor.depict_and_resize_cdk,
             self.depictor.depict_and_resize_pikachu,
         ]
-        assert observed == expected
+        # symmetric_difference
+        difference = set(observed) ^ set(expected)
+        assert not difference
 
     def test_get_depiction_functions_isotopes(self):
         # PIKAChU can't handle isotopes
@@ -331,7 +333,8 @@ class TestRandomDepictor:
             self.depictor.depict_and_resize_indigo,
             self.depictor.depict_and_resize_cdk,
         ]
-        assert observed == expected
+        difference = set(observed) ^ set(expected)
+        assert not difference
 
     def test_get_depiction_functions_R(self):
         # RDKit depicts "R" without indices as '*' (which is not desired)
@@ -341,7 +344,8 @@ class TestRandomDepictor:
             self.depictor.depict_and_resize_cdk,
             self.depictor.depict_and_resize_pikachu,
         ]
-        assert observed == expected
+        difference = set(observed) ^ set(expected)
+        assert not difference
 
     def test_get_depiction_functions_X(self):
         # RDKit and Indigo don't depict "X"
@@ -350,7 +354,8 @@ class TestRandomDepictor:
             self.depictor.depict_and_resize_cdk,
             self.depictor.depict_and_resize_pikachu,
         ]
-        assert observed == expected
+        difference = set(observed) ^ set(expected)
+        assert not difference
 
     def test_smiles_to_mol_str(self):
         # Compare generated mol file str with reference string

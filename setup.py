@@ -29,7 +29,8 @@ setuptools.setup(
         "imagecorruptions",
         "pillow>=8.2.0",
         "pikachu-chem>=1.0.7",
-        'omegaconf',
+        "omegaconf",
+        "typing-extensions;python_version<'3.8'"
     ],
     extras_require={
         "dev": ["tox", "pytest"],
