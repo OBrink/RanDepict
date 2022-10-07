@@ -1,4 +1,5 @@
 from __future__ import annotations
+import copy
 
 import os
 from pathlib import Path
@@ -64,10 +65,15 @@ class RandomDepictorConfig:
         return OmegaConf.structured(cls(**dict_config))
 
     def __post_init__(self):
-        """Ensure styles are always List[str] even if "cdk, indigo" is passed"""
-        # TODO make sure styles are valid...
+        # Ensure styles are always List[str] when "cdk, indigo" is passed
         if isinstance(self.styles, str):
             self.styles = [v.strip() for v in self.styles.split(",")]
+        if len(self.styles) == 0:
+            raise ValueError("Empty list of styles was supplied.")
+        # Not sure if this is the best way in order to not repeat the list of styles
+        ss = set(self.__dataclass_fields__['styles'].default_factory())
+        if any([s not in ss for s in self.styles]):
+            raise ValueError(f"Use only {', '.join(ss)}")
 
 
 class RandomDepictor:
@@ -78,7 +84,7 @@ class RandomDepictor:
     the RGB image with the given chemical structure.
     """
 
-    def __init__(self, seed: int = 42, hand_drawn: bool = False, *, config: RandomDepictorConfig = None):
+    def __init__(self, seed: Optional[int] = None, hand_drawn: Optional[bool] = None, *, config: RandomDepictorConfig = None):
         """
         Load the JVM only once, load superatom list (OSRA),
         set context for multiprocessing
@@ -96,14 +102,18 @@ class RandomDepictor:
         -------
 
         """
-        # TODO remove seed and hand_drawn args but watch out b/c might break existing code
-        self.seed = seed
-        self.hand_drawn = hand_drawn
 
         if config is None:
             self._config = RandomDepictorConfig()
         else:
-            self._config = config
+            self._config = copy.deepcopy(config)
+        if seed is not None:
+            self._config.seed = seed
+        if hand_drawn is not None:
+            self._config.hand_drawn = hand_drawn
+
+        self.seed = self._config.seed
+        self.hand_drawn = self._config.hand_drawn
 
         self.HERE = Path(__file__).resolve().parent.joinpath("assets")
 

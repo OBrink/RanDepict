@@ -4,6 +4,8 @@ import numpy as np
 
 import pytest
 
+from RanDepict import RandomDepictorConfig
+
 class TestDepictionFeatureRanges:
     DFR = DepictionFeatureRanges()
 
@@ -271,6 +273,43 @@ class TestDepictionFeatureRanges:
         )
         assert list(picked_fingerprints) == ["A"] * 20
         assert corrected_n == 3
+
+class TestRandomDepictorConstruction:
+
+    def test_default_depicter(self):
+        """RandomDepictor default values should match that of the default RandomDepictorConfig"""
+        depicter =  RandomDepictor()
+        config = RandomDepictorConfig()
+        assert depicter.seed == config.seed
+        assert depicter.hand_drawn == config.hand_drawn
+
+    def test_init_param_override(self):
+        """Values passed to init should override defaults"""
+        config = RandomDepictorConfig()
+        assert config.seed != 21
+        assert not config.hand_drawn
+        depicter =  RandomDepictor(seed=21, hand_drawn=True)
+        assert depicter.seed == 21
+        assert depicter.hand_drawn
+
+    def test_config_override(self):
+        """Config passed to init should override defaults"""
+        config = RandomDepictorConfig(seed=21, hand_drawn=True)
+        depicter =  RandomDepictor(config=config)
+        assert depicter.seed == 21
+        assert depicter.hand_drawn
+
+    @pytest.mark.xfail(raises=ValueError) 
+    def test_invalid_style(self):
+        """Invalid style passed to config should raise exception"""
+        _ = RandomDepictorConfig(styles=["pio", "cdk"])
+    
+    def test_empty_style_list(self):
+        """Empty style list passed to config should raise exception"""
+        with pytest.raises(ValueError) as excinfo:
+            _ = RandomDepictorConfig(styles=[])
+        assert 'Empty list' in str(excinfo.value)
+
 
 class TestRandomDepictor:
     depictor = RandomDepictor()
