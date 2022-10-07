@@ -1,6 +1,7 @@
 from RanDepict import RandomDepictor, DepictionFeatureRanges, RandomMarkushStructureCreator
 from rdkit import DataStructs
 import numpy as np
+from omegaconf import OmegaConf 
 
 import pytest
 
@@ -309,6 +310,39 @@ class TestRandomDepictorConstruction:
         with pytest.raises(ValueError) as excinfo:
             _ = RandomDepictorConfig(styles=[])
         assert 'Empty list' in str(excinfo.value)
+
+    def test_omega_config_rdc(self):
+        """Can create RandomDepictorConfig from yaml"""
+        s = """
+        # RandomDepictorConfig:
+            seed: 21
+            augment: False
+            styles:
+                - cdk
+        """
+        dict_config = OmegaConf.create(s)
+        rdc = RandomDepictorConfig.from_config(dict_config)
+        assert rdc.seed == 21
+        assert not rdc.hand_drawn
+        assert not rdc.augment
+        assert len(rdc.styles) == 1
+        assert 'cdk' in rdc.styles
+
+    def test_omega_config_rd(self, tmp_path):
+        """Can create RandomDepictor from yaml"""
+        s = """
+        RandomDepictorConfig:
+            seed: 21
+            augment: False
+            styles:
+                - cdk
+                - indigo
+        """
+        temp_config_file = tmp_path / "omg.yaml"
+        temp_config_file.write_text(s)
+        rd = RandomDepictor.from_config(config_file=temp_config_file)
+        assert rd.seed == 21
+        assert not rd.hand_drawn
 
 
 class TestRandomDepictor:

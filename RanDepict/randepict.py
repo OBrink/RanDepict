@@ -168,13 +168,13 @@ class RandomDepictor:
             # TODO Needs documentation of config_file yaml format...
             """
             # randepict.yaml
-            RandomDepictor:
+            RandomDepictorConfig:
                 seed: 42
                 augment: False
                 styles:
                     - cdk
             """
-            config: RandomDepictorConfig = RandomDepictorConfig.from_config(OmegaConf.load(config_file)[cls.__name__])
+            config: RandomDepictorConfig = RandomDepictorConfig.from_config(OmegaConf.load(config_file)[RandomDepictorConfig.__name__])
         except Exception as e:
             print(f"Error loading from {config_file}. Make sure it has {cls.__name__} section. {e}")
             print("Using default config.")
