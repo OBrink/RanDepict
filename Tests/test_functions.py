@@ -1,8 +1,11 @@
 from RanDepict import RandomDepictor, DepictionFeatureRanges, RandomMarkushStructureCreator
 from rdkit import DataStructs
 import numpy as np
+from omegaconf import OmegaConf 
 
 import pytest
+
+from RanDepict import RandomDepictorConfig
 
 class TestDepictionFeatureRanges:
     DFR = DepictionFeatureRanges()
@@ -272,6 +275,76 @@ class TestDepictionFeatureRanges:
         assert list(picked_fingerprints) == ["A"] * 20
         assert corrected_n == 3
 
+class TestRandomDepictorConstruction:
+
+    def test_default_depicter(self):
+        """RandomDepictor default values should match that of the default RandomDepictorConfig"""
+        depicter =  RandomDepictor()
+        config = RandomDepictorConfig()
+        assert depicter.seed == config.seed
+        assert depicter.hand_drawn == config.hand_drawn
+
+    def test_init_param_override(self):
+        """Values passed to init should override defaults"""
+        config = RandomDepictorConfig()
+        assert config.seed != 21
+        assert not config.hand_drawn
+        depicter =  RandomDepictor(seed=21, hand_drawn=True)
+        assert depicter.seed == 21
+        assert depicter.hand_drawn
+
+    def test_config_override(self):
+        """Config passed to init should override defaults"""
+        config = RandomDepictorConfig(seed=21, hand_drawn=True)
+        depicter =  RandomDepictor(config=config)
+        assert depicter.seed == 21
+        assert depicter.hand_drawn
+
+    @pytest.mark.xfail(raises=ValueError) 
+    def test_invalid_style(self):
+        """Invalid style passed to config should raise exception"""
+        _ = RandomDepictorConfig(styles=["pio", "cdk"])
+    
+    def test_empty_style_list(self):
+        """Empty style list passed to config should raise exception"""
+        with pytest.raises(ValueError) as excinfo:
+            _ = RandomDepictorConfig(styles=[])
+        assert 'Empty list' in str(excinfo.value)
+
+    def test_omega_config_rdc(self):
+        """Can create RandomDepictorConfig from yaml"""
+        s = """
+        # RandomDepictorConfig:
+            seed: 21
+            augment: False
+            styles:
+                - cdk
+        """
+        dict_config = OmegaConf.create(s)
+        rdc = RandomDepictorConfig.from_config(dict_config)
+        assert rdc.seed == 21
+        assert not rdc.hand_drawn
+        assert not rdc.augment
+        assert len(rdc.styles) == 1
+        assert 'cdk' in rdc.styles
+
+    def test_omega_config_rd(self, tmp_path):
+        """Can create RandomDepictor from yaml"""
+        s = """
+        RandomDepictorConfig:
+            seed: 21
+            augment: False
+            styles:
+                - cdk
+                - indigo
+        """
+        temp_config_file = tmp_path / "omg.yaml"
+        temp_config_file.write_text(s)
+        rd = RandomDepictor.from_config(config_file=temp_config_file)
+        assert rd.seed == 21
+        assert not rd.hand_drawn
+
+
 class TestRandomDepictor:
     depictor = RandomDepictor()
 
@@ -321,7 +394,9 @@ class TestRandomDepictor:
             self.depictor.depict_and_resize_cdk,
             self.depictor.depict_and_resize_pikachu,
         ]
-        assert observed == expected
+        # symmetric_difference
+        difference = set(observed) ^ set(expected)
+        assert not difference
 
     def test_get_depiction_functions_isotopes(self):
         # PIKAChU can't handle isotopes
@@ -331,7 +406,8 @@ class TestRandomDepictor:
             self.depictor.depict_and_resize_indigo,
             self.depictor.depict_and_resize_cdk,
         ]
-        assert observed == expected
+        difference = set(observed) ^ set(expected)
+        assert not difference
 
     def test_get_depiction_functions_R(self):
         # RDKit depicts "R" without indices as '*' (which is not desired)
@@ -341,7 +417,8 @@ class TestRandomDepictor:
             self.depictor.depict_and_resize_cdk,
             self.depictor.depict_and_resize_pikachu,
         ]
-        assert observed == expected
+        difference = set(observed) ^ set(expected)
+        assert not difference
 
     def test_get_depiction_functions_X(self):
         # RDKit and Indigo don't depict "X"
@@ -350,7 +427,8 @@ class TestRandomDepictor:
             self.depictor.depict_and_resize_cdk,
             self.depictor.depict_and_resize_pikachu,
         ]
-        assert observed == expected
+        difference = set(observed) ^ set(expected)
+        assert not difference
 
     def test_smiles_to_mol_str(self):
         # Compare generated mol file str with reference string

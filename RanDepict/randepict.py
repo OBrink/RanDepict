@@ -1,5 +1,8 @@
+from __future__ import annotations
+import copy
+
 import os
-import pathlib
+from pathlib import Path
 import numpy as np
 import io
 from skimage import io as sk_io
@@ -10,7 +13,7 @@ from multiprocessing import set_start_method, get_context
 import imgaug.augmenters as iaa
 import random
 from copy import deepcopy
-from typing import Tuple, List, Dict, Any, Callable
+from typing import Optional, Tuple, List, Dict, Any, Callable
 import re
 
 from rdkit import Chem
@@ -21,6 +24,9 @@ from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit import DataStructs
 from rdkit.SimDivFilters.rdSimDivPickers import MaxMinPicker
 from itertools import product
+
+from omegaconf import OmegaConf, DictConfig  # configuration package
+from dataclasses import dataclass, field
 
 from indigo import Indigo
 from indigo.renderer import IndigoRenderer
@@ -34,6 +40,41 @@ import cv2
 from scipy.ndimage import gaussian_filter
 from scipy.ndimage import map_coordinates
 
+@dataclass
+class RandomDepictorConfig:
+    """
+    Examples
+    --------
+    >>> c1 = RandomDepictorConfig(seed=24, styles=["cdk", "indigo"])
+    >>> c1
+    RandomDepictorConfig(seed=24, hand_drawn=False, augment=True, styles=['cdk', 'indigo'])
+    >>> c2 = RandomDepictorConfig(styles=["cdk", "indigo", "pikachu", "rdkit"])
+    >>> c2
+    RandomDepictorConfig(seed=42, hand_drawn=False, augment=True, styles=['cdk', 'indigo', 'pikachu', 'rdkit'])
+    """
+    seed: int = 42
+    hand_drawn: bool = False
+    augment: bool = True
+    # unions of containers are not supported yet
+    # https://github.com/omry/omegaconf/issues/144
+    # styles: Union[str, List[str]] = field(default_factory=lambda: ["cdk", "indigo", "pikachu", "rdkit"])
+    styles: List[str] = field(default_factory=lambda: ["cdk", "indigo", "pikachu", "rdkit"])
+
+    @classmethod
+    def from_config(cls, dict_config: Optional[DictConfig] = None) -> 'RandomDepictorConfig':
+        return OmegaConf.structured(cls(**dict_config))
+
+    def __post_init__(self):
+        # Ensure styles are always List[str] when "cdk, indigo" is passed
+        if isinstance(self.styles, str):
+            self.styles = [v.strip() for v in self.styles.split(",")]
+        if len(self.styles) == 0:
+            raise ValueError("Empty list of styles was supplied.")
+        # Not sure if this is the best way in order to not repeat the list of styles
+        ss = set(self.__dataclass_fields__['styles'].default_factory())
+        if any([s not in ss for s in self.styles]):
+            raise ValueError(f"Use only {', '.join(ss)}")
+
 
 class RandomDepictor:
     """
@@ -43,12 +84,38 @@ class RandomDepictor:
     the RGB image with the given chemical structure.
     """
 
-    def __init__(self, seed: int = 42, hand_drawn: bool = False):
+    def __init__(self, seed: Optional[int] = None, hand_drawn: Optional[bool] = None, *, config: RandomDepictorConfig = None):
         """
         Load the JVM only once, load superatom list (OSRA),
         set context for multiprocessing
+
+        Parameters
+        ----------
+        seed : int
+            seed for random number generator
+        hand_drawn : bool
+            Whether to augment with hand drawn features
+        config : Path object to configuration file in yaml format.
+            RandomDepictor section is expected.
+
+        Returns
+        -------
+
         """
-        self.HERE = pathlib.Path(__file__).resolve().parent.joinpath("assets")
+
+        if config is None:
+            self._config = RandomDepictorConfig()
+        else:
+            self._config = copy.deepcopy(config)
+        if seed is not None:
+            self._config.seed = seed
+        if hand_drawn is not None:
+            self._config.hand_drawn = hand_drawn
+
+        self.seed = self._config.seed
+        self.hand_drawn = self._config.hand_drawn
+
+        self.HERE = Path(__file__).resolve().parent.joinpath("assets")
 
         # Start the JVM to access Java classes
         try:
@@ -67,8 +134,6 @@ class RandomDepictor:
             self.jar_path = self.HERE.joinpath("jar_files/cdk-2.8.jar")
             startJVM(self.jvmPath, "-ea", "-Djava.class.path=" + str(self.jar_path))
 
-        self.seed = seed
-        self.hand_drawn = hand_drawn
         random.seed(self.seed)
 
         # Load list of superatoms for label generation
@@ -97,6 +162,25 @@ class RandomDepictor:
         except RuntimeError:
             pass
 
+    @classmethod
+    def from_config(cls, config_file: Path) -> 'RandomDepictor':
+        try:
+            # TODO Needs documentation of config_file yaml format...
+            """
+            # randepict.yaml
+            RandomDepictorConfig:
+                seed: 42
+                augment: False
+                styles:
+                    - cdk
+            """
+            config: RandomDepictorConfig = RandomDepictorConfig.from_config(OmegaConf.load(config_file)[RandomDepictorConfig.__name__])
+        except Exception as e:
+            print(f"Error loading from {config_file}. Make sure it has {cls.__name__} section. {e}")
+            print("Using default config.")
+            config = RandomDepictorConfig()
+        return RandomDepictor(config=config)
+
     def __call__(
         self,
         smiles: str,
@@ -105,14 +189,16 @@ class RandomDepictor:
         hand_drawn: bool = False,
     ):
         # Depict structure with random parameters
+        # TODO hand_drawn to this call is ignored. Decide which one to keep
         hand_drawn = self.hand_drawn
         if hand_drawn:
             depiction = self.random_depiction(smiles, shape)
-
+            # TODO is call to hand_drawn_augment missing?
         else:
             depiction = self.random_depiction(smiles, shape)
             # Add augmentations
-            depiction = self.add_augmentations(depiction)
+            if self._config.augment:
+                depiction = self.add_augmentations(depiction)
 
         if grayscale:
             return self.to_grayscale_float_img(depiction)
@@ -1346,6 +1432,7 @@ class RandomDepictor:
         """
         depiction_functions = self.get_depiction_functions(smiles)
         # If nothing is returned, try different function
+        # FIXME: depictions_functions could be an empty list
         for _ in range(3):
             if len(depiction_functions) != 0:
                 # Pick random depiction function and call it
@@ -1400,12 +1487,15 @@ class RandomDepictor:
         Returns:
             List[Callable]: List of depiction functions
         """
-        depiction_functions = [
-            self.depict_and_resize_rdkit,
-            self.depict_and_resize_indigo,
-            self.depict_and_resize_cdk,
-            self.depict_and_resize_pikachu,
-        ]
+
+        depiction_functions_registry = {
+            'rdkit': self.depict_and_resize_rdkit,
+            'indigo': self.depict_and_resize_indigo,
+            'cdk': self.depict_and_resize_cdk,
+            'pikachu': self.depict_and_resize_pikachu,
+        }
+        depiction_functions = [depiction_functions_registry[k] for k in self._config.styles]
+
         # Remove PIKAChU if there is an isotope
         if re.search("(\[\d\d\d?[A-Z])|(\[2H\])|(\[3H\])|(D)|(T)", smiles):
             depiction_functions.remove(self.depict_and_resize_pikachu)
@@ -1418,11 +1508,13 @@ class RandomDepictor:
                         depiction_functions.remove(self.depict_and_resize_pikachu)
             # "R", "X", "Z" are not depicted by RDKit
             # The same is valid for X,Y,Z and a number
-            if re.search("\[[RXZ]\]|\[[XYZ]\d+", smiles):
-                depiction_functions.remove(self.depict_and_resize_rdkit)
+            if self.depict_and_resize_rdkit in depiction_functions:
+                if re.search("\[[RXZ]\]|\[[XYZ]\d+", smiles):
+                    depiction_functions.remove(self.depict_and_resize_rdkit)
             # "X", "R0" and indices above 32 are not depicted by Indigo
-            if re.search("\[R0\]|\[X\]|[4-9][0-9]+|3[3-9]", smiles):
-                depiction_functions.remove(self.depict_and_resize_indigo)
+            if self.depict_and_resize_indigo in depiction_functions:
+                if re.search("\[R0\]|\[X\]|[4-9][0-9]+|3[3-9]", smiles):
+                    depiction_functions.remove(self.depict_and_resize_indigo)
         return depiction_functions
 
     def resize(self, image: np.array, shape: Tuple[int], HQ: bool = False) -> np.array:
@@ -3030,7 +3122,7 @@ class DepictionFeatureRanges(RandomDepictor):
 
 
 class RandomMarkushStructureCreator:
-    def __init__(self, *, variables_list=None, max_index=21):
+    def __init__(self, *, variables_list=None, max_index=20):
         """
         RandomMarkushStructureCreator objects are instantiated with the desired
         inserted R group variables. Otherwise, "R", "X" and "Z" are used.
@@ -3043,7 +3135,7 @@ class RandomMarkushStructureCreator:
         else:
             self.r_group_variables = variables_list
 
-        self.potential_indices = range(max_index + 1)
+        self.potential_indices = range(1, max_index + 1)
 
     def generate_markush_structure_dataset(self, smiles_list: List[str]) -> List[str]:
         """
