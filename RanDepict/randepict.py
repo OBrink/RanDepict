@@ -8,7 +8,6 @@ import io
 from skimage import io as sk_io
 from skimage.color import rgba2rgb, rgb2gray
 from skimage.util import img_as_ubyte, img_as_float
-from PIL import Image, ImageFont, ImageDraw, ImageStat, ImageEnhance
 from multiprocessing import set_start_method, get_context
 import imgaug.augmenters as iaa
 import random
@@ -40,6 +39,11 @@ import cv2
 from scipy.ndimage import gaussian_filter
 from scipy.ndimage import map_coordinates
 
+from PIL import Image, ImageFont, ImageDraw, ImageStat, ImageEnhance
+
+# Below version 9.0, PIL stores resampling methods differently
+if not hasattr(Image, 'Resampling'):
+    Image.Resampling = Image
 @dataclass
 class RandomDepictorConfig:
     """
