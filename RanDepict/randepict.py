@@ -3244,6 +3244,7 @@ class RandomMarkushStructureCreator:
                         "f",
                         "d",
                         "n",
+                        "@"  # replacing chiral C leads to invalid SMILES
                     ]:
                         replacement_positions.append(index - 1)
         return replacement_positions

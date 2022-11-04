@@ -539,3 +539,11 @@ class TestRandomMarkushStructureCreator:
         observed = self.markush_creator.get_valid_replacement_positions("CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
         expected = [0, 3, 11, 18, 25, 27]
         assert observed == expected
+        
+    def test_get_valid_replacement_positions_alanine(self):
+        # Example with stereo
+        smiles = "C([H])([H])([H])[C@@]([H])(C(=O)O[H])N([H])[H]"
+        observed = self.markush_creator.get_valid_replacement_positions(smiles)
+        expected = [0, 3, 8, 13, 23, 27, 34, 40, 44]
+        assert observed == expected
+        
