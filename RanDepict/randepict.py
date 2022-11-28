@@ -28,7 +28,7 @@ from omegaconf import OmegaConf, DictConfig  # configuration package
 from dataclasses import dataclass, field
 
 from indigo import Indigo
-from indigo.exceptions import IndigoException
+from indigo import IndigoException
 from indigo.renderer import IndigoRenderer
 from jpype import startJVM, getDefaultJVMPath
 from jpype import JClass, JVMNotFoundException, isJVMStarted
