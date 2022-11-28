@@ -28,6 +28,7 @@ from omegaconf import OmegaConf, DictConfig  # configuration package
 from dataclasses import dataclass, field
 
 from indigo import Indigo
+from indigo.exceptions import IndigoException
 from indigo.renderer import IndigoRenderer
 from jpype import startJVM, getDefaultJVMPath
 from jpype import JClass, JVMNotFoundException, isJVMStarted
@@ -868,11 +869,14 @@ class RandomDepictor:
         # Instantiate Indigo with random settings and IndigoRenderer
         indigo, renderer = self.get_random_indigo_rendering_settings()
         # Load molecule
-        if not self.has_r_group(smiles):
-            molecule = indigo.loadMolecule(smiles)
-        else:
-            mol_str = self.smiles_to_mol_str(smiles)
-            molecule = indigo.loadMolecule(mol_str)
+        try:
+            if not self.has_r_group(smiles):
+                molecule = indigo.loadMolecule(smiles)
+            else:
+                mol_str = self.smiles_to_mol_str(smiles)
+                molecule = indigo.loadMolecule(mol_str)
+        except IndigoException:
+            return None
         # Kekulize in 67% of cases
         if not self.random_choice(
             [True, True, False], log_attribute="indigo_kekulized"
