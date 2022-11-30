@@ -1498,7 +1498,8 @@ class RandomDepictor:
             'cdk': self.depict_and_resize_cdk,
             'pikachu': self.depict_and_resize_pikachu,
         }
-        depiction_functions = [depiction_functions_registry[k] for k in self._config.styles]
+        depiction_functions = [depiction_functions_registry[k]
+                               for k in self._config.styles]
 
         # Remove PIKAChU if there is an isotope
         if re.search("(\[\d\d\d?[A-Z])|(\[2H\])|(\[3H\])|(D)|(T)", smiles):
@@ -1519,6 +1520,12 @@ class RandomDepictor:
             if self.depict_and_resize_indigo in depiction_functions:
                 if re.search("\[R0\]|\[X\]|[4-9][0-9]+|3[3-9]", smiles):
                     depiction_functions.remove(self.depict_and_resize_indigo)
+        # Workaround because PIKAChU fails to depict large structures
+        # TODO: Delete workaround when problem is fixed in PIKAChU
+        # https://github.com/BTheDragonMaster/pikachu/issues/11
+        if len(smiles) > 100:
+            if self.depict_and_resize_pikachu in depiction_functions:
+                depiction_functions.remove(self.depict_and_resize_pikachu)
         return depiction_functions
 
     def resize(self, image: np.array, shape: Tuple[int], HQ: bool = False) -> np.array:
