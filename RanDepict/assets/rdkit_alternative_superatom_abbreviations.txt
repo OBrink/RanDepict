@@ -1,0 +1,13 @@
+nDec,C10H21,C<sub>10</sub>H<sub>21</sub>,H<sub>21</sub>C<sub>10</sub>
+nNon,C9H19,C<sub>9</sub>H<sub>19</sub>,H<sub>19</sub>C<sub>9</sub>
+nOct,C8H17,C<sub>8</sub>H<sub>17</sub>,H<sub>17</sub>C<sub>8</sub>
+nHept,C7H15,C<sub>7</sub>H<sub>15</sub>,H<sub>15</sub>C<sub>7</sub>
+nHex,C6H13,C<sub>6</sub>H<sub>13</sub>,H<sub>13</sub>C<sub>6</sub>
+nPent,C5H11-n,C<sub>5</sub>H<sub>11</sub>-n,n-H<sub>11</sub>C<sub>5</sub>
+iPent,C5H11-i,C<sub>5</sub>H<sub>11</sub>-i,i-H<sub>11</sub>C<sub>5</sub>
+tBu,C4H9-t,C<sub>4</sub>H<sub>9</sub>-t,t-H<sub>9</sub>C<sub>4</sub>
+iBu,C4H9-i,C<sub>4</sub>H<sub>9</sub>-i,i-H<sub>9</sub>C<sub>4</sub>
+nBu,C4H9-n,C<sub>4</sub>H<sub>9</sub>-n,n-H<sub>9</sub>C<sub>4</sub>
+iPr,C3H7-i,C<sub>3</sub>H<sub>7</sub>-i,i-H<sub>7</sub>C<sub>3</sub>
+nPr,C3H7-n,C<sub>3</sub>H<sub>7</sub>-n,n-H<sub>7</sub>C<sub>3</sub>
+Et,C2H5,C<sub>2</sub>H<sub>5</sub>,H<sub>5</sub>C<sub>2</sub>

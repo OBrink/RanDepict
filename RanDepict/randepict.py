@@ -141,6 +141,8 @@ class RandomDepictor:
 
         random.seed(self.seed)
 
+        self.rdkit_abbrevs = self.get_all_rdkit_abbreviations()
+
         # Load list of superatoms for label generation
         with open(self.HERE.joinpath("superatom.txt")) as superatoms:
             superatoms = superatoms.readlines()
@@ -219,6 +221,71 @@ class RandomDepictor:
         # Shutdown the JVM
         # shutdownJVM()
         pass
+
+    def get_all_rdkit_abbreviations(
+        self,
+    ) -> List[Chem.rdAbbreviations._vectstruct]:
+        """
+        This function returns the Default abbreviations for superatom and functional
+        group collapsing in RDKit as well as alternative abbreviations defined in
+        rdkit_alternative_superatom_abbreviations.txt.
+
+        Returns:
+            Chem.rdAbbreviations._vectstruct: RDKit's data structure that contains the
+            abbreviations
+        """
+        abbreviations = []
+        abbreviations.append(GetDefaultAbbreviations())
+        abbr_path = self.HERE.joinpath("rdkit_alternative_superatom_abbreviations.txt")
+
+        with open(abbr_path) as alternative_abbreviations:
+            split_lines = [line[:-1].split(",")
+                           for line in alternative_abbreviations.readlines()]
+            swap_dict = {line[0]: line[1:] for line in split_lines}
+        
+        abbreviations.append(self.get_modified_rdkit_abbreviations(swap_dict))
+        for key in swap_dict.keys():
+            new_labels = []
+            for label in swap_dict[key]:
+                if label[:2] in ["n-", "i-", "t-"]:
+                    label = f"{label[2:]}-{label[0]}"
+                elif label[-2:] in ["-n", "-i", "-t"]:
+                    label = f"{label[-1]}-{label[:-2]}"
+                new_labels.append(label)
+            swap_dict[key] = new_labels
+        abbreviations.append(self.get_modified_rdkit_abbreviations(swap_dict))
+        return abbreviations
+
+    def get_modified_rdkit_abbreviations(
+        self,
+        swap_dict: Dict
+    ) -> Chem.rdAbbreviations._vectstruct:
+        """
+        This function takes a dictionary that maps the original superatom/FG label in
+        the RDKit abbreviations to the desired labels, replaces them as defined in the
+        dictionary and returns the abbreviations in RDKit's preferred format.
+
+        Args:
+            swap_dict (Dict): Dictionary that maps the original label (eg. "Et") to the
+                              desired label (eg. "C2H5"), a displayed label (eg.
+                              "C<sub>2</sub>H<sub>5</sub>") and a reversed display label
+                              (eg. "H<sub>5</sub>C<sub>2</sub>").
+                              Example:
+                              {"Et": [
+                                  "C2H5",
+                                  "C<sub>2</sub>H<sub>5</sub>"
+                                  "H<sub>5</sub>C<sub>2</sub>"
+                              ]}
+
+        Returns:
+            Chem.rdAbbreviations._vectstruct: Modified abbreviations
+        """
+        alt_abbreviations = GetDefaultAbbreviations()
+        for abbr in alt_abbreviations:
+            alt_label = swap_dict.get(abbr.label)
+            if alt_label:
+                abbr.label, abbr.displayLabel, abbr.displayLabelW = alt_label
+        return alt_abbreviations
 
     def random_choice(self, iterable: List, log_attribute: str = False):
         """
@@ -692,7 +759,7 @@ class RandomDepictor:
         coords = []
         for i in img.shape:
             coordinates = []
-            for n in range(num_salt):
+            for _ in range(num_salt):
                 coordinates.append(self.random_choice(np.arange(0, i - 1)))
             coords.append(np.array(coordinates))
         out[tuple(coords)] = 1
@@ -701,7 +768,7 @@ class RandomDepictor:
         coords = []
         for i in img.shape:
             coordinates = []
-            for n in range(num_pepper):
+            for _ in range(num_pepper):
                 coordinates.append(self.random_choice(np.arange(0, i - 1)))
             coords.append(np.array(coordinates))
         out[tuple(coords)] = 0
@@ -994,7 +1061,7 @@ class RandomDepictor:
             if self.random_choice(
                 [True, False], log_attribute="rdkit_collapse_superatoms"
             ):
-                abbrevs = GetDefaultAbbreviations()
+                abbrevs = self.random_choice(self.rdkit_abbrevs)
                 mol = CondenseMolAbbreviations(mol, abbrevs)
             # Get random depiction settings
             depiction_settings = self.get_random_rdkit_rendering_settings(smiles=smiles)
