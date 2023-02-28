@@ -242,7 +242,7 @@ class RandomDepictor:
             split_lines = [line[:-1].split(",")
                            for line in alternative_abbreviations.readlines()]
             swap_dict = {line[0]: line[1:] for line in split_lines}
-        
+
         abbreviations.append(self.get_modified_rdkit_abbreviations(swap_dict))
         for key in swap_dict.keys():
             new_labels = []
@@ -1304,7 +1304,16 @@ class RandomDepictor:
         )
         Font = JClass("java.awt.Font")
         font_name = self.random_choice(
-            ["Verdana", "Times New Roman", "Arial", "Gulliver Regular"],
+            ["Verdana",
+             "Times New Roman",
+             "Arial",
+             "Gulliver Regular",
+             "Helvetica",
+             "Courier",
+             "architectural",
+             "Geneva",
+             "Lucida Sans",
+             "Teletype"],
             # log_attribute='cdk_atom_label_font'
         )
         font_style = self.random_choice(
