@@ -3,7 +3,7 @@
 *C(C)(C)C tBu
 *CCCC nBu
 *C(C)C iPr
-*CCC nPr
+*CCC C3H7
 *CC C2H5
 *NC(F)(F)F NCF3
 *C(F)(F)F CF3
@@ -104,7 +104,7 @@
 *COCc1ccccc1 BOM
 *Cc1ccccc1 Bn
 *C(=O)c1ccccc1 Bz
-*CCCC n-Bu
+*CCCC C4H9
 *CC(C)(C) t-Bu
 *C1CCC1 c-Bu
 *S(=O)(=O)C1=CC=C(Br)C=C1 Bs
@@ -125,9 +125,9 @@
 *COCC EOM
 *C=O Formyl
 *C(=O)OCC1C2=CC=CC=C2C3=CC=CC=C13 FMOC
-*CCCCCCC n-Hept
+*CCCCCCC C7H15
 *C1CCCCCC1 c-Hept
-*CCCCCC n-Hex
+*CCCCCC C6H13
 *C1CCCCC1 c-Hex
 
 *OC OMe
@@ -138,9 +138,9 @@
 *S(=O)(C)=O Ms
 
 
-*CCCCCCCC n-Oct
+*CCCCCCCC C8H17
 *CC1=CC=C(N)C=C1 PAB
-*CCCCC n-Pent
+*CCCCC C5H11
 *C1CCCC1 c-Pent
 *c1ccccc1 Phenyl
 *CC1=CC=C(OC)C=C1 PMB
@@ -165,3 +165,4 @@
 *C(=O)OCC(Cl)(Cl)Cl Troc
 *C=C Vinyl
 *C(=O)OC= Voc
+
