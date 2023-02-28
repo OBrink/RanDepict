@@ -1599,9 +1599,9 @@ class RandomDepictor:
             if self.depict_and_resize_rdkit in depiction_functions:
                 if re.search("\[[RXZ]\]|\[[XYZ]\d+", smiles):
                     depiction_functions.remove(self.depict_and_resize_rdkit)
-            # "X", "R0" and indices above 32 are not depicted by Indigo
+            # "X", "R0", [RXYZ]\d+[a-f] and indices above 32 are not depicted by Indigo
             if self.depict_and_resize_indigo in depiction_functions:
-                if re.search("\[R0\]|\[X\]|[4-9][0-9]+|3[3-9]", smiles):
+                if re.search("\[R0\]|\[X\]|[4-9][0-9]+|3[3-9]|[XYZR]\d+[a-f]", smiles):
                     depiction_functions.remove(self.depict_and_resize_indigo)
         # Workaround because PIKAChU fails to depict large structures
         # TODO: Delete workaround when problem is fixed in PIKAChU
@@ -3225,7 +3225,7 @@ class RandomMarkushStructureCreator:
         self.depictor = RandomDepictor()
         # Define R group variables
         if variables_list is None:
-            self.r_group_variables = ["R", "X", "Z"]
+            self.r_group_variables = ["R", "X", "Y", "Z"]
         else:
             self.r_group_variables = variables_list
 
@@ -3296,7 +3296,11 @@ class RandomMarkushStructureCreator:
         r_group_var = self.depictor.random_choice(self.r_group_variables)
         if has_indices:
             index = self.depictor.random_choice(self.potential_indices)
-            return f"[{r_group_var}{index}]"
+            if self.depictor.random_choice([True, False, False]):
+                index_char = self.depictor.random_choice(["a", "b", "c", "d", "e", "f"])
+            else:
+                index_char = ""
+            return f"[{r_group_var}{index}{index_char}]"
         else:
             return f"[{r_group_var}]"
 
