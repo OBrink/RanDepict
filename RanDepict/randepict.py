@@ -1224,7 +1224,10 @@ class RandomDepictor:
         # That seems inefficient.
         if self.random_choice([True, False], log_attribute="cdk_collapse_superatoms"):
             cdk_superatom_abrv = JClass("org.openscience.cdk.depict.Abbreviations")()
-            abbreviation_path = str(self.HERE.joinpath("smiles_list.smi"))
+            abbr_filename = self.random_choice([
+                "cdk_superatom_abbreviations.smi",
+                "cdk_alt_superatom_abbreviations.smi"])
+            abbreviation_path = str(self.HERE.joinpath(abbr_filename))
             abbreviation_path = abbreviation_path.replace("\\", "/")
             abbreviation_path = JClass("java.lang.String")(abbreviation_path)
             cdk_superatom_abrv.loadFromFile(abbreviation_path)
