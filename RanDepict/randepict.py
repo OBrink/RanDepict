@@ -137,7 +137,10 @@ class RandomDepictor:
             self.jvmPath = "Define/path/or/set/JAVA_HOME/variable/properly"
         if not isJVMStarted():
             self.jar_path = self.HERE.joinpath("jar_files/cdk-2.8.jar")
-            startJVM(self.jvmPath, "-ea", "-Djava.class.path=" + str(self.jar_path))
+            startJVM(self.jvmPath,
+                     "-ea",
+                     "-Djava.class.path=" + str(self.jar_path),
+                     "-Xmx4096M")
 
         random.seed(self.seed)
 
