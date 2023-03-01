@@ -144,8 +144,6 @@ class RandomDepictor:
 
         random.seed(self.seed)
 
-        self.rdkit_abbrevs = self.get_all_rdkit_abbreviations()
-
         # Load list of superatoms for label generation
         with open(self.HERE.joinpath("superatom.txt")) as superatoms:
             superatoms = superatoms.readlines()
@@ -1064,7 +1062,7 @@ class RandomDepictor:
             if self.random_choice(
                 [True, False], log_attribute="rdkit_collapse_superatoms"
             ):
-                abbrevs = self.random_choice(self.rdkit_abbrevs)
+                abbrevs = self.random_choice(self.get_all_rdkit_abbreviations())
                 mol = CondenseMolAbbreviations(mol, abbrevs)
             # Get random depiction settings
             depiction_settings = self.get_random_rdkit_rendering_settings(smiles=smiles)
