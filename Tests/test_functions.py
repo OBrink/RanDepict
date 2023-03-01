@@ -522,6 +522,18 @@ class TestRandomMarkushStructureCreator:
         expected = list(range(6))
         assert observed == expected
         
+    def test_get_valid_replacement_positions_isotope(self):
+        # Isotopes like 13C are not valid replacement positions (avoid eg. "13R")
+        observed = self.markush_creator.get_valid_replacement_positions("CCC[13C]CC")
+        expected = [0, 1, 2, 8, 9]
+        assert observed == expected
+    
+    def test_get_valid_replacement_positions_charge(self):
+        # charged atoms are not valid replacement positions (avoid eg. "[R+]")
+        observed = self.markush_creator.get_valid_replacement_positions("CCC[C+]CC")
+        expected = [0, 1, 2, 7, 8]
+        assert observed == expected
+    
     def test_get_valid_replacement_positions_with_hydrogen(self):
         # Simple example case
         observed = self.markush_creator.get_valid_replacement_positions("([H])([H])([H])CO([H])")

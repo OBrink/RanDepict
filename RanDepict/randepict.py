@@ -3320,27 +3320,33 @@ class RandomMarkushStructureCreator:
         replacement_positions = []
         for index in range(len(smiles)):
             # Be aware of digits --> don't destroy ring syntax
-            if not smiles[index].isdigit():
-                if smiles[index - 1] == "H":
-                    if smiles[index] == "]":
-                        replacement_positions.append(index - 1)
-                # Only replace "C" and "H"
-                elif smiles[index - 1] == "C":
-                    # Don't replace "C" in "Cl", "Ca", Cu", etc...
-                    if smiles[index] not in [
-                        "s",
-                        "a",
-                        "e",
-                        "o",
-                        "u",
-                        "r",
-                        "l",
-                        "f",
-                        "d",
-                        "n",
-                        "@"  # replacing chiral C leads to invalid SMILES
-                    ]:
-                        replacement_positions.append(index - 1)
+            if smiles[index].isdigit():
+                continue
+            # Don't replace isotopes to not to end up with [13R]
+            elif index >= 2 and smiles[index - 2].isdigit() and smiles[index] == "]":
+                continue
+            # Don't produce charged R groups (eg. "R+")
+            elif smiles[index] in ["+", "-"]:
+                continue
+            elif smiles[index - 1] == "H" and smiles[index] == "]":
+                replacement_positions.append(index - 1)
+            # Only replace "C" and "H"
+            elif smiles[index - 1] == "C":
+                # Don't replace "C" in "Cl", "Ca", Cu", etc...
+                if smiles[index] not in [
+                    "s",
+                    "a",
+                    "e",
+                    "o",
+                    "u",
+                    "r",
+                    "l",
+                    "f",
+                    "d",
+                    "n",
+                    "@"  # replacing chiral C leads to invalid SMILES
+                ]:
+                    replacement_positions.append(index - 1)
         return replacement_positions
 
     def add_explicite_hydrogen_to_smiles(self, smiles: str) -> str:
