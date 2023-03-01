@@ -17,11 +17,11 @@ Example:
 Have a look in the RanDepictNotebook.ipynb for more examples.
 
 For comments, bug reports or feature ideas,
-please raise a issue on the Github repository.
+please raise an issue on the Github repository.
 
 """
 
-__version__ = "1.1.4"
+__version__ = "1.1.5"
 
 __all__ = [
     "RanDepict",
