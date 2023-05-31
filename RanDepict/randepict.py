@@ -1096,7 +1096,7 @@ class RandomDepictor:
         if re.search("\[.*[RXYZ].*\]", smiles):
             return True
 
-    def get_random_cdk_rendering_settings(self, rendererModel, molecule, smiles: str):
+    def _cdk_get_random_rendering_settings(self, rendererModel, molecule, smiles: str):
         """
         This function defines random rendering options for the structure
         depictions created using CDK.
@@ -1194,6 +1194,7 @@ class RandomDepictor:
             [True, False, False, False], log_attribute="cdk_add_atom_indices"
         ):
             if not self.has_r_group(smiles):
+                # Avoid confusion with R group indices and atom numbering
                 labels = True
                 for atom in molecule.atoms():
                     label = JClass("java.lang.Integer")(
@@ -1235,35 +1236,20 @@ class RandomDepictor:
             cdk_superatom_abrv.apply(molecule)
         return rendererModel, molecule
 
-    def depict_and_resize_cdk(
-        self, smiles: str, shape: Tuple[int, int] = (299, 299)
-    ) -> np.array:
+    def _cdk_add_explicite_hydrogens_to_iatomcontainer(
+        self, molecule,
+    ):
         """
-        This function takes a smiles str and an image shape.
-        It renders the chemical structures using CDK with random
-        rendering/depiction settings and returns an RGB image (np.array)
-        with the given image shape.
-        The general workflow here is a JPype adaptation of code published
-        by Egon Willighagen in 'Groovy Cheminformatics with the Chemistry
-        Development Kit':
-        https://egonw.github.io/cdkbook/ctr.html#depict-a-compound-as-an-image
-        with additional adaptations to create all the different depiction
-        types from
-        https://github.com/cdk/cdk/wiki/Standard-Generator
+        This function takes an IAtomContainer and returns an IAtomContainer with added
+        explicite hydrogen atoms.
 
         Args:
-            smiles (str): SMILES representation of molecule
-            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+        molecule: IAtomContainer (JClass object)
 
         Returns:
-            np.array: Chemical structure depiction
+        molecule: IAtomContainer (JClass object)
         """
         cdk_base = "org.openscience.cdk"
-        # Read molecule from SMILES str
-        molecule = self.cdk_smiles_to_IAtomContainer(smiles)
-
-        # Add hydrogens for coordinate generation (to make it look nicer/
-        # avoid overlaps)
         matcher = JClass(cdk_base + ".atomtype.CDKAtomTypeMatcher").getInstance(
             molecule.getBuilder()
         )
@@ -1280,29 +1266,35 @@ class RandomDepictor:
             cdk_base + ".tools.manipulator.AtomContainerManipulator"
         )
         AtomContainerManipulator.convertImplicitToExplicitHydrogens(molecule)
+        return molecule
 
-        # Instantiate StructureDiagramGenerator, determine coordinates
-        sdg = JClass(cdk_base + ".layout.StructureDiagramGenerator")()
-        sdg.setMolecule(molecule)
-        sdg.generateCoordinates(molecule)
-        molecule = sdg.getMolecule()
+    def _cdk_remove_explicite_hydrogens_from_iatomcontainer(
+        self, molecule,
+    ):
+        """
+        This function takes an IAtomContainer and returns an IAtomContainer with added
+        explicite hydrogen atoms.
 
-        # Remove explicit hydrogens again
-        AtomContainerManipulator.suppressHydrogens(molecule)
+        Args:
+        molecule: IAtomContainer (JClass object)
 
-        # Rotate molecule randomly
-        point = JClass(cdk_base + ".geometry.GeometryTools").get2DCenter(molecule)
-        rot_degrees = self.random_choice(range(360))
-        JClass(cdk_base + ".geometry.GeometryTools").rotate(
-            molecule, point, rot_degrees
+        Returns:
+        molecule: IAtomContainer (JClass object)
+        """
+        cdk_base = "org.openscience.cdk"
+        AtomContainerManipulator = JClass(
+            cdk_base + ".tools.manipulator.AtomContainerManipulator"
         )
+        AtomContainerManipulator.suppressHydrogens(molecule)
+        return molecule
 
-        # Get Generators
-        generators = JClass("java.util.ArrayList")()
-        BasicSceneGenerator = JClass(
-            "org.openscience.cdk.renderer.generators.BasicSceneGenerator"
-        )()
-        generators.add(BasicSceneGenerator)
+    def _cdk_get_random_java_font(self):
+        """
+        This function returns a random java.awt.Font (JClass) object
+
+        Returns:
+        font: java.awt.Font (JClass object)
+        """
         font_size = self.random_choice(
             range(10, 20), log_attribute="cdk_atom_label_font_size"
         )
@@ -1325,39 +1317,157 @@ class RandomDepictor:
             # log_attribute='cdk_atom_label_font_style'
         )
         font = Font(font_name, font_style, font_size)
-        StandardGenerator = JClass(
-            cdk_base + ".renderer.generators.standard.StandardGenerator"
-        )(font)
-        generators.add(StandardGenerator)
+        return font
 
-        # Instantiate renderer
-        AWTFontManager = JClass(cdk_base + ".renderer.font.AWTFontManager")
-        renderer = JClass(cdk_base + ".renderer.AtomContainerRenderer")(
+    def _cdk_rotate_coordinates(self, molecule):
+        """
+        Given an IAtomContainer (JClass object), this function rotates the molecule
+        and adapts the coordinates of accordingly. The IAtomContainer is then returned.#
+
+        Args:
+        molecule: IAtomContainer (JClass object)
+
+        Returns:
+        molecule: IAtomContainer (JClass object)
+        """
+        cdk_base = "org.openscience.cdk"
+        point = JClass(cdk_base + ".geometry.GeometryTools").get2DCenter(molecule)
+        rot_degrees = self.random_choice(range(360))
+        JClass(cdk_base + ".geometry.GeometryTools").rotate(
+            molecule, point, rot_degrees
+        )
+        return molecule
+
+    def _cdk_generate_2d_coordinates(self, molecule):
+        """
+        Given an IAtomContainer (JClass object), this function adds 2D coordinate to
+        the molecule. The modified IAtomContainer is then returned.
+
+        Args:
+        molecule: IAtomContainer (JClass object)
+
+        Returns:
+        molecule: IAtomContainer (JClass object)
+        """
+        cdk_base = "org.openscience.cdk"
+        sdg = JClass(cdk_base + ".layout.StructureDiagramGenerator")()
+        sdg.setMolecule(molecule)
+        sdg.generateCoordinates(molecule)
+        molecule = sdg.getMolecule()
+        return molecule
+
+    def _cdk_create_generators(self,):
+        """
+        This function returns a java.util.ArrayList (JClass object) that contains the
+        BasicSceneGenerator and the StandardGenerator. A random font is for the
+        instantiation of the StandardGenerator.
+
+        Returns:
+        generators: java.util.ArrayList (JClass object)
+        """
+        generators = JClass("java.util.ArrayList")()
+        BasicSceneGenerator = JClass(
+            "org.openscience.cdk.renderer.generators.BasicSceneGenerator"
+        )()
+        generators.add(BasicSceneGenerator)
+
+        StandardGenerator = JClass(
+            "org.openscience.cdk.renderer.generators.standard.StandardGenerator"
+        )(self._cdk_get_random_java_font())
+        generators.add(StandardGenerator)
+        return generators
+
+    def _cdk_get_atomcontainer_renderer(
+        self,
+        molecule,
+        shape: Tuple[int, int]
+    ):
+        """pytest
+        This function takes an IAtomContainer (JClass object) and returns an
+        AtomContainerRenderer (JClass object) that CDK uses for the depiction of the
+        molecule.
+
+        Args:
+            molecule (IAtomContainer (JClass object)): molecule
+            shape (Tuple[int, int]): y, x
+
+        Returns:
+           AtomContainerRenderer (JClass object)
+        """
+        generators = self._cdk_create_generators()
+        AWTFontManager = JClass("org.openscience.cdk.renderer.font.AWTFontManager")
+        renderer = JClass("org.openscience.cdk.renderer.AtomContainerRenderer")(
             generators, AWTFontManager()
         )
-
-        # Create an empty image of the right size
-        y, x = self.random_image_size(shape)
+        y, x = shape
         # Workaround for structures that are cut off at edged of images:
         # Make image twice as big, reduce Zoom factor, then remove white
         # areas at borders and resize to originally desired shape
         # TODO: Find out why the structures are cut off in the first place
         y = y * 4
         x = x * 4
-
         drawArea = JClass("java.awt.Rectangle")(x, y)
-        BufferedImage = JClass("java.awt.image.BufferedImage")
-        image = BufferedImage(x, y, BufferedImage.TYPE_INT_RGB)
-
         # Draw the molecule
         renderer.setup(molecule, drawArea)
+        return renderer
+
+    def _cdk_bufferedimage_to_numpyarray(
+        self,
+        image
+    ) -> np.ndarray:
+        """
+        This function converts a BufferedImage (JClass object) into a numpy array.
+
+        Args:
+            image (BufferedImage (JClass object))
+
+        Returns:
+            image (np.ndarray)
+        """
+        # Write the image into a format that can be read by skimage
+        ImageIO = JClass("javax.imageio.ImageIO")
+        os = JClass("java.io.ByteArrayOutputStream")()
+        Base64 = JClass("java.util.Base64")
+        ImageIO.write(
+            image, JClass("java.lang.String")("PNG"), Base64.getEncoder().wrap(os)
+        )
+        image = bytes(os.toString("UTF-8"))
+        image = base64.b64decode(image)
+
+        # Read image in skimage
+        image = sk_io.imread(image, plugin="imageio")
+        image = img_as_ubyte(image)
+        return image
+
+    def _cdk_render_molecule(
+        self,
+        molecule,
+        smiles: str,
+        shape: Tuple[int, int]
+    ):
+        """
+        This function takes an IAtomContainer (JClass object), the corresponding SMILES
+        string and an image shape and returns a BufferedImage (JClass object) with the
+        rendered molecule.
+
+        Args:
+            molecule (IAtomContainer (JClass object)): molecule
+            smiles (str): SMILES string
+            shape (Tuple[int, int]): y, x
+        Returns:
+            depiction (np.ndarray): chemical structure depiction
+        """
+        cdk_base = "org.openscience.cdk"
+        renderer = self._cdk_get_atomcontainer_renderer(molecule, shape)
         model = renderer.getRenderer2DModel()
+        BufferedImage = JClass("java.awt.image.BufferedImage")
+        y, x = shape
+        image = BufferedImage(x, y, BufferedImage.TYPE_INT_RGB)
 
         # Get random rendering settings
-        model, molecule = self.get_random_cdk_rendering_settings(
+        model, molecule = self._cdk_get_random_rendering_settings(
             model, molecule, smiles
         )
-
         double = JClass("java.lang.Double")
         model.set(
             JClass(cdk_base + ".renderer.generators.BasicSceneGenerator.ZoomFactor"),
@@ -1367,29 +1477,48 @@ class RandomDepictor:
         g2.setColor(JClass("java.awt.Color").WHITE)
         g2.fillRect(0, 0, x, y)
         AWTDrawVisitor = JClass("org.openscience.cdk.renderer.visitor.AWTDrawVisitor")
-
         renderer.paint(molecule, AWTDrawVisitor(g2))
-
-        # Write the image into a format that can be read by skimage
-        ImageIO = JClass("javax.imageio.ImageIO")
-        os = JClass("java.io.ByteArrayOutputStream")()
-        Base64 = JClass("java.util.Base64")
-        ImageIO.write(
-            image, JClass("java.lang.String")("PNG"), Base64.getEncoder().wrap(os)
-        )
-        depiction = bytes(os.toString("UTF-8"))
-        depiction = base64.b64decode(depiction)
-
-        # Read image in skimage
-        depiction = sk_io.imread(depiction, plugin="imageio")
+        depiction = self._cdk_bufferedimage_to_numpyarray(image)
         # Normalise padding and get non-distorted image of right size
-        depiction = self.normalise_padding(depiction)
-        depiction = self.central_square_image(depiction)
+        # TODO: Get rid of this nonsense with adding padding and then removing it
+        # depiction = self.normalise_padding(depiction)
+        # depiction = self.central_square_image(depiction)
         depiction = self.resize(depiction, shape, HQ=True)
-        depiction = img_as_ubyte(depiction)
         return depiction
 
-    def cdk_smiles_to_IAtomContainer(self, smiles: str):
+    def cdk_depict(
+        self, smiles: str, shape: Tuple[int, int] = (299, 299)
+    ) -> np.array:
+        """
+        This function takes a smiles str and an image shape.
+        It renders the chemical structures using CDK with random
+        rendering/depiction settings and returns an RGB image (np.array)
+        with the given image shape.
+        The general workflow here is a JPype adaptation of code published
+        by Egon Willighagen in 'Groovy Cheminformatics with the Chemistry
+        Development Kit':
+        https://egonw.github.io/cdkbook/ctr.html#depict-a-compound-as-an-image
+        with additional adaptations to create all the different depiction
+        types from
+        https://github.com/cdk/cdk/wiki/Standard-Generator
+
+        Args:
+            smiles (str): SMILES representation of molecule
+            shape (Tuple[int, int], optional): im shape. Defaults to (299, 299)
+
+        Returns:
+            np.array: Chemical structure depiction
+        """
+        # TODO: Find out if adding and removing hydrogens is really necessary
+        molecule = self._cdk_smiles_to_IAtomContainer(smiles)
+        molecule = self._cdk_add_explicite_hydrogens_to_iatomcontainer(molecule)
+        molecule = self._cdk_generate_2d_coordinates(molecule)
+        molecule = self._cdk_remove_explicite_hydrogens_from_iatomcontainer(molecule)
+        molecule = self._cdk_rotate_coordinates(molecule)
+        depiction = self._cdk_render_molecule(molecule, smiles, shape)
+        return depiction
+
+    def _cdk_smiles_to_IAtomContainer(self, smiles: str):
         """
         This function takes a SMILES representation of a molecule and
         returns the corresponding IAtomContainer object.
@@ -1423,7 +1552,7 @@ class RandomDepictor:
         Returns:
             str: content of SD file of input molecule
         """
-        i_atom_container = self.cdk_smiles_to_IAtomContainer(smiles)
+        i_atom_container = self._cdk_smiles_to_IAtomContainer(smiles)
         mol_str = self.cdk_IAtomContainer_to_mol_str(i_atom_container)
         return mol_str
 
@@ -1503,10 +1632,9 @@ class RandomDepictor:
         self,
         smiles: str,
         shape: Tuple[int, int] = (299, 299),
-        # path_bkg="./backgrounds/",
     ) -> np.array:
         """
-        This function takes a SMILES and depicts it using Rdkit, Indigo or CDK.
+        This function takes a SMILES and depicts it using Rdkit, Indigo, CDK or PIKACHU.
         The depiction method and the specific parameters for the depiction are
         chosen completely randomly. The purpose of this function is to enable
         depicting a diverse variety of chemical structure depictions.
@@ -1519,8 +1647,7 @@ class RandomDepictor:
             np.array: Chemical structure depiction
         """
         depiction_functions = self.get_depiction_functions(smiles)
-        # If nothing is returned, try different function
-        # FIXME: depictions_functions could be an empty list
+
         for _ in range(3):
             if len(depiction_functions) != 0:
                 # Pick random depiction function and call it
@@ -1579,7 +1706,7 @@ class RandomDepictor:
         depiction_functions_registry = {
             'rdkit': self.depict_and_resize_rdkit,
             'indigo': self.depict_and_resize_indigo,
-            'cdk': self.depict_and_resize_cdk,
+            'cdk': self.cdk_depict,
             'pikachu': self.depict_and_resize_pikachu,
         }
         depiction_functions = [depiction_functions_registry[k]
@@ -2443,7 +2570,7 @@ class RandomDepictor:
         elif "pikachu" in list(schemes[0].keys())[0]:
             depiction = depictor.depict_and_resize_pikachu(smiles, shape)
         elif "cdk" in list(schemes[0].keys())[0]:
-            depiction = depictor.depict_and_resize_cdk(smiles, shape)
+            depiction = depictor.cdk_depict(smiles, shape)
 
         # Add augmentations
         if len(fingerprints) == 2:
@@ -2673,7 +2800,7 @@ class DepictionFeatureRanges(RandomDepictor):
 
         # Call every depiction function
         depiction = self(smiles)
-        depiction = self.depict_and_resize_cdk(smiles)
+        depiction = self.cdk_depict(smiles)
         depiction = self.depict_and_resize_rdkit(smiles)
         depiction = self.depict_and_resize_indigo(smiles)
         depiction = self.depict_and_resize_pikachu(smiles)
@@ -3361,7 +3488,7 @@ class RandomMarkushStructureCreator:
         Returns:
             smiles (str): SMILES representation of a molecule with explicite H
         """
-        i_atom_container = self.depictor.cdk_smiles_to_IAtomContainer(smiles)
+        i_atom_container = self.depictor._cdk_smiles_to_IAtomContainer(smiles)
 
         # Add explicite hydrogen atoms
         cdk_base = "org.openscience.cdk."
@@ -3387,7 +3514,7 @@ class RandomMarkushStructureCreator:
         Returns:
             smiles (str): SMILES representation of a molecule with explicite H
         """
-        i_atom_container = self.depictor.cdk_smiles_to_IAtomContainer(smiles)
+        i_atom_container = self.depictor._cdk_smiles_to_IAtomContainer(smiles)
         # Remove explicite hydrogen atoms
         cdk_base = "org.openscience.cdk."
         manipulator = JClass(cdk_base + "tools.manipulator.AtomContainerManipulator")

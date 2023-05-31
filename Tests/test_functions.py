@@ -367,13 +367,13 @@ class TestRandomDepictor:
             im = self.depictor.depict_and_resize_rdkit(smiles)
             assert type(im) == np.ndarray
 
-    def test_depict_and_resize_cdk(self):
+    def test_cdk_depict(self):
         # Assert that an image is returned with different types
         # of input SMILES str
         test_smiles = ['c1ccccc1',
                        '[Otto]C1=C([XYZ123])C([R1])=C([Y])C([X])=C1[R]']
         for smiles in test_smiles:
-            im = self.depictor.depict_and_resize_cdk(smiles)
+            im = self.depictor.cdk_depict(smiles)
             assert type(im) == np.ndarray
 
     def test_depict_and_resize_pikachu(self):
@@ -391,7 +391,7 @@ class TestRandomDepictor:
         expected = [
             self.depictor.depict_and_resize_rdkit,
             self.depictor.depict_and_resize_indigo,
-            self.depictor.depict_and_resize_cdk,
+            self.depictor.cdk_depict,
             self.depictor.depict_and_resize_pikachu,
         ]
         # symmetric_difference
@@ -404,7 +404,7 @@ class TestRandomDepictor:
         expected = [
             self.depictor.depict_and_resize_rdkit,
             self.depictor.depict_and_resize_indigo,
-            self.depictor.depict_and_resize_cdk,
+            self.depictor.cdk_depict,
         ]
         difference = set(observed) ^ set(expected)
         assert not difference
@@ -414,7 +414,7 @@ class TestRandomDepictor:
         observed = self.depictor.get_depiction_functions("[R]N1C=NC2=C1C(=O)N(C(=O)N2C)C")
         expected = [
             self.depictor.depict_and_resize_indigo,
-            self.depictor.depict_and_resize_cdk,
+            self.depictor.cdk_depict,
             self.depictor.depict_and_resize_pikachu,
         ]
         difference = set(observed) ^ set(expected)
@@ -424,7 +424,7 @@ class TestRandomDepictor:
         # RDKit and Indigo don't depict "X"
         observed = self.depictor.get_depiction_functions("[X]N1C=NC2=C1C(=O)N(C(=O)N2C)C")
         expected = [
-            self.depictor.depict_and_resize_cdk,
+            self.depictor.cdk_depict,
             self.depictor.depict_and_resize_pikachu,
         ]
         difference = set(observed) ^ set(expected)
