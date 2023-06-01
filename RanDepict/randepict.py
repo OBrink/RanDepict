@@ -1096,26 +1096,27 @@ class RandomDepictor:
         if re.search("\[.*[RXYZ].*\]", smiles):
             return True
 
-    def _cdk_get_random_rendering_settings(self, rendererModel, molecule, smiles: str):
+    def _cdk_get_depiction_generator(self, molecule, smiles: str):
         """
         This function defines random rendering options for the structure
         depictions created using CDK.
-        It takes a cdk.renderer.AtomContainerRenderer.2DModel
-        and a cdk.AtomContainer and returns the 2DModel object with random
-        rendering settings and the AtomContainer.
-        I followed https://github.com/cdk/cdk/wiki/Standard-Generator while
-        creating this.
+        It takes an iAtomContainer and a SMILES string and returns the iAtomContainer
+        and the DepictionGenerator
+        with random rendering settings and the AtomContainer.
+        I followed https://github.com/cdk/cdk/wiki/Standard-Generator to adjust the
+        depiction parameters.
 
         Args:
-            rendererModel (cdk.renderer.AtomContainerRenderer.2DModel)
             molecule (cdk.AtomContainer): Atom container
             smiles (str): smiles representation of molecule
 
         Returns:
-            rendererModel, molecule: Objects that hold depiction parameters
+            DepictionGenerator, molecule: Objects that hold depiction parameters
         """
         cdk_base = "org.openscience.cdk"
-
+        dep_gen = JClass("org.openscience.cdk.depict.DepictionGenerator")(
+            self._cdk_get_random_java_font()
+        )
         StandardGenerator = JClass(
             cdk_base + ".renderer.generators.standard.StandardGenerator"
         )
@@ -1127,18 +1128,18 @@ class RandomDepictor:
         )
         SymbolVisibility = JClass("org.openscience.cdk.renderer.SymbolVisibility")
         if symbol_visibility == "iupac_recommendation":
-            rendererModel.set(
+            dep_gen = dep_gen.withParam(
                 StandardGenerator.Visibility.class_,
                 SymbolVisibility.iupacRecommendations(),
             )
         elif symbol_visibility == "no_terminal_methyl":
             # only hetero atoms, no terminal alkyl groups
-            rendererModel.set(
+            dep_gen = dep_gen.withParam(
                 StandardGenerator.Visibility.class_,
                 SymbolVisibility.iupacRecommendationsWithoutTerminalCarbon(),
             )
         elif symbol_visibility == "show_all_atom_labels":
-            rendererModel.set(
+            dep_gen = dep_gen.withParam(
                 StandardGenerator.Visibility.class_, SymbolVisibility.all()
             )  # show all atom labels
 
@@ -1146,12 +1147,13 @@ class RandomDepictor:
         stroke_width = self.random_choice(
             np.arange(0.8, 2.0, 0.1), log_attribute="cdk_stroke_width"
         )
-        rendererModel.set(StandardGenerator.StrokeRatio.class_, stroke_width)
+        dep_gen = dep_gen.withParam(StandardGenerator.StrokeRatio.class_,
+                                    stroke_width)
         # Define symbol margin ratio
         margin_ratio = self.random_choice(
             [0, 1, 2, 2, 2, 3, 4], log_attribute="cdk_margin_ratio"
         )
-        rendererModel.set(
+        dep_gen = dep_gen.withParam(
             StandardGenerator.SymbolMarginRatio.class_,
             JClass("java.lang.Double")(margin_ratio),
         )
@@ -1159,21 +1161,23 @@ class RandomDepictor:
         double_bond_dist = self.random_choice(
             np.arange(0.11, 0.25, 0.01), log_attribute="cdk_double_bond_dist"
         )
-        rendererModel.set(StandardGenerator.BondSeparation.class_, double_bond_dist)
+        dep_gen = dep_gen.withParam(StandardGenerator.BondSeparation.class_,
+                                    double_bond_dist)
         wedge_ratio = self.random_choice(
             np.arange(4.5, 7.5, 0.1), log_attribute="cdk_wedge_ratio"
         )
-        rendererModel.set(
+        dep_gen = dep_gen.withParam(
             StandardGenerator.WedgeRatio.class_, JClass("java.lang.Double")(wedge_ratio)
         )
         if self.random_choice([True, False], log_attribute="cdk_fancy_bold_wedges"):
-            rendererModel.set(StandardGenerator.FancyBoldWedges.class_, True)
+            dep_gen = dep_gen.withParam(StandardGenerator.FancyBoldWedges.class_, True)
         if self.random_choice([True, False], log_attribute="cdk_fancy_hashed_wedges"):
-            rendererModel.set(StandardGenerator.FancyHashedWedges.class_, True)
+            dep_gen = dep_gen.withParam(StandardGenerator.FancyHashedWedges.class_,
+                                        True)
         hash_spacing = self.random_choice(
             np.arange(4.0, 6.0, 0.2), log_attribute="cdk_hash_spacing"
         )
-        rendererModel.set(StandardGenerator.HashSpacing.class_, hash_spacing)
+        dep_gen = dep_gen.withParam(StandardGenerator.HashSpacing.class_, hash_spacing)
         # Add CIP labels
         labels = False
         if self.random_choice([True, False], log_attribute="cdk_add_CIP_labels"):
@@ -1203,7 +1207,7 @@ class RandomDepictor:
                     atom.setProperty(StandardGenerator.ANNOTATION_LABEL, label)
         if labels:
             # We only need black
-            rendererModel.set(
+            dep_gen = dep_gen.withParam(
                 StandardGenerator.AnnotationColor.class_,
                 JClass("java.awt.Color")(0x000000),
             )
@@ -1211,12 +1215,14 @@ class RandomDepictor:
             font_scale = self.random_choice(
                 np.arange(0.5, 0.8, 0.1), log_attribute="cdk_label_font_scale"
             )
-            rendererModel.set(StandardGenerator.AnnotationFontScale.class_, font_scale)
+            dep_gen = dep_gen.withParam(
+                StandardGenerator.AnnotationFontScale.class_,
+                font_scale)
             # Distance between atom numbering and depiction
             annotation_distance = self.random_choice(
                 np.arange(0.15, 0.30, 0.05), log_attribute="cdk_annotation_distance"
             )
-            rendererModel.set(
+            dep_gen = dep_gen.withParam(
                 StandardGenerator.AnnotationDistance.class_, annotation_distance
             )
         # Abbreviate superatom labels in half of the cases
@@ -1234,59 +1240,7 @@ class RandomDepictor:
             abbreviation_path = JClass("java.lang.String")(abbreviation_path)
             cdk_superatom_abrv.loadFromFile(abbreviation_path)
             cdk_superatom_abrv.apply(molecule)
-        return rendererModel, molecule
-
-    def _cdk_add_explicite_hydrogens_to_iatomcontainer(
-        self, molecule,
-    ):
-        """
-        This function takes an IAtomContainer and returns an IAtomContainer with added
-        explicite hydrogen atoms.
-
-        Args:
-        molecule: IAtomContainer (JClass object)
-
-        Returns:
-        molecule: IAtomContainer (JClass object)
-        """
-        cdk_base = "org.openscience.cdk"
-        matcher = JClass(cdk_base + ".atomtype.CDKAtomTypeMatcher").getInstance(
-            molecule.getBuilder()
-        )
-        for atom in molecule.atoms():
-            atom_type = matcher.findMatchingAtomType(molecule, atom)
-            JClass(cdk_base + ".tools.manipulator.AtomTypeManipulator").configure(
-                atom, atom_type
-            )
-        adder = JClass(cdk_base + ".tools.CDKHydrogenAdder").getInstance(
-            molecule.getBuilder()
-        )
-        adder.addImplicitHydrogens(molecule)
-        AtomContainerManipulator = JClass(
-            cdk_base + ".tools.manipulator.AtomContainerManipulator"
-        )
-        AtomContainerManipulator.convertImplicitToExplicitHydrogens(molecule)
-        return molecule
-
-    def _cdk_remove_explicite_hydrogens_from_iatomcontainer(
-        self, molecule,
-    ):
-        """
-        This function takes an IAtomContainer and returns an IAtomContainer with added
-        explicite hydrogen atoms.
-
-        Args:
-        molecule: IAtomContainer (JClass object)
-
-        Returns:
-        molecule: IAtomContainer (JClass object)
-        """
-        cdk_base = "org.openscience.cdk"
-        AtomContainerManipulator = JClass(
-            cdk_base + ".tools.manipulator.AtomContainerManipulator"
-        )
-        AtomContainerManipulator.suppressHydrogens(molecule)
-        return molecule
+        return dep_gen, molecule
 
     def _cdk_get_random_java_font(self):
         """
@@ -1356,61 +1310,6 @@ class RandomDepictor:
         molecule = sdg.getMolecule()
         return molecule
 
-    def _cdk_create_generators(self,):
-        """
-        This function returns a java.util.ArrayList (JClass object) that contains the
-        BasicSceneGenerator and the StandardGenerator. A random font is for the
-        instantiation of the StandardGenerator.
-
-        Returns:
-        generators: java.util.ArrayList (JClass object)
-        """
-        generators = JClass("java.util.ArrayList")()
-        BasicSceneGenerator = JClass(
-            "org.openscience.cdk.renderer.generators.BasicSceneGenerator"
-        )()
-        generators.add(BasicSceneGenerator)
-
-        StandardGenerator = JClass(
-            "org.openscience.cdk.renderer.generators.standard.StandardGenerator"
-        )(self._cdk_get_random_java_font())
-        generators.add(StandardGenerator)
-        return generators
-
-    def _cdk_get_atomcontainer_renderer(
-        self,
-        molecule,
-        shape: Tuple[int, int]
-    ):
-        """pytest
-        This function takes an IAtomContainer (JClass object) and returns an
-        AtomContainerRenderer (JClass object) that CDK uses for the depiction of the
-        molecule.
-
-        Args:
-            molecule (IAtomContainer (JClass object)): molecule
-            shape (Tuple[int, int]): y, x
-
-        Returns:
-           AtomContainerRenderer (JClass object)
-        """
-        generators = self._cdk_create_generators()
-        AWTFontManager = JClass("org.openscience.cdk.renderer.font.AWTFontManager")
-        renderer = JClass("org.openscience.cdk.renderer.AtomContainerRenderer")(
-            generators, AWTFontManager()
-        )
-        y, x = shape
-        # Workaround for structures that are cut off at edged of images:
-        # Make image twice as big, reduce Zoom factor, then remove white
-        # areas at borders and resize to originally desired shape
-        # TODO: Find out why the structures are cut off in the first place
-        y = y * 4
-        x = x * 4
-        drawArea = JClass("java.awt.Rectangle")(x, y)
-        # Draw the molecule
-        renderer.setup(molecule, drawArea)
-        return renderer
-
     def _cdk_bufferedimage_to_numpyarray(
         self,
         image
@@ -1433,8 +1332,6 @@ class RandomDepictor:
         )
         image = bytes(os.toString("UTF-8"))
         image = base64.b64decode(image)
-
-        # Read image in skimage
         image = sk_io.imread(image, plugin="imageio")
         image = img_as_ubyte(image)
         return image
@@ -1457,33 +1354,10 @@ class RandomDepictor:
         Returns:
             depiction (np.ndarray): chemical structure depiction
         """
-        cdk_base = "org.openscience.cdk"
-        renderer = self._cdk_get_atomcontainer_renderer(molecule, shape)
-        model = renderer.getRenderer2DModel()
-        BufferedImage = JClass("java.awt.image.BufferedImage")
-        y, x = shape
-        image = BufferedImage(x, y, BufferedImage.TYPE_INT_RGB)
-
-        # Get random rendering settings
-        model, molecule = self._cdk_get_random_rendering_settings(
-            model, molecule, smiles
-        )
-        double = JClass("java.lang.Double")
-        model.set(
-            JClass(cdk_base + ".renderer.generators.BasicSceneGenerator.ZoomFactor"),
-            double(1.0),
-        )
-        g2 = image.getGraphics()
-        g2.setColor(JClass("java.awt.Color").WHITE)
-        g2.fillRect(0, 0, x, y)
-        AWTDrawVisitor = JClass("org.openscience.cdk.renderer.visitor.AWTDrawVisitor")
-        renderer.paint(molecule, AWTDrawVisitor(g2))
-        depiction = self._cdk_bufferedimage_to_numpyarray(image)
-        # Normalise padding and get non-distorted image of right size
-        # TODO: Get rid of this nonsense with adding padding and then removing it
-        # depiction = self.normalise_padding(depiction)
-        # depiction = self.central_square_image(depiction)
-        depiction = self.resize(depiction, shape, HQ=True)
+        dep_gen, molecule = self._cdk_get_depiction_generator(molecule, smiles)
+        dep_gen = dep_gen.withSize(shape[1], shape[0])
+        depiction = dep_gen.depict(molecule).toImg()
+        depiction = self._cdk_bufferedimage_to_numpyarray(depiction)
         return depiction
 
     def cdk_depict(
@@ -1511,9 +1385,7 @@ class RandomDepictor:
         """
         # TODO: Find out if adding and removing hydrogens is really necessary
         molecule = self._cdk_smiles_to_IAtomContainer(smiles)
-        molecule = self._cdk_add_explicite_hydrogens_to_iatomcontainer(molecule)
         molecule = self._cdk_generate_2d_coordinates(molecule)
-        molecule = self._cdk_remove_explicite_hydrogens_from_iatomcontainer(molecule)
         molecule = self._cdk_rotate_coordinates(molecule)
         depiction = self._cdk_render_molecule(molecule, smiles, shape)
         return depiction
