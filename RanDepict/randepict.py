@@ -941,7 +941,7 @@ class RandomDepictor:
             if not self.has_r_group(smiles):
                 molecule = indigo.loadMolecule(smiles)
             else:
-                mol_str = self.smiles_to_mol_str(smiles)
+                mol_str = self._cdk_smiles_to_mol_str(smiles)
                 molecule = indigo.loadMolecule(mol_str)
         except IndigoException:
             return None
@@ -1034,8 +1034,8 @@ class RandomDepictor:
         depiction_settings.drawOptions().useBWAtomPalette()
         return depiction_settings
 
-    def depict_and_resize_rdkit(
-        self, smiles: str, shape: Tuple[int, int] = (299, 299)
+    def rdkit_depict(
+        self, smiles: str, shape: Tuple[int, int] = (512, 512)
     ) -> np.array:
         """
         This function takes a smiles str and an image shape.
@@ -1054,7 +1054,7 @@ class RandomDepictor:
         if not self.has_r_group(smiles):
             mol = Chem.MolFromSmiles(smiles)
         if self.has_r_group(smiles) or not mol:
-            mol_str = self.smiles_to_mol_str(smiles)
+            mol_str = self._cdk_smiles_to_mol_str(smiles)
             mol = Chem.MolFromMolBlock(mol_str)
         if mol:
             AllChem.Compute2DCoords(mol)
@@ -1066,13 +1066,6 @@ class RandomDepictor:
                 mol = CondenseMolAbbreviations(mol, abbrevs)
             # Get random depiction settings
             depiction_settings = self.get_random_rdkit_rendering_settings(smiles=smiles)
-            # Create depiction
-            # TODO: Figure out how to depict without kekulization here
-            # The following line does not prevent the molecule from being
-            # depicted kekulized:
-            # mol = rdMolDraw2D.PrepareMolForDrawing(mol, kekulize = False)
-            # The molecule must get kekulized somewhere "by accident"
-
             rdMolDraw2D.PrepareAndDrawMolecule(depiction_settings, mol)
             depiction = depiction_settings.GetDrawingText()
             depiction = sk_io.imread(io.BytesIO(depiction))
@@ -1358,7 +1351,7 @@ class RandomDepictor:
         dep_gen = dep_gen.withSize(shape[1], shape[0])
         depiction = dep_gen.depict(molecule).toImg()
         depiction = self._cdk_bufferedimage_to_numpyarray(depiction)
-        return depiction
+        return depiction     
 
     def cdk_depict(
         self, smiles: str, shape: Tuple[int, int] = (299, 299)
@@ -1409,7 +1402,11 @@ class RandomDepictor:
         molecule = SmilesParser.parseSmiles(smiles)
         return molecule
 
-    def smiles_to_mol_str(self, smiles: str) -> str:
+    def _cdk_smiles_to_mol_str(
+        self,
+        smiles: str,
+        generate_2d: bool = False,
+    ) -> str:
         """
         This function takes a SMILES representation of a molecule and returns
         the content of the corresponding SD file using the CDK.
@@ -1420,15 +1417,19 @@ class RandomDepictor:
 
         Args:
             smiles (str): SMILES representation of a molecule
+            generate_2d (bool, optional): Whether to generate 2D coordinates.
 
         Returns:
-            str: content of SD file of input molecule
+            mol_block (str): content of SD file of input molecule
         """
-        i_atom_container = self._cdk_smiles_to_IAtomContainer(smiles)
-        mol_str = self.cdk_IAtomContainer_to_mol_str(i_atom_container)
-        return mol_str
+        molecule = self._cdk_smiles_to_IAtomContainer(smiles)
+        if generate_2d:
+            molecule = self._cdk_generate_2d_coordinates(molecule)
+            molecule = self._cdk_rotate_coordinates(molecule)
+        mol_block = self._cdk_IAtomContainer_to_mol_str(molecule)
+        return mol_block
 
-    def cdk_IAtomContainer_to_mol_str(self, i_atom_container) -> str:
+    def _cdk_IAtomContainer_to_mol_str(self, i_atom_container) -> str:
         """
         This function takes an IAtomContainer object and returns the content
         of the corresponding MDL MOL file as a string.
@@ -1576,7 +1577,7 @@ class RandomDepictor:
         """
 
         depiction_functions_registry = {
-            'rdkit': self.depict_and_resize_rdkit,
+            'rdkit': self.rdkit_depict,
             'indigo': self.depict_and_resize_indigo,
             'cdk': self.cdk_depict,
             'pikachu': self.depict_and_resize_pikachu,
@@ -1596,9 +1597,9 @@ class RandomDepictor:
                         depiction_functions.remove(self.depict_and_resize_pikachu)
             # "R", "X", "Z" are not depicted by RDKit
             # The same is valid for X,Y,Z and a number
-            if self.depict_and_resize_rdkit in depiction_functions:
+            if self.rdkit_depict in depiction_functions:
                 if re.search("\[[RXZ]\]|\[[XYZ]\d+", smiles):
-                    depiction_functions.remove(self.depict_and_resize_rdkit)
+                    depiction_functions.remove(self.rdkit_depict)
             # "X", "R0", [RXYZ]\d+[a-f] and indices above 32 are not depicted by Indigo
             if self.depict_and_resize_indigo in depiction_functions:
                 if re.search("\[R0\]|\[X\]|[4-9][0-9]+|3[3-9]|[XYZR]\d+[a-f]", smiles):
@@ -2438,7 +2439,7 @@ class RandomDepictor:
         if "indigo" in list(schemes[0].keys())[0]:
             depiction = depictor.depict_and_resize_indigo(smiles, shape)
         elif "rdkit" in list(schemes[0].keys())[0]:
-            depiction = depictor.depict_and_resize_rdkit(smiles, shape)
+            depiction = depictor.rdkit_depict(smiles, shape)
         elif "pikachu" in list(schemes[0].keys())[0]:
             depiction = depictor.depict_and_resize_pikachu(smiles, shape)
         elif "cdk" in list(schemes[0].keys())[0]:
@@ -2673,7 +2674,7 @@ class DepictionFeatureRanges(RandomDepictor):
         # Call every depiction function
         depiction = self(smiles)
         depiction = self.cdk_depict(smiles)
-        depiction = self.depict_and_resize_rdkit(smiles)
+        depiction = self.rdkit_depict(smiles)
         depiction = self.depict_and_resize_indigo(smiles)
         depiction = self.depict_and_resize_pikachu(smiles)
         # Call augmentation function
