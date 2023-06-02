@@ -355,7 +355,7 @@ class TestRandomDepictor:
                        '[Otto]C1=C([XYZ123])C([R1])=C([Y])C([X1])=C1[R]',
                        'c1ccccc1[R1]']
         for smiles in test_smiles:
-            im = self.depictor.depict_and_resize_indigo(smiles)
+            im = self.depictor.indigo_depict(smiles)
             assert type(im) == np.ndarray
 
     def test_depict_and_resize_rdkit(self):
@@ -364,7 +364,7 @@ class TestRandomDepictor:
         test_smiles = ['c1ccccc1',
                        '[Otto]C1=C([XYZ123])C([R1])=C([Y])C([X])=C1[R]']
         for smiles in test_smiles:
-            im = self.depictor.depict_and_resize_rdkit(smiles)
+            im = self.depictor.rdkit_depict(smiles)
             assert type(im) == np.ndarray
 
     def test_cdk_depict(self):
@@ -382,17 +382,17 @@ class TestRandomDepictor:
         test_smiles = ['c1ccccc1',
                        '[R1]C1=C([X23])C([R])=C([Z])C([X])=C1[R]']
         for smiles in test_smiles:
-            im = self.depictor.depict_and_resize_pikachu(smiles)
+            im = self.depictor.pikachu_depict(smiles)
             assert type(im) == np.ndarray
 
     def test_get_depiction_functions_normal(self):
         # For a molecule without isotopes or R groups, all toolkits can be used
         observed = self.depictor.get_depiction_functions('c1ccccc1C(O)=O')
         expected = [
-            self.depictor.depict_and_resize_rdkit,
-            self.depictor.depict_and_resize_indigo,
+            self.depictor.rdkit_depict,
+            self.depictor.indigo_depict,
             self.depictor.cdk_depict,
-            self.depictor.depict_and_resize_pikachu,
+            self.depictor.pikachu_depict,
         ]
         # symmetric_difference
         difference = set(observed) ^ set(expected)
@@ -402,8 +402,8 @@ class TestRandomDepictor:
         # PIKAChU can't handle isotopes
         observed = self.depictor.get_depiction_functions("[13CH3]N1C=NC2=C1C(=O)N(C(=O)N2C)C")
         expected = [
-            self.depictor.depict_and_resize_rdkit,
-            self.depictor.depict_and_resize_indigo,
+            self.depictor.rdkit_depict,
+            self.depictor.indigo_depict,
             self.depictor.cdk_depict,
         ]
         difference = set(observed) ^ set(expected)
@@ -413,9 +413,9 @@ class TestRandomDepictor:
         # RDKit depicts "R" without indices as '*' (which is not desired)
         observed = self.depictor.get_depiction_functions("[R]N1C=NC2=C1C(=O)N(C(=O)N2C)C")
         expected = [
-            self.depictor.depict_and_resize_indigo,
+            self.depictor.indigo_depict,
             self.depictor.cdk_depict,
-            self.depictor.depict_and_resize_pikachu,
+            self.depictor.pikachu_depict,
         ]
         difference = set(observed) ^ set(expected)
         assert not difference
@@ -425,14 +425,14 @@ class TestRandomDepictor:
         observed = self.depictor.get_depiction_functions("[X]N1C=NC2=C1C(=O)N(C(=O)N2C)C")
         expected = [
             self.depictor.cdk_depict,
-            self.depictor.depict_and_resize_pikachu,
+            self.depictor.pikachu_depict,
         ]
         difference = set(observed) ^ set(expected)
         assert not difference
 
     def test_smiles_to_mol_str(self):
         # Compare generated mol file str with reference string
-        mol_str = self.depictor.smiles_to_mol_str("CC")
+        mol_str = self.depictor._cdk_smiles_to_mol_block("CC")
         mol_str_lines = mol_str.split('\n')
         with open('Tests/test.mol', 'r') as ref_mol_file:
             ref_lines = ref_mol_file.readlines()
