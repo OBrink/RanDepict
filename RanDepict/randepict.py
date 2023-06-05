@@ -845,7 +845,7 @@ class RandomDepictor:
         Returns:
             np.array: Chemical structure depiction
         """
-        reader = MolFileReader(mol_block)
+        reader = MolFileReader(molfile_str=mol_block)
         structure = reader.molfile_to_structure()
         # structure = read_smiles(smiles)
         depiction_settings = self.get_random_pikachu_rendering_settings()
@@ -955,7 +955,7 @@ class RandomDepictor:
             [True, True, False], log_attribute="indigo_kekulized"
         ):
             molecule.aromatize()
-        molecule.layout()
+        # molecule.layout()
         # Write to buffer
         temp = renderer.renderToBuffer(molecule)
         temp = io.BytesIO(temp)
@@ -1024,7 +1024,7 @@ class RandomDepictor:
         depiction_settings.drawOptions().minFontSize = min_font_size
         depiction_settings.drawOptions().maxFontSize = 30
         # Rotate the molecule
-        depiction_settings.drawOptions().rotate = self.random_choice(range(360))
+        # depiction_settings.drawOptions().rotate = self.random_choice(range(360))
         # Fixed bond length
         fixed_bond_length = self.random_choice(
             range(30, 45), log_attribute="rdkit_fixed_bond_length"
@@ -1061,7 +1061,7 @@ class RandomDepictor:
         # if self.has_r_group(smiles) or not mol:
         #     mol_str = self._smiles_to_mol_block(smiles)
         #     mol = Chem.MolFromMolBlock(mol_str)
-        mol = Chem.MolFromMolBlock(mol_block, sanitize=False)
+        mol = Chem.MolFromMolBlock(mol_block, sanitize=True)
         if mol:
             # AllChem.Compute2DCoords(mol)
             # Abbreviate superatoms
@@ -1358,6 +1358,7 @@ class RandomDepictor:
         """
         dep_gen, molecule = self._cdk_get_depiction_generator(molecule, smiles)
         dep_gen = dep_gen.withSize(shape[1], shape[0])
+        dep_gen = dep_gen.withFillToFit()
         depiction = dep_gen.depict(molecule).toImg()
         depiction = self._cdk_bufferedimage_to_numpyarray(depiction)
         return depiction
@@ -1479,12 +1480,18 @@ class RandomDepictor:
         Returns:
             IAtomContainer: CDK IAtomContainer object that represents the molecule
         """
-        xyz_reader = JClass("org.openscience.cdk.io.XYZReader")
+        # xyz_reader = JClass("org.openscience.cdk.io.XYZReader")
+        scob = JClass("org.openscience.cdk.silent.SilentChemObjectBuilder")
+        bldr = scob.getInstance()
+        iac_class = JClass("org.openscience.cdk.interfaces.IAtomContainer").class_
         string_reader = JClass("java.io.StringReader")(mol_block)
-        reader = xyz_reader(string_reader)
-        chemfile = reader.read(JClass("org.openscience.cdk.ChemFile")())
-        manip = JClass("org.openscience.cdk.tools.manipulator.ChemFileManipulator")
-        iatomcontainer = manip.getAllAtomContainers(chemfile).get(0)
+        mdlr = JClass("org.openscience.cdk.io.MDLV2000Reader")(string_reader)
+        iatomcontainer = mdlr.read(bldr.newInstance(iac_class))
+        mdlr.close()
+        # reader = xyz_reader(string_reader)
+        # chemfile = reader.read(JClass("org.openscience.cdk.ChemFile")())
+        # manip = JClass("org.openscience.cdk.tools.manipulator.ChemFileManipulator")
+        # iatomcontainer = manip.getAllAtomContainers(chemfile).get(0)
         return iatomcontainer
 
     def _cdk_iatomcontainer_to_mol_block(self, i_atom_container) -> str:
