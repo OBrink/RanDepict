@@ -179,13 +179,13 @@ class FingerprintDatasetWithAndWithoutAugmentationsCreator(RandomDepictor):
         # Depict molecule
         try:
             if "indigo" in list(schemes[0].keys())[0]:
-                depiction = depictor.depict_and_resize_indigo(smiles, shape)
+                depiction = depictor.indigo_depict(smiles, shape)
             elif "rdkit" in list(schemes[0].keys())[0]:
-                depiction = depictor.depict_and_resize_rdkit(smiles, shape)
+                depiction = depictor.rdkit_depict(smiles, shape)
             elif "cdk" in list(schemes[0].keys())[0]:
-                depiction = depictor.depict_and_resize_cdk(smiles, shape)
+                depiction = depictor.cdk_depict(smiles, shape)
             elif "pikachu" in list(schemes[0].keys())[0]:
-                depiction = depictor.depict_and_resize_pikachu(smiles, shape)
+                depiction = depictor.pikachu_depict(smiles, shape)
         except IndexError:
             depiction = None
 
@@ -196,7 +196,7 @@ class FingerprintDatasetWithAndWithoutAugmentationsCreator(RandomDepictor):
                 False,
                 False,
             )
-            depiction = depictor.depict_and_resize_cdk(smiles, shape)
+            depiction = depictor.cdk_depict(smiles, shape)
             with open(os.path.join(self.output_dir, 'error_log.txt'), 'a') as error_log:
                 error_log.write(f'Failed depicting SMILES: {smiles}\n')
                 error_log.write('It was depicted using CDK WITHOUT fingerprints.\n')

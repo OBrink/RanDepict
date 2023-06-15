@@ -41,7 +41,7 @@ def split_id_from_smiles(lines: List[str]) -> Tuple[List[str], List[str]]:
     smiles_list = []
     for line in lines:
         line = line[:-1]
-        id, smiles = line.split(",")
+        id, smiles = line.split("\t")
         id_list.append(id)
         smiles_list.append(smiles)
     return id_list, smiles_list
@@ -74,7 +74,7 @@ def main():
         smiles_lists = split_smiles_list(input_file.readlines(), 1000)
     starmap_tuples = [(smiles_lists[index], index * 1000000)
                       for index in range(len(smiles_lists))]
-    with Pool(15) as pool:
+    with Pool(40) as pool:
         _ = pool.starmap(helper, starmap_tuples)
 
 

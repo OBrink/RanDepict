@@ -21,11 +21,13 @@ please raise an issue on the Github repository.
 
 """
 
-__version__ = "1.1.6"
+__version__ = "1.1.7"
 
 __all__ = [
     "RanDepict",
 ]
 
-
-from .randepict import RandomDepictor, RandomDepictorConfig, DepictionFeatureRanges, RandomMarkushStructureCreator
+from .config import RandomDepictorConfig
+from .depiction_feature_ranges import DepictionFeatureRanges
+from .randepict import RandomDepictor
+from .random_markush_structure_generator import RandomMarkushStructureCreator
