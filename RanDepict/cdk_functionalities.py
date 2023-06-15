@@ -1,6 +1,6 @@
 from __future__ import annotations
 import base64
-from jpype import JClass, JavaException
+from jpype import JClass, JException
 import numpy as np
 from skimage import io as sk_io
 from skimage.util import img_as_ubyte
@@ -283,7 +283,7 @@ class CDKFunctionalities:
             cdk_superatom_abrv.loadFromFile(abbreviation_path)
             try:
                 cdk_superatom_abrv.apply(molecule)
-            except JavaException:
+            except JException:
                 pass
         return dep_gen, molecule
 
