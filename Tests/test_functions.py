@@ -1,5 +1,6 @@
 from RanDepict import RandomDepictor, DepictionFeatureRanges, RandomMarkushStructureCreator
 from rdkit import DataStructs
+import re
 import numpy as np
 from omegaconf import OmegaConf 
 
@@ -384,7 +385,20 @@ class TestRandomDepictor:
         for smiles in test_smiles:
             im = self.depictor.pikachu_depict(smiles)
             assert type(im) == np.ndarray
-
+            
+    def test_random_depiction_with_coordinates(self):
+        smiles = "CCC"
+        with RandomDepictor() as depictor:
+            for index in range(20):
+                if index < 10:
+                    depiction, cx_smiles = depictor.random_depiction_with_coordinates(smiles)
+                    
+                else:
+                    depiction, cx_smiles = depictor.random_depiction_with_coordinates(smiles,
+                                                                                      augment=True)
+                assert type(depiction) == np.ndarray
+                assert cx_smiles[:3] == smiles
+                
     def test_get_depiction_functions_normal(self):
         # For a molecule without isotopes or R groups, all toolkits can be used
         observed = self.depictor.get_depiction_functions('c1ccccc1C(O)=O')
@@ -432,7 +446,7 @@ class TestRandomDepictor:
 
     def test_smiles_to_mol_str(self):
         # Compare generated mol file str with reference string
-        mol_str = self.depictor._cdk_smiles_to_mol_block("CC")
+        mol_str = self.depictor._smiles_to_mol_block("CC")
         mol_str_lines = mol_str.split('\n')
         with open('Tests/test.mol', 'r') as ref_mol_file:
             ref_lines = ref_mol_file.readlines()

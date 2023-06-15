@@ -179,13 +179,13 @@ class FingerprintDatasetWithAndWithoutAugmentationsCreator(RandomDepictor):
         # Depict molecule
         try:
             if "indigo" in list(schemes[0].keys())[0]:
-                depiction = depictor.depict_and_resize_indigo(smiles, shape)
+                depiction = depictor.indigo_depict(smiles, shape)
             elif "rdkit" in list(schemes[0].keys())[0]:
-                depiction = depictor.depict_and_resize_rdkit(smiles, shape)
+                depiction = depictor.rdkit_depict(smiles, shape)
             elif "cdk" in list(schemes[0].keys())[0]:
                 depiction = depictor.cdk_depict(smiles, shape)
             elif "pikachu" in list(schemes[0].keys())[0]:
-                depiction = depictor.depict_and_resize_pikachu(smiles, shape)
+                depiction = depictor.pikachu_depict(smiles, shape)
         except IndexError:
             depiction = None
 

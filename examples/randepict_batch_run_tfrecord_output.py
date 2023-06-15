@@ -1,7 +1,7 @@
 import os
 import io
 from typing import Tuple, List
-import argparse
+import sys
 import numpy as np
 from multiprocessing import Process
 import time
@@ -193,25 +193,21 @@ def main() -> None:
     The annotation is an array saved as a str ([1  2  3  4  ..  .. X])
     ___
     '''
-    # Parse arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument("file", nargs="+")
-    args = parser.parse_args()
 
-    # Read input data from file
-    for file_in in args.file:
-        ID_list = []
-        smiles_list = []
-        tokens_list = []
-        with open(file_in, "r") as fp:
-            for line in fp.readlines():
-                if line[-1] == '\n':
-                    line = line[:-1]
-                line = line.replace(";[ ", ";[").replace("  ", " ").replace(" ", ",")
-                ID, smiles, tokens = line.split(";")
-                ID_list.append(ID)
-                smiles_list.append(smiles)
-                tokens_list.append(np.array(eval(tokens)))
+    num_procs = int(sys.argv[2])
+
+    ID_list = []
+    smiles_list = []
+    tokens_list = []
+    with open(sys.argv[1], "r") as fp:
+        for line in fp.readlines():
+            if line[-1] == '\n':
+                line = line[:-1]
+            line = line.replace(";[ ", ";[").replace("  ", " ").replace(" ", ",")
+            ID, smiles, tokens = line.split(";")
+            ID_list.append(ID)
+            smiles_list.append(smiles)
+            tokens_list.append(np.array(eval(tokens)))
 
     # Set desired image shape and number of depictions per SMILES and output paths
     im_per_SMILES_noaug = 1
@@ -230,8 +226,8 @@ def main() -> None:
             ID_list,
             SMILES_chunksize,
             depiction_img_shape,
-            20,
-            random.randint(0, 100),
+            num_procs,
+            42,
             1800)
 
 
