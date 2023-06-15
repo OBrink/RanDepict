@@ -1,6 +1,6 @@
 from __future__ import annotations
 import base64
-from jpype import JClass
+from jpype import JClass, JavaException
 import numpy as np
 from skimage import io as sk_io
 from skimage.util import img_as_ubyte
@@ -281,7 +281,10 @@ class CDKFunctionalities:
             abbreviation_path = abbreviation_path.replace("\\", "/")
             abbreviation_path = JClass("java.lang.String")(abbreviation_path)
             cdk_superatom_abrv.loadFromFile(abbreviation_path)
-            cdk_superatom_abrv.apply(molecule)
+            try:
+                cdk_superatom_abrv.apply(molecule)
+            except JavaException:
+                pass
         return dep_gen, molecule
 
     def _cdk_get_random_java_font(self):
