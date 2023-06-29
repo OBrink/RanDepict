@@ -59,20 +59,29 @@ class CDKFunctionalities:
         depiction = self._cdk_render_molecule(molecule, has_R_group, shape)
         return depiction
 
-    def _cdk_mol_block_to_cxsmiles(self, mol_block: str) -> str:
+    def _cdk_mol_block_to_cxsmiles(
+        self,
+        mol_block: str,
+        ignore_explicite_hydrogens: bool = True,
+    ) -> str:
         """
         This function takes a mol block str and returns the corresponding CXSMILES
         with coordinates using the CDK.
 
         Args:
             mol_block (str): mol block str
+            ignore_explicite_hydrogens (bool, optional): whether or not to ignore H
 
         Returns:
             str: CXSMILES
         """
         atom_container = self._cdk_mol_block_to_iatomcontainer(mol_block)
-        smi_gen = JClass("org.openscience.cdk.smiles.SmilesGenerator")
-        flavor = JClass("org.openscience.cdk.smiles.SmiFlavor")
+        if ignore_explicite_hydrogens:
+            cdk_base = "org.openscience.cdk."
+            manipulator = JClass(cdk_base + "tools.manipulator.AtomContainerManipulator")
+            atom_container = manipulator.copyAndSuppressedHydrogens(atom_container)
+        smi_gen = JClass(cdk_base + "smiles.SmilesGenerator")
+        flavor = JClass(cdk_base + "smiles.SmiFlavor")
         smi_gen = smi_gen(flavor.CxSmilesWithCoords)
         cxsmiles = smi_gen.create(atom_container)
         return cxsmiles
@@ -133,6 +142,68 @@ class CDKFunctionalities:
         mol_writer.close()
         mol_str = string_writer.toString()
         return str(mol_str)
+
+    def _cdk_add_explicite_hydrogen_to_molblock(self, mol_block: str) -> str:
+        """
+        This function takes a mol block and returns the mol block with explicit
+        hydrogen atoms.
+
+        Args:
+            mol_block (str): mol block that describes a molecule
+
+        Returns:
+            str: The same mol block with explicit hydrogen atoms
+        """
+        i_atom_container = self._cdk_mol_block_to_iatomcontainer(mol_block)
+        cdk_base = "org.openscience.cdk."
+        manipulator = JClass(cdk_base + "tools.manipulator.AtomContainerManipulator")
+        manipulator.convertImplicitToExplicitHydrogens(i_atom_container)
+        mol_block = self._cdk_iatomcontainer_to_mol_block(i_atom_container)
+        return mol_block
+
+    def _cdk_add_explicite_hydrogen_to_smiles(self, smiles: str) -> str:
+        """
+        This function takes a SMILES str and uses CDK to add explicite hydrogen atoms.
+        It returns an adapted version of the SMILES str.
+
+        Args:
+            smiles (str): SMILES representation of a molecule
+
+        Returns:
+            smiles (str): SMILES representation of a molecule with explicite H
+        """
+        i_atom_container = self._cdk_smiles_to_IAtomContainer(smiles)
+        cdk_base = "org.openscience.cdk."
+        manipulator = JClass(cdk_base + "tools.manipulator.AtomContainerManipulator")
+        manipulator.convertImplicitToExplicitHydrogens(i_atom_container)
+        smi_flavor = JClass("org.openscience.cdk.smiles.SmiFlavor").Absolute
+        smiles_generator = JClass("org.openscience.cdk.smiles.SmilesGenerator")(
+            smi_flavor
+        )
+        smiles = smiles_generator.create(i_atom_container)
+        return str(smiles)
+
+    def _cdk_remove_explicite_hydrogen_from_smiles(self, smiles: str) -> str:
+        """
+        This function takes a SMILES str and uses CDK to remove explicite hydrogen atoms.
+        It returns an adapted version of the SMILES str.
+
+        Args:
+            smiles (str): SMILES representation of a molecule
+
+        Returns:
+            smiles (str): SMILES representation of a molecule with explicite H
+        """
+        i_atom_container = self._cdk_smiles_to_IAtomContainer(smiles)
+        cdk_base = "org.openscience.cdk."
+        manipulator = JClass(cdk_base + "tools.manipulator.AtomContainerManipulator")
+        i_atom_container = manipulator.copyAndSuppressedHydrogens(i_atom_container)
+        smi_flavor = JClass("org.openscience.cdk.smiles.SmiFlavor").Absolute
+        smiles_generator = JClass("org.openscience.cdk.smiles.SmilesGenerator")(
+            smi_flavor
+        )
+        smiles = smiles_generator.create(i_atom_container)
+        return str(smiles)
 
     def _cdk_get_depiction_generator(self, molecule, has_R_group: bool = False):
         """

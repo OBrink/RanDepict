@@ -1,5 +1,3 @@
-from jpype import JClass
-# import sys
 from typing import List
 from .randepict import RandomDepictor
 
@@ -49,7 +47,7 @@ class RandomMarkushStructureCreator:
         Returns:
             smiles (str): input SMILES with $num inserted R group variables
         """
-        smiles = self.add_explicite_hydrogen_to_smiles(smiles)
+        smiles = self.depictor._cdk_add_explicite_hydrogen_to_smiles(smiles)
         potential_replacement_positions = self.get_valid_replacement_positions(smiles)
         r_groups = []
         # Replace C or H in SMILES with *
@@ -66,7 +64,7 @@ class RandomMarkushStructureCreator:
                 break
         # Remove explicite hydrogen again and get absolute SMILES
         smiles = "".join(smiles)
-        smiles = self.remove_explicite_hydrogen_from_smiles(smiles)
+        smiles = self.depictor._cdk_remove_explicite_hydrogen_from_smiles(smiles)
         # Replace * with R groups
         for r_group in r_groups:
             smiles = smiles.replace("*", r_group, 1)
@@ -136,53 +134,3 @@ class RandomMarkushStructureCreator:
                 ]:
                     replacement_positions.append(index - 1)
         return replacement_positions
-
-    def add_explicite_hydrogen_to_smiles(self, smiles: str) -> str:
-        """
-        This function takes a SMILES str and uses CDK to add explicite hydrogen atoms.
-        It returns an adapted version of the SMILES str.
-
-        Args:
-            smiles (str): SMILES representation of a molecule
-
-        Returns:
-            smiles (str): SMILES representation of a molecule with explicite H
-        """
-        i_atom_container = self.depictor._cdk_smiles_to_IAtomContainer(smiles)
-
-        # Add explicite hydrogen atoms
-        cdk_base = "org.openscience.cdk."
-        manipulator = JClass(cdk_base + "tools.manipulator.AtomContainerManipulator")
-        manipulator.convertImplicitToExplicitHydrogens(i_atom_container)
-
-        # Create absolute SMILES
-        smi_flavor = JClass("org.openscience.cdk.smiles.SmiFlavor").Absolute
-        smiles_generator = JClass("org.openscience.cdk.smiles.SmilesGenerator")(
-            smi_flavor
-        )
-        smiles = smiles_generator.create(i_atom_container)
-        return str(smiles)
-
-    def remove_explicite_hydrogen_from_smiles(self, smiles: str) -> str:
-        """
-        This function takes a SMILES str and uses CDK to remove explicite hydrogen atoms.
-        It returns an adapted version of the SMILES str.
-
-        Args:
-            smiles (str): SMILES representation of a molecule
-
-        Returns:
-            smiles (str): SMILES representation of a molecule with explicite H
-        """
-        i_atom_container = self.depictor._cdk_smiles_to_IAtomContainer(smiles)
-        # Remove explicite hydrogen atoms
-        cdk_base = "org.openscience.cdk."
-        manipulator = JClass(cdk_base + "tools.manipulator.AtomContainerManipulator")
-        i_atom_container = manipulator.copyAndSuppressedHydrogens(i_atom_container)
-        # Create absolute SMILES
-        smi_flavor = JClass("org.openscience.cdk.smiles.SmiFlavor").Absolute
-        smiles_generator = JClass("org.openscience.cdk.smiles.SmilesGenerator")(
-            smi_flavor
-        )
-        smiles = smiles_generator.create(i_atom_container)
-        return str(smiles)

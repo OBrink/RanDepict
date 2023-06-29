@@ -412,6 +412,20 @@ class TestRandomDepictor:
         difference = set(observed) ^ set(expected)
         assert not difference
 
+    def test_add_explicite_hydrogen_to_smiles(self):
+        # Assert that hydrogen atoms are added
+        input_smiles = "CCC"
+        expected_output = "C([H])([H])([H])C([H])([H])C([H])([H])[H]"
+        observed_output = self.depictor._cdk_add_explicite_hydrogen_to_smiles(input_smiles)
+        assert expected_output == observed_output
+        
+    def test_remove_explicite_hydrogen_to_smiles(self):
+        # Assert that hydrogen atoms are removed
+        input_smiles = "C([H])([H])([H])C([H])([H])C([H])([H])[H]"
+        expected_output = "CCC"
+        observed_output = self.depictor._cdk_remove_explicite_hydrogen_from_smiles(input_smiles)
+        assert expected_output == observed_output
+
     def test_get_depiction_functions_isotopes(self):
         # PIKAChU can't handle isotopes
         observed = self.depictor.get_depiction_functions("[13CH3]N1C=NC2=C1C(=O)N(C(=O)N2C)C")
@@ -516,19 +530,6 @@ class TestRandomMarkushStructureCreator:
             depiction = self.depictor.random_depiction(output_smiles)
             assert type(depiction) == np.ndarray
 
-    def test_add_explicite_hydrogen_to_smiles(self):
-        # Assert that hydrogen atoms are added
-        input_smiles = "CCC"
-        expected_output = "C([H])([H])([H])C([H])([H])C([H])([H])[H]"
-        observed_output = self.markush_creator.add_explicite_hydrogen_to_smiles(input_smiles)
-        assert expected_output == observed_output
-        
-    def test_remove_explicite_hydrogen_to_smiles(self):
-        # Assert that hydrogen atoms are removed
-        input_smiles = "C([H])([H])([H])C([H])([H])C([H])([H])[H]"
-        expected_output = "CCC"
-        observed_output = self.markush_creator.remove_explicite_hydrogen_from_smiles(input_smiles)
-        assert expected_output == observed_output
     
     def test_get_valid_replacement_positions_simple_chain(self):
         # Simple example case
