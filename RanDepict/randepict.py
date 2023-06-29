@@ -195,8 +195,13 @@ class RandomDepictor(Augmentations,
         Returns:
             np.array: Chemical structure depiction
         """
+        orig_styles = self._config.styles
+        # TODO: add this to depiction feature fingerprint
+        if self.random_choice([True] + [False] * 5):
+            smiles = self._cdk_add_explicite_hydrogen_to_smiles(smiles)
+            self._config.styles = [style for style in orig_styles if style != 'pikachu']
         depiction_functions = self.get_depiction_functions(smiles)
-
+        self._config.styles = orig_styles
         for _ in range(3):
             if len(depiction_functions) != 0:
                 # Pick random depiction function and call it
@@ -267,11 +272,17 @@ class RandomDepictor(Augmentations,
         orig_styles = self._config.styles
         self._config.styles = [style for style in orig_styles if style != 'pikachu']
         depiction_functions = self.get_depiction_functions(smiles)
-        self._config.styles = orig_styles
-        mol_block = self._smiles_to_mol_block(smiles,
-                                              self.random_choice(['rdkit', 'indigo', 'cdk']))
-        cxsmiles = self._cdk_mol_block_to_cxsmiles(mol_block)
         fun = self.random_choice(depiction_functions)
+        self._config.styles = orig_styles
+        # TODO: add this to depiction feature fingerprint
+        if self.random_choice([True] + [False] * 5):
+            smiles = self._cdk_add_explicite_hydrogen_to_smiles(smiles)
+        mol_block = self._smiles_to_mol_block(smiles,
+                                              self.random_choice(['rdkit',
+                                                                  'indigo',
+                                                                  'cdk']))
+        cxsmiles = self._cdk_mol_block_to_cxsmiles(mol_block,
+                                                   ignore_explicite_hydrogens=True)
         depiction = fun(mol_block=mol_block, shape=shape)
         if augment:
             depiction = self.add_augmentations(depiction)
