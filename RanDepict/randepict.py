@@ -262,8 +262,7 @@ class RandomDepictor(Augmentations,
 
         Args:
             smiles (str): SMILES representation of a molecule
-            augment (bool, optional): Whether add augmentations to the image.
-                                      Defaults to False.
+            augment (bool, optional): Whether add augmentations to the image. Defaults to False.
             shape (Tuple[int, int], optional): Image shape. Defaults to (512, 512).
 
         Returns:
@@ -695,8 +694,7 @@ class RandomDepictor(Augmentations,
 
         Args:
             iterable (List): iterable to pick from
-            log_attribute (str, optional): ID for fingerprint.
-                                           Defaults to False.
+            log_attribute (str, optional): ID for fingerprint. Defaults to False.
 
         Returns:
             Any: "Randomly" picked element
