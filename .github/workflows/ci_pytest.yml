@@ -46,4 +46,7 @@ jobs:
           package-name: release-please-action
           token: ${{ secrets.GITHUB_TOKEN }}
           start-version: '1.1.8'
-          version-path: RanDepict/__init__.py
+    - name: Modify version number
+      run: |
+        sed -i 's/^VERSION = .*$/VERSION = "${{ steps.release.outputs.version }}"/' RanDepict/__init__.py
+    
