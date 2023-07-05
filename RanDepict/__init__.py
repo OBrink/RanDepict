@@ -21,7 +21,7 @@ please raise an issue on the Github repository.
 
 """
 
-__version__ = "1.1.9"
+__version__ = "1.2.0"
 
 __all__ = [
     "RanDepict",
