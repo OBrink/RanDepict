@@ -48,5 +48,5 @@ jobs:
           start-version: '1.1.8'
       - name: Modify version number
         run: |
-          sed -i 's/^VERSION = .*$/VERSION = "${{ steps.release.outputs.version }}"/' RanDepict/RanDepict/__init__.py
+          sed -i 's/^VERSION = .*$/VERSION = "${{ steps.release.outputs.version }}"/' /RanDepict/RanDepict/__init__.py
     
