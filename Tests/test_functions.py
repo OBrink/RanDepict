@@ -1,6 +1,5 @@
 from RanDepict import RandomDepictor, DepictionFeatureRanges, RandomMarkushStructureCreator
 from rdkit import DataStructs
-import re
 import numpy as np
 from omegaconf import OmegaConf 
 
@@ -574,3 +573,11 @@ class TestRandomMarkushStructureCreator:
         expected = [0, 3, 8, 13, 23, 27, 34, 40, 44]
         assert observed == expected
         
+    def test_index_enumeration(self):
+        smiles = "CCCCCCCCC"
+        markush_creator = RandomMarkushStructureCreator(variables_list=["R"],
+                                                        enumerate_indices=True)
+        smiles = markush_creator.insert_R_group_var(smiles, 3)
+        assert "[R1" in smiles
+        assert "[R2" in smiles
+        assert "[R3" in smiles
