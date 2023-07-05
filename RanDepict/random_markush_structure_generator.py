@@ -1,21 +1,40 @@
+from copy import deepcopy
+from itertools import cycle
 from typing import List
 from .randepict import RandomDepictor
 
 class RandomMarkushStructureCreator:
-    def __init__(self, *, variables_list=None, max_index=20):
+    def __init__(
+        self,
+        variables_list=None,
+        max_index=20,
+        max_num=4,
+        enumerate_indices=False,
+    ):
         """
-        RandomMarkushStructureCreator objects are instantiated with the desired
-        inserted R group variables. Otherwise, "R", "X" and "Z" are used.
+        RandomMarkushStructureCreator class for the generation of random Markush
+        structures from given SMILES strings
+
+        Args:
+            variables_list (List[str]): List of R group variables that can be used to
+                replace C or H atoms in a SMILES str. desired .
+                Otherwise, "R", "X" and "Z" are used.
+            max_index (int): Maximum index that is used for R group variables.
+            max_num (int): Maximum number of R group variables that are inserted
+            enumerate_indices (bool): If True, R group indices are enumerates (eg.
+                R1, R2, R3, ...) instead of randomly picked (eg. R1, R20, R4, ...).
         """
-        # Instantiate RandomDepictor for reproducible random decisions
         self.depictor = RandomDepictor()
-        # Define R group variables
         if variables_list is None:
             self.r_group_variables = ["R", "X", "Y", "Z"]
         else:
             self.r_group_variables = variables_list
 
         self.potential_indices = range(1, max_index + 1)
+        self.max_num = max_num
+        self.enumerate_indices = enumerate_indices
+        if enumerate_indices:
+            self.potential_indices = cycle(self.potential_indices)
 
     def generate_markush_structure_dataset(self, smiles_list: List[str]) -> List[str]:
         """
@@ -28,7 +47,8 @@ class RandomMarkushStructureCreator:
         Returns:
             List[str]: SMILES reprentations of markush structures
         """
-        numbers = [self.depictor.random_choice(range(1, 5)) for _ in smiles_list]
+        numbers = [self.depictor.random_choice(range(1, self.max_num + 1))
+                   for _ in smiles_list]
         r_group_smiles = [
             self.insert_R_group_var(smiles_list[index], numbers[index])
             for index in range(len(smiles_list))
@@ -54,6 +74,7 @@ class RandomMarkushStructureCreator:
         # If we would directly insert the R group variables, CDK would replace them with '*'
         # later when removing the explicite hydrogen atoms
         smiles = list(smiles)
+        orig_potential_indices = deepcopy(self.potential_indices)
         for _ in range(num):
             if len(potential_replacement_positions) > 0:
                 position = self.depictor.random_choice(potential_replacement_positions)
@@ -62,6 +83,7 @@ class RandomMarkushStructureCreator:
                 r_groups.append(self.get_r_group_smiles())
             else:
                 break
+        self.potential_indices = orig_potential_indices
         # Remove explicite hydrogen again and get absolute SMILES
         smiles = "".join(smiles)
         smiles = self.depictor._cdk_remove_explicite_hydrogen_from_smiles(smiles)
@@ -81,7 +103,10 @@ class RandomMarkushStructureCreator:
         has_indices = self.depictor.random_choice([True, True, True, True, False])
         r_group_var = self.depictor.random_choice(self.r_group_variables)
         if has_indices:
-            index = self.depictor.random_choice(self.potential_indices)
+            if self.enumerate_indices:
+                index = next(self.potential_indices)
+            else:
+                index = self.depictor.random_choice(self.potential_indices)
             if self.depictor.random_choice([True, False, False]):
                 index_char = self.depictor.random_choice(["a", "b", "c", "d", "e", "f"])
             else:
