@@ -313,7 +313,8 @@ class RandomDepictor(Augmentations,
 
         # Remove PIKAChU if there is an isotope
         if re.search("(\[\d\d\d?[A-Z])|(\[2H\])|(\[3H\])|(D)|(T)", smiles):
-            depiction_functions.remove(self.pikachu_depict)
+            if self.pikachu_depict in depiction_functions:
+                depiction_functions.remove(self.pikachu_depict)
         if self.has_r_group(smiles):
             # PIKAChU only accepts \[[RXZ]\d*\]
             squared_bracket_content = re.findall("\[.+?\]", smiles)
