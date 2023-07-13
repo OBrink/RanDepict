@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/OBrink/RanDepict/compare/v1.2.0...v1.2.1) (2023-07-13)
+
+
+### Bug Fixes
+
+* add Copyright info and modify theme options ([779dac0](https://github.com/OBrink/RanDepict/commit/779dac0c9a14e9bbba674236c654aaa9580b5c09))
+* only remove PIKAChU if it is there initially (caused crash) ([3b5d3e0](https://github.com/OBrink/RanDepict/commit/3b5d3e012916d445bbe4ffc2bf888c6d0f728c30))
+
 ## [1.2.0](https://github.com/OBrink/RanDepict/compare/1.1.8...v1.2.0) (2023-07-05)
 
 

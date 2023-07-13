@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="RanDepict",
-    version="1.2.0",
+    version="1.2.1",
     author="Otto Brinkhaus",
     author_email="otto.brinkhaus@uni-jena.de, kohulan.rajan@uni-jena.de",
     maintainer="Otto Brinkhaus, Kohulan Rajan",
