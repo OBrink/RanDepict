@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/OBrink/RanDepict/compare/v1.2.1...v1.3.0) (2023-09-22)
+
+
+### Features
+
+* automated_pypi_releases ([deeaa91](https://github.com/OBrink/RanDepict/commit/deeaa9142a95d4a11b00e2284364822c1d774dd2))
+
 ## [1.2.1](https://github.com/OBrink/RanDepict/compare/v1.2.0...v1.2.1) (2023-07-13)
 
 
