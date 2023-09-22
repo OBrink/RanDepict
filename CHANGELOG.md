@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/OBrink/RanDepict/compare/v1.3.0...v1.3.1) (2023-09-22)
+
+
+### Bug Fixes
+
+* version bump 1.3.0 ([adf25e5](https://github.com/OBrink/RanDepict/commit/adf25e5d8c29ed64c79b7d37e24834052b6b6b67))
+
 ## [1.2.1](https://github.com/OBrink/RanDepict/compare/v1.2.0...v1.2.1) (2023-07-13)
 
 
