@@ -5,3 +5,7 @@ epam.indigo
 jpype1
 ipyplot
 pikachu-chem>=1.0.7
+pystow
+imgaug
+omegaconf
+matplotlib==3.9.4

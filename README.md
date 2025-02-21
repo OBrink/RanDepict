@@ -1,6 +1,6 @@
 [![License](https://img.shields.io/badge/License-MIT%202.0-blue.svg)](https://opensource.org/licenses/MIt)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-blue.svg)](https://github.com/OBrink/RanDepict/graphs/commit-activity)
-![Workflow](https://github.com/OBrink/RanDepict/actions/workflows/ci_pytest.yml/badge.svg)
+![Workflow](https://github.com/Steinbeck-Lab/RanDepict/actions/workflows/ci_pytest.yml/badge.svg)
 [![GitHub issues](https://img.shields.io/github/issues/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/issues/)
 [![GitHub contributors](https://img.shields.io/github/contributors/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/graphs/contributors/)
 [![GitHub release](https://img.shields.io/github/release/OBrink/RanDepict.svg)](https://GitHub.com/OBrink/RanDepict/releases/)
